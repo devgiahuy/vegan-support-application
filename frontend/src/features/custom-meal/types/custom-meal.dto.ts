@@ -135,6 +135,12 @@ export interface CustomMealListResponseDto {
   availableTags?: CustomMealTagStatDto[];
 }
 
+/** Body trả về của các endpoint custom meal READY. */
+export interface CustomMealEnvelopeDto<T> {
+  success: true;
+  data: T;
+}
+
 export interface CreateCustomMealIngredientRequestDto {
   position: number;
   displayName: string;

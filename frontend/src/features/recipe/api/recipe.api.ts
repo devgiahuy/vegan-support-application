@@ -1,9 +1,7 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { POSTS_ENDPOINTS } from '@/common/constants/endpoints/posts.endpoints';
 import { PostType } from '@/common/enums';
 import { recipeMapper } from '../mappers/recipe.mapper';
-import { shouldFallbackToFixtures, createNotFoundError } from '@/features/post/utils/api-fallback';
-import { MOCK_RECIPE_DTOS } from '../__fixtures__/recipe-fixtures';
 import type {
   RecipeListResponseDto,
   RecipeDetailResponseDto,
@@ -32,7 +30,7 @@ export const recipeApi = {
    * Lấy danh sách công thức nấu ăn (hỗ trợ phân trang, lọc danh mục, độ khó, từ khóa)
    */
   getRecipes: async (params?: RecipeQueryParams): Promise<RecipePaginationResult> => {
-    const res = await api.get<RecipeListResponseDto>(API_ENDPOINTS.POSTS.LIST, {
+    const res = await api.get<RecipeListResponseDto>(POSTS_ENDPOINTS.LIST, {
       params: {
         ...params,
         type: PostType.RECIPE,
@@ -50,27 +48,11 @@ export const recipeApi = {
    * Lấy chi tiết công thức nấu ăn theo id hoặc slug
    */
   getRecipeDetail: async (idOrSlug: string): Promise<Recipe> => {
-    try {
-      const res = await api.get<RecipeDetailResponseDto>(API_ENDPOINTS.POSTS.DETAIL(idOrSlug), {
-        silent: true,
-      });
-
-      if (res.data?.success && res.data.data) {
-        return recipeMapper.toModel(res.data.data);
-      }
-      throw new Error('Phản hồi chi tiết công thức không đúng định dạng.');
-    } catch (err) {
-      // 404 từ backend hoặc lỗi nghiệp vụ 4xx → ném tiếp để trang [id] hiện 404.
-      if (!shouldFallbackToFixtures(err, 'detail')) throw err;
-    }
-
-    const found = MOCK_RECIPE_DTOS.find((r) => r.id === idOrSlug || r.slug === idOrSlug);
-    if (found) {
-      return recipeMapper.toModel(found);
-    }
-
-    // Không có trong fixture: báo 404 thật thay vì trả công thức giả.
-    throw createNotFoundError({ resourceLabel: 'Công thức' });
+    const res = await api.get<RecipeDetailResponseDto>(POSTS_ENDPOINTS.DETAIL(idOrSlug), {
+      silent: true,
+    });
+    if (res.data?.success && res.data.data) return recipeMapper.toModel(res.data.data);
+    throw new Error('Phản hồi chi tiết công thức không đúng định dạng.');
   },
 
   /**
@@ -78,24 +60,9 @@ export const recipeApi = {
    */
   createRecipe: async (recipe: Partial<Recipe>): Promise<Recipe> => {
     const payload: CreateRecipeRequestDto = recipeMapper.toCreateDto(recipe);
-    try {
-      const res = await api.post<RecipeDetailResponseDto>(API_ENDPOINTS.POSTS.CREATE, payload);
-      if (res.data?.success && res.data.data) {
-        return recipeMapper.toModel(res.data.data);
-      }
-      throw new Error('Phản hồi tạo công thức không đúng định dạng.');
-    } catch (err) {
-      // Lỗi nghiệp vụ 4xx (validation, quyền...) → ném tiếp để form hiện lỗi thật.
-      if (!shouldFallbackToFixtures(err, 'mutation')) throw err;
-    }
-
-    return recipeMapper.toModel({
-      ...MOCK_RECIPE_DTOS[0],
-      revision: {
-        ...MOCK_RECIPE_DTOS[0].revision,
-        title: recipe.title || 'Công thức mới',
-      },
-    });
+    const res = await api.post<RecipeDetailResponseDto>(POSTS_ENDPOINTS.CREATE, payload);
+    if (res.data?.success && res.data.data) return recipeMapper.toModel(res.data.data);
+    throw new Error('Phản hồi tạo công thức không đúng định dạng.');
   },
 
   /**
@@ -103,30 +70,17 @@ export const recipeApi = {
    */
   updateRecipe: async (id: string, recipe: Partial<Recipe>): Promise<Recipe> => {
     const payload: UpdateRecipeRequestDto = recipeMapper.toUpdateDto(recipe);
-    try {
-      const res = await api.patch<RecipeDetailResponseDto>(API_ENDPOINTS.POSTS.UPDATE(id), payload);
-      if (res.data?.success && res.data.data) {
-        return recipeMapper.toModel(res.data.data);
-      }
-      throw new Error('Phản hồi cập nhật công thức không đúng định dạng.');
-    } catch (err) {
-      if (!shouldFallbackToFixtures(err, 'mutation')) throw err;
-    }
-
-    return recipeMapper.toModel(MOCK_RECIPE_DTOS[0]);
+    const res = await api.patch<RecipeDetailResponseDto>(POSTS_ENDPOINTS.UPDATE(id), payload);
+    if (res.data?.success && res.data.data) return recipeMapper.toModel(res.data.data);
+    throw new Error('Phản hồi cập nhật công thức không đúng định dạng.');
   },
 
   /**
    * Xóa mềm công thức (backend yêu cầu `?expectedVersion`)
    */
   deleteRecipe: async (id: string, expectedVersion?: number): Promise<void> => {
-    try {
-      await api.delete(API_ENDPOINTS.POSTS.DELETE(id), {
-        params: expectedVersion !== undefined ? { expectedVersion } : undefined,
-      });
-    } catch (err) {
-      // 403/401 khi đã có API thật → ném tiếp để toast báo quyền, không im lặng.
-      if (!shouldFallbackToFixtures(err, 'mutation')) throw err;
-    }
+    await api.delete(POSTS_ENDPOINTS.DELETE(id), {
+      params: expectedVersion !== undefined ? { expectedVersion } : undefined,
+    });
   },
 };

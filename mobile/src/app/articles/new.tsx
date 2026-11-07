@@ -5,7 +5,7 @@ import { type Href, useRouter } from 'expo-router';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { ArticleForm } from '@/features/post/components/article-form';
 import { useCreateArticleMutation } from '@/features/post/queries/post.queries';
-import { getApiErrorMessage } from '@/lib/api-error';
+import { getApiErrorDetail } from '@/lib/api-error';
 import { useAuthStore } from '@/store/useAuthStore';
 
 /**
@@ -31,15 +31,20 @@ export default function CreateArticleScreen() {
         <Text className="text-2xl font-extrabold tracking-tight text-foreground">Viết bài chia sẻ mới</Text>
 
         <ArticleForm
-          submitLabel="Gửi bài viết"
+          submitLabel="Gửi duyệt bài"
           isSubmitting={createMutation.isPending}
-          onSubmit={async (values) => {
+          onSubmit={async (values, action) => {
             try {
               const created = await createMutation.mutateAsync(values);
-              Alert.alert('Đã gửi bài viết', 'Bài viết đã được gửi cho Ban biên tập kiểm duyệt.');
+              Alert.alert(
+                action === 'DRAFT' ? 'Đã lưu bản nháp' : 'Đã gửi bài viết',
+                action === 'DRAFT'
+                  ? 'Bài viết đã được lưu vào Bản nháp. Bạn có thể mở lại để chỉnh sửa và gửi duyệt sau.'
+                  : 'Bài viết đã được gửi vào hàng đợi kiểm duyệt.'
+              );
               router.replace(`/articles/${created.id}` as Href);
             } catch (error) {
-              Alert.alert('Không đăng được bài viết', getApiErrorMessage(error, 'Vui lòng kiểm tra dữ liệu và thử lại.'));
+              Alert.alert('Không đăng được bài viết', getApiErrorDetail(error, 'Vui lòng kiểm tra dữ liệu và thử lại.'));
             }
           }}
         />

@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { INGREDIENTS_ENDPOINTS } from '@/features/ingredient/constants/ingredients.endpoints';
 import type { PaginationResult } from '@/types/api';
 import type { IngredientListResponseDto, ResolveResponseDto } from '../types/ingredient.dto';
 import type { Ingredient, IngredientResolution } from '../types/ingredient.model';
@@ -17,19 +17,19 @@ export const ingredientApi = {
   searchIngredients: async (
     params?: IngredientSearchParams
   ): Promise<PaginationResult<Ingredient>> => {
-    const res = await api.get<IngredientListResponseDto>(API_ENDPOINTS.INGREDIENTS.LIST, {
+    const res = await api.get<IngredientListResponseDto>(INGREDIENTS_ENDPOINTS.LIST, {
       params,
       silent: true,
     });
-    return ingredientMapper.toListModel(res.data);
+    return ingredientMapper.toListModel(res.data?.data, res.data?.meta);
   },
 
   /** Chú ý: tên query param là `query`, không phải `q`. */
   resolveIngredient: async (query: string): Promise<IngredientResolution> => {
-    const res = await api.get<ResolveResponseDto>(API_ENDPOINTS.INGREDIENTS.RESOLVE, {
+    const res = await api.get<ResolveResponseDto>(INGREDIENTS_ENDPOINTS.RESOLVE, {
       params: { query },
       silent: true,
     });
-    return ingredientMapper.toResolutionModel(res.data);
+    return ingredientMapper.toResolutionModel(res.data?.data);
   },
 };

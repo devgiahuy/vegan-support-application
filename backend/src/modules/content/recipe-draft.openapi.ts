@@ -15,9 +15,9 @@ export function registerRecipeDraftOpenApi(registry: OpenAPIRegistry, errorSchem
     method: 'post',
     path: '/api/v1/recipe-drafts/generate',
     tags: ['Content', 'AI'],
-    summary: 'Generate an editable recipe draft from a title, description and ingredient names',
+    summary: 'Generate an editable recipe draft from ingredient names and optional basic information',
     description:
-      'Authenticated preview only. No post or pantry mutation. Ingredient names remain in input order; amounts, units, servings, times and steps are AI suggestions with subjective confidence. The client must let the user edit the returned draft and then call POST /api/v1/posts to save it as DRAFT. Images are not analyzed. No nutrition values are invented.',
+      'Authenticated preview only. Title and description are optional; missing values are suggested from the ingredient names. Supplied values and servings and preparation/cooking times are preserved; omitted values are suggested by AI. No post or pantry mutation. Ingredient names remain in input order. The client must let the user edit the returned draft and then call POST /api/v1/posts to save it as DRAFT. Images are not analyzed. No nutrition values are invented.',
     operationId: 'generateRecipeDraft',
     security: [{ BearerAuth: [] }, { AccessTokenCookie: [] }],
     request: { body: { content: { 'application/json': { schema: request } } } },

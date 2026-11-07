@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { ADMIN_CATALOG_ENDPOINTS } from '@/features/admin-catalog/constants/admin-catalog.endpoints';
 import type { PaginationResult } from '@/types/api';
 import type {
   AdminCategoryListResponseDto,
@@ -21,28 +21,28 @@ export interface AdminCategoryListParams {
 export const adminCategoryApi = {
   listCategories: async (params?: AdminCategoryListParams): Promise<PaginationResult<Category>> => {
     const res = await api.get<AdminCategoryListResponseDto>(
-      API_ENDPOINTS.ADMIN_CATALOG.CATEGORIES.LIST,
+      ADMIN_CATALOG_ENDPOINTS.CATEGORIES.LIST,
       { params, silent: true }
     );
-    return categoryMapper.toAdminPaginationModel(res.data);
+    return categoryMapper.toAdminPaginationModel(res.data?.data, res.data?.meta);
   },
 
   createCategory: async (payload: CreateCategoryRequestDto): Promise<Category> => {
     const res = await api.post<CategoryResponseDto>(
-      API_ENDPOINTS.ADMIN_CATALOG.CATEGORIES.CREATE,
+      ADMIN_CATALOG_ENDPOINTS.CATEGORIES.CREATE,
       payload,
       { showErrorToast: true }
     );
-    return categoryMapper.toSingleModel(res.data);
+    return categoryMapper.toModel(res.data?.data);
   },
 
   updateCategory: async (id: string, payload: UpdateCategoryRequestDto): Promise<Category> => {
     const res = await api.patch<CategoryResponseDto>(
-      API_ENDPOINTS.ADMIN_CATALOG.CATEGORIES.UPDATE(id),
+      ADMIN_CATALOG_ENDPOINTS.CATEGORIES.UPDATE(id),
       payload,
       { showErrorToast: true }
     );
-    return categoryMapper.toSingleModel(res.data);
+    return categoryMapper.toModel(res.data?.data);
   },
 
   archiveCategory: async (
@@ -50,9 +50,9 @@ export const adminCategoryApi = {
     replacementId?: string
   ): Promise<{ id: string; status: string }> => {
     const res = await api.delete<CatalogArchiveResponseDto>(
-      API_ENDPOINTS.ADMIN_CATALOG.CATEGORIES.ARCHIVE(id),
+      ADMIN_CATALOG_ENDPOINTS.CATEGORIES.ARCHIVE(id),
       { params: replacementId ? { replacementId } : {}, showErrorToast: true }
     );
-    return categoryMapper.toArchiveModel(res.data);
+    return categoryMapper.toArchiveModel(res.data?.data);
   },
 };

@@ -1,4 +1,5 @@
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { AI_ARTIFACTS_ENDPOINTS } from '@/features/ai-artifacts/constants/ai-artifacts.endpoints';
+import { AI_VERIFICATIONS_ADMIN_ENDPOINTS } from '@/features/ai-artifacts/constants/ai-verifications-admin.endpoints';
 import api from '@/lib/axios';
 import { aiArtifactMapper } from '../mappers/ai-artifact.mapper';
 import { aiVerificationMapper } from '../mappers/ai-verification.mapper';
@@ -19,7 +20,7 @@ export const aiVerificationApi = {
     data: CreateAiVerificationFormData
   ): Promise<{ artifact: AiArtifact; verification: AiVerification }> {
     const res = await api.post<AiVerificationEnvelopeDto>(
-      API_ENDPOINTS.AI_ARTIFACTS.VERIFICATIONS(artifactId),
+      AI_ARTIFACTS_ENDPOINTS.VERIFICATIONS(artifactId),
       data
     );
     return {
@@ -36,7 +37,7 @@ export const aiVerificationApi = {
     data: AdminAiVerificationActionFormData
   ): Promise<{ artifact: AiArtifact; verification: AiVerification }> {
     const res = await api.patch<AiVerificationEnvelopeDto>(
-      API_ENDPOINTS.AI_VERIFICATIONS_ADMIN.ACTION(verificationId),
+      AI_VERIFICATIONS_ADMIN_ENDPOINTS.ACTION(verificationId),
       data
     );
     return {

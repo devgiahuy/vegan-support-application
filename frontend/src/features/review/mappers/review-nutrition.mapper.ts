@@ -1,6 +1,5 @@
 import {
   BaseMapper,
-  pickField,
   safeArray,
   safeBoolean,
   safeDate,
@@ -15,7 +14,6 @@ import type {
   ReviewNutritionMetricDto,
   ReviewNutritionOverrideRequestDto,
   ReviewNutritionPanelDto,
-  ReviewNutritionPanelResponseDto,
   ReviewNutritionUncoveredDto,
 } from '../types/review-nutrition.dto';
 import {
@@ -221,10 +219,6 @@ export class ReviewNutritionMapper extends BaseMapper<
         this.toAudit(item)
       ),
     };
-  }
-
-  toResponse(response: ReviewNutritionPanelResponseDto | null | undefined): ReviewNutritionPanel {
-    return this.toModel(pickField<ReviewNutritionPanelDto | null>(response, ['data'], null));
   }
 
   /** Chỉ gửi các chỉ số có thay đổi; null = bỏ giá trị sửa tay */

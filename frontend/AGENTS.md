@@ -20,7 +20,7 @@
 | **7** | `docs/PROGRESS.md` & `docs/WORK-LOG.md` | Nơi theo dõi tiến độ % và nhật ký công việc. Agent **bắt buộc cập nhật sau mỗi task**. |
 | **8** | `package.json`, `components.json`, `tsconfig.json` | Tech stack (Next.js 16, React 19, Tailwind v4, shadcn/ui style `new-york` base `radix`), path alias `@/*`. |
 | **9** | `src/app/layout.tsx`, `src/middleware.ts`, `src/lib/auth-refresh.ts` | App shell, cơ chế Auth session, HttpOnly cookie, silent-refresh chống race condition. |
-| **10** | `src/lib/mapper/` + `src/common/constants/api-endpoints.ts` | Base mapper, contract API tập trung. |
+| **10** | `src/lib/mapper/` + `src/features/*/constants/` + `src/common/constants/endpoints/` | Base mapper, endpoint theo domain và endpoint dùng chung. |
 | **11** | `src/features/category/*` hoặc `src/features/profile/*` | **Feature mẫu chuẩn end-to-end**: DTO → Model → Mapper → API → Query → Components. Mọi feature mới phải theo đúng mẫu này. |
 
 *Lưu ý:* `docs/SRS_Vegan_Support_Application.md` và `docs/SRS_Production.md` chỉ là tài liệu tham khảo/lịch sử. Nếu mâu thuẫn, dùng `../docs/SRS.md`. Tuyệt đối không đọc `node_modules/`, `.next/`, file build artifacts hoặc đọc trực tiếp file swagger json thô khi chưa cần thiết.
@@ -83,7 +83,7 @@ Hệ sinh thái dự án trang bị sẵn các bộ kỹ năng chuyên sâu tạ
    - Không bọc 2 tầng `APIResponse<*ResponseDto>` ở api layer.
 2. **Nghiêm cấm tuyệt đối**:
    - `any`, `as any`, `@ts-ignore`, `Record<string, any>`.
-   - Hard-code URL API trong feature (phải khai báo tập trung trong `src/common/constants/api-endpoints.ts`).
+   - Hard-code URL API trong consumer (khai báo trong `features/<domain>/constants/*.endpoints.ts`; endpoint dùng chung ở `common/constants/endpoints/`).
    - Import tương đối sâu `../../..` (bắt buộc dùng alias `@/*`).
    - Lưu trữ server-state vào Zustand (Zustand chỉ dành cho client-state: auth session memory, theme).
 3. **Quản lý dữ liệu**:

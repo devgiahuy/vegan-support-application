@@ -11,6 +11,9 @@ import {
   parsePostReviewStatus,
 } from '@/features/review/mappers/content-review.mapper';
 import { ADMIN_CONTENT_STATUS_OPTIONS } from '../types/admin-content.options';
+import { recipeMapper } from '@/features/recipe/mappers/recipe.mapper';
+import { postMapper } from '@/features/post/mappers/post.mapper';
+import { videoMapper } from '@/features/video/mappers/video.mapper';
 import type {
   BasePostDto,
   PostCategorySummaryDto,
@@ -20,6 +23,7 @@ import type {
 import type { AdminContentListResponseDto } from '../types/admin-content.dto';
 import type {
   AdminContentListResult,
+  AdminContentDetail,
   AdminContentRow,
   AdminContentSource,
 } from '../types/admin-content.model';
@@ -143,6 +147,19 @@ const ERROR_MESSAGES: Record<string, string> = {
 const GENERIC_ERROR_MESSAGE = 'Thao tác thất bại. Vui lòng thử lại.';
 
 export class AdminContentMapper extends BaseMapper<BasePostDto, AdminContentRow> {
+  toDetailModel(dto: BasePostDto): AdminContentDetail {
+    const type = safeString(dto.type).toUpperCase();
+    switch (type) {
+      case PostType.RECIPE:
+        return { type: PostType.RECIPE, content: recipeMapper.toModel(dto) };
+      case PostType.BLOG:
+        return { type: PostType.BLOG, content: postMapper.toModel(dto) };
+      case PostType.VIDEO:
+        return { type: PostType.VIDEO, content: videoMapper.toModel(dto) };
+      default:
+        throw new Error('Loại nội dung không được hỗ trợ.');
+    }
+  }
   /**
    * DTO → Model hàng bảng. Mọi quy tắc quyền được tính MỘT LẦN ở đây để thành
    * phần chỉ đọc, không suy luận (data-model.md §2.1).
@@ -272,10 +289,11 @@ export class AdminContentMapper extends BaseMapper<BasePostDto, AdminContentRow>
    * (`source = 'published-only'` — nhãn trung thực, R-06).
    */
   toPublishedOnlyResult(
-    response: AdminContentListResponseDto | null | undefined,
+    data: AdminContentListResponseDto['data'],
+    meta: AdminContentListResponseDto['meta'],
     sessionUserId: string
   ): AdminContentListResult {
-    return this.toResult(response, sessionUserId, 'published-only');
+    return this.toResult(data, meta, sessionUserId, 'published-only');
   }
 
   /**
@@ -283,23 +301,24 @@ export class AdminContentMapper extends BaseMapper<BasePostDto, AdminContentRow>
    * Chỉ dùng sau khi T082 trong tasks.md xác nhận trạng thái `READY`.
    */
   toAdminListResult(
-    response: AdminContentListResponseDto | null | undefined,
+    data: AdminContentListResponseDto['data'],
+    meta: AdminContentListResponseDto['meta'],
     sessionUserId: string
   ): AdminContentListResult {
-    return this.toResult(response, sessionUserId, 'admin-list');
+    return this.toResult(data, meta, sessionUserId, 'admin-list');
   }
 
   private toResult(
-    response: AdminContentListResponseDto | null | undefined,
+    data: AdminContentListResponseDto['data'],
+    meta: AdminContentListResponseDto['meta'],
     sessionUserId: string,
     source: AdminContentSource
   ): AdminContentListResult {
     // Phần tử null trong `data` không phải nội dung thật — bỏ hẳn thay vì dựng
     // hàng giả, để tổng số dòng khớp `meta.total` (contracts/api-consumers.md §3.4).
-    const rows = safeArray<BasePostDto | null>(response?.data)
+    const rows = safeArray<BasePostDto | null>(data)
       .filter((dto): dto is BasePostDto => dto !== null && dto !== undefined)
       .map((dto) => this.toAdminRow(dto, sessionUserId));
-    const meta = response?.meta ?? null;
     const totalItems = Math.max(0, safeNumber(meta?.total, rows.length));
     const totalPagesRaw = safeNumber(meta?.totalPages, 0);
 

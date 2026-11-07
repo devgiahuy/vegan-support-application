@@ -349,12 +349,13 @@ export function MapFallback({
         Sơ đồ vị trí tương đối, không phải bản đồ đường phố.
       </p>
       <Dialog
+        modal={false}
         open={Boolean(openCluster)}
         onOpenChange={(open) => {
           if (!open) setOpenClusterId(null);
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md lg:left-auto lg:right-6 lg:translate-x-0">
           <DialogHeader>
             <DialogTitle>
               {openCluster ? `${openCluster.members.length} quán gần nhau` : 'Các quán gần nhau'}

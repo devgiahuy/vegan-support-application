@@ -17,7 +17,7 @@ describe('SafetyMapper reports', () => {
       },
       meta: null,
     };
-    const report = safetyMapper.toSingleReport(envelope);
+    const report = safetyMapper.toSingleReport(envelope.data);
     expect(report.targetKind).toBe(ReportTargetKind.POST);
     expect(report.targetKindLabel).toBe('Bài viết');
     expect(report.reasonCode).toBe(ReportReasonCode.SPAM);
@@ -27,28 +27,32 @@ describe('SafetyMapper reports', () => {
   });
 
   it('COMMENT + snake_case + RESOLVED', () => {
-    const report = safetyMapper.toSingleReport({
-      success: true,
-      data: {
-        id: 'r',
-        target_id: 'a',
-        target_type: 'COMMENT',
-        reason_code: 'HARASSMENT',
-        status: 'RESOLVED',
-      },
-      meta: null,
-    });
+    const report = safetyMapper.toSingleReport(
+      {
+        success: true,
+        data: {
+          id: 'r',
+          target_id: 'a',
+          target_type: 'COMMENT',
+          reason_code: 'HARASSMENT',
+          status: 'RESOLVED',
+        },
+        meta: null,
+      }.data
+    );
     expect(report.targetKindLabel).toBe('Bình luận');
     expect(report.reasonLabel).toBe('Quấy rối');
     expect(report.statusLabel).toBe('Đã xử lý');
   });
 
   it('mã lạ → fallback OTHER/POST, details rỗng → null', () => {
-    const report = safetyMapper.toSingleReport({
-      success: true,
-      data: { id: 'r', targetType: 'GHOST', reasonCode: 'GHOST', details: '   ' },
-      meta: null,
-    });
+    const report = safetyMapper.toSingleReport(
+      {
+        success: true,
+        data: { id: 'r', targetType: 'GHOST', reasonCode: 'GHOST', details: '   ' },
+        meta: null,
+      }.data
+    );
     expect(report.targetKind).toBe(ReportTargetKind.POST);
     expect(report.reasonCode).toBe(ReportReasonCode.OTHER);
     expect(report.details).toBeNull();
@@ -71,11 +75,13 @@ describe('SafetyMapper reports', () => {
     ] as const;
     const labels = codes.map(
       (code) =>
-        safetyMapper.toSingleReport({
-          success: true,
-          data: { id: 'r', reasonCode: code },
-          meta: null,
-        }).reasonLabel
+        safetyMapper.toSingleReport(
+          {
+            success: true,
+            data: { id: 'r', reasonCode: code },
+            meta: null,
+          }.data
+        ).reasonLabel
     );
     expect(labels).toEqual([
       'Spam',
@@ -125,34 +131,40 @@ describe('SafetyMapper submit/delete', () => {
 
   it('toDeletionResult đọc deletedCount, thiếu → 0', () => {
     expect(
-      safetyMapper.toDeletionResult({ success: true, data: { deletedCount: 42 }, meta: null })
+      safetyMapper.toDeletionResult({ success: true, data: { deletedCount: 42 }, meta: null }.data)
     ).toEqual({ deletedCount: 42 });
     expect(safetyMapper.toDeletionResult(null)).toEqual({ deletedCount: 0 });
-    expect(safetyMapper.toDeletionResult({ success: true, data: {}, meta: null })).toEqual({
+    expect(safetyMapper.toDeletionResult({ success: true, data: {}, meta: null }.data)).toEqual({
       deletedCount: 0,
     });
   });
 
   it('createdAt ISO parse đúng', () => {
-    const report = safetyMapper.toSingleReport({
-      success: true,
-      data: { id: 'r', created_at: '2026-09-17T10:00:00.000Z' },
-      meta: null,
-    });
+    const report = safetyMapper.toSingleReport(
+      {
+        success: true,
+        data: { id: 'r', created_at: '2026-09-17T10:00:00.000Z' },
+        meta: null,
+      }.data
+    );
     expect(report.createdAt).not.toBeNull();
   });
 
   it('status rỗng → Đang mở', () => {
-    const report = safetyMapper.toSingleReport({ success: true, data: { id: 'r' }, meta: null });
+    const report = safetyMapper.toSingleReport(
+      { success: true, data: { id: 'r' }, meta: null }.data
+    );
     expect(report.statusLabel).toBe('Đang mở');
   });
 
   it('status lowercase resolved vẫn nhận diện', () => {
-    const report = safetyMapper.toSingleReport({
-      success: true,
-      data: { id: 'r', status: 'resolved' },
-      meta: null,
-    });
+    const report = safetyMapper.toSingleReport(
+      {
+        success: true,
+        data: { id: 'r', status: 'resolved' },
+        meta: null,
+      }.data
+    );
     expect(report.statusLabel).toBe('Đã xử lý');
   });
 });

@@ -3,7 +3,6 @@ import type {
   CreateReportRequestDto,
   DeleteBehaviorHistoryResponseDto,
   ViolationReportDto,
-  ViolationReportResponseDto,
 } from '../types/safety.dto';
 import type { DeletionResult, SubmitReportInput, ViolationReport } from '../types/safety.model';
 import { ReportReasonCode, ReportTargetKind } from '@/common/enums';
@@ -26,7 +25,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /**
  * SafetyMapper: báo cáo vi phạm + xóa lịch sử.
- * Envelope `{success, data, meta}` đọc trực tiếp — cấm bọc `APIResponse<>` 2 tầng.
+ * Nhận dữ liệu từ API function sau khi đọc response envelope.
  */
 export class SafetyMapper extends BaseMapper<ViolationReportDto, ViolationReport> {
   toModel(dto: ViolationReportDto | null | undefined): ViolationReport {
@@ -58,14 +57,12 @@ export class SafetyMapper extends BaseMapper<ViolationReportDto, ViolationReport
   }
 
   /** `POST /reports` → 201 báo cáo đã ghi nhận. */
-  toSingleReport(dto: ViolationReportResponseDto | null | undefined): ViolationReport {
-    const data = pickField(dto, ['data'], null) as ViolationReportDto | null;
+  toSingleReport(data: ViolationReportDto | null | undefined): ViolationReport {
     return this.toModel(data);
   }
 
   /** `DELETE /users/me/behavior-history` → số lượng đã xóa. */
-  toDeletionResult(dto: DeleteBehaviorHistoryResponseDto | null | undefined): DeletionResult {
-    const data = pickField(dto, ['data'], null) as DeleteBehaviorHistoryResponseDto['data'];
+  toDeletionResult(data: DeleteBehaviorHistoryResponseDto['data']): DeletionResult {
     return { deletedCount: safeNumber(pickField(data, ['deletedCount'], 0)) };
   }
 

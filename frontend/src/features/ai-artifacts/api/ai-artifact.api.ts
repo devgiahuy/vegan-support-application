@@ -1,4 +1,4 @@
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { AI_ARTIFACTS_ENDPOINTS } from '@/features/ai-artifacts/constants/ai-artifacts.endpoints';
 import api from '@/lib/axios';
 import type { PaginationResult } from '@/types/api';
 import { aiArtifactMapper } from '../mappers/ai-artifact.mapper';
@@ -18,7 +18,7 @@ export const aiArtifactApi = {
    * Lưu đầu ra AI hợp lệ thành AI Artifact bất biến (DRAFT, PRIVATE).
    */
   async create(data: CreateAiArtifactFormData): Promise<AiArtifact> {
-    const res = await api.post<AiArtifactEnvelopeDto>(API_ENDPOINTS.AI_ARTIFACTS.BASE, data);
+    const res = await api.post<AiArtifactEnvelopeDto>(AI_ARTIFACTS_ENDPOINTS.BASE, data);
     return aiArtifactMapper.toModel(res.data.data);
   },
 
@@ -29,10 +29,7 @@ export const aiArtifactApi = {
     id: string,
     data: UpdateAiArtifactVisibilityFormData
   ): Promise<AiArtifact> {
-    const res = await api.patch<AiArtifactEnvelopeDto>(
-      API_ENDPOINTS.AI_ARTIFACTS.VISIBILITY(id),
-      data
-    );
+    const res = await api.patch<AiArtifactEnvelopeDto>(AI_ARTIFACTS_ENDPOINTS.VISIBILITY(id), data);
     return aiArtifactMapper.toModel(res.data.data);
   },
 
@@ -40,7 +37,7 @@ export const aiArtifactApi = {
    * Gửi artifact để Người đóng góp (Contributor) thẩm định chuyên môn.
    */
   async submit(id: string, data: SubmitAiArtifactFormData): Promise<AiArtifact> {
-    const res = await api.post<AiArtifactEnvelopeDto>(API_ENDPOINTS.AI_ARTIFACTS.SUBMIT(id), data);
+    const res = await api.post<AiArtifactEnvelopeDto>(AI_ARTIFACTS_ENDPOINTS.SUBMIT(id), data);
     return aiArtifactMapper.toModel(res.data.data);
   },
 
@@ -48,9 +45,10 @@ export const aiArtifactApi = {
    * Lấy danh sách tri thức AI công khai theo phân trang và bộ lọc loại.
    */
   async listPublic(query?: PublicAiArtifactsQuery): Promise<PaginationResult<AiArtifact>> {
-    const res = await api.get<PublicAiArtifactListResponseDto>(API_ENDPOINTS.AI_ARTIFACTS.PUBLIC, {
+    const res = await api.get<PublicAiArtifactListResponseDto>(AI_ARTIFACTS_ENDPOINTS.PUBLIC, {
       params: query,
     });
-    return aiArtifactMapper.toPaginationModel(res.data);
+    if (!res.data) return aiArtifactMapper.toPaginationModel(null);
+    return aiArtifactMapper.toPublicListModel(res.data.data, res.data.meta);
   },
 };

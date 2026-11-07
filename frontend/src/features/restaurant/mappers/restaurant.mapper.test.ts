@@ -278,16 +278,12 @@ describe('RestaurantMapper.toModel — dữ liệu cũ và bản ghi nội bộ'
 
 describe('RestaurantMapper.toDiscoveryModel — meta và cảnh báo', () => {
   it('giữ kết quả rỗng do ràng buộc ăn uống và phân biệt với lỗi nhà cung cấp', () => {
-    const result = restaurantMapper.toDiscoveryModel({
-      success: true,
-      data: [],
-      meta: {
-        page: 1,
-        limit: 20,
-        total: 0,
-        externalResultsSuppressed: true,
-        externalDataUnavailable: false,
-      },
+    const result = restaurantMapper.toDiscoveryModel([], {
+      page: 1,
+      limit: 20,
+      total: 0,
+      externalResultsSuppressed: true,
+      externalDataUnavailable: false,
     });
     expect(result.restaurants).toEqual([]);
     expect(result.meta.externalResultsSuppressed).toBe(true);
@@ -295,11 +291,10 @@ describe('RestaurantMapper.toDiscoveryModel — meta và cảnh báo', () => {
   });
 
   it('giữ quán nội bộ phù hợp khi backend loại kết quả ngoài chưa xác minh', () => {
-    const result = restaurantMapper.toDiscoveryModel({
-      success: true,
-      data: [{ id: 'approved-place', source: 'INTERNAL', dietaryReviewed: true }],
-      meta: { page: 1, limit: 20, total: 1, externalResultsSuppressed: true },
-    });
+    const result = restaurantMapper.toDiscoveryModel(
+      [{ id: 'approved-place', source: 'INTERNAL', dietaryReviewed: true }],
+      { page: 1, limit: 20, total: 1, externalResultsSuppressed: true }
+    );
     expect(result.restaurants.map((place) => place.id)).toEqual(['approved-place']);
     expect(result.notices.some((notice) => notice.kind === 'SUPPRESSED')).toBe(true);
   });
@@ -314,7 +309,7 @@ describe('RestaurantMapper.toDiscoveryModel — meta và cảnh báo', () => {
   };
 
   it('map meta 8 trường và giữ hasNextPage false vì discovery không phân trang', () => {
-    const result = restaurantMapper.toDiscoveryModel(baseEnvelope);
+    const result = restaurantMapper.toDiscoveryModel(baseEnvelope?.data, baseEnvelope?.meta);
     expect(result.restaurants).toHaveLength(2);
     expect(result.meta.page).toBe(1);
     expect(result.meta.limit).toBe(20);
@@ -324,36 +319,63 @@ describe('RestaurantMapper.toDiscoveryModel — meta và cảnh báo', () => {
   });
 
   it('tính totalPages từ total và limit khi backend không gửi field này', () => {
-    const withTotal = restaurantMapper.toDiscoveryModel(baseEnvelope);
+    const withTotal = restaurantMapper.toDiscoveryModel(baseEnvelope?.data, baseEnvelope?.meta);
     expect(withTotal.meta.totalPages).toBe(1);
-    const first = restaurantMapper.toDiscoveryModel({
-      ...baseEnvelope,
-      meta: { page: 1, limit: 20, total: 39 },
-    });
+    const first = restaurantMapper.toDiscoveryModel(
+      {
+        ...baseEnvelope,
+        meta: { page: 1, limit: 20, total: 39 },
+      }?.data,
+      {
+        ...baseEnvelope,
+        meta: { page: 1, limit: 20, total: 39 },
+      }?.meta
+    );
     expect(first.meta.totalPages).toBe(2);
     expect(first.meta.hasNextPage).toBe(true);
-    const second = restaurantMapper.toDiscoveryModel({
-      ...baseEnvelope,
-      meta: { page: 2, limit: 20, total: 39 },
-    });
+    const second = restaurantMapper.toDiscoveryModel(
+      {
+        ...baseEnvelope,
+        meta: { page: 2, limit: 20, total: 39 },
+      }?.data,
+      {
+        ...baseEnvelope,
+        meta: { page: 2, limit: 20, total: 39 },
+      }?.meta
+    );
     expect(second.meta.hasNextPage).toBe(false);
     expect(second.meta.hasPrevPage).toBe(true);
   });
 
   it('map cờ provider và dịch nhãn provider', () => {
-    const result = restaurantMapper.toDiscoveryModel({
-      ...baseEnvelope,
-      meta: {
-        page: 1,
-        limit: 20,
-        total: 2,
-        externalDataUnavailable: true,
-        resultsTruncated: true,
-        provider: 'serpapi',
-        providerResultLimit: 200,
-        locationStored: false,
-      },
-    });
+    const result = restaurantMapper.toDiscoveryModel(
+      {
+        ...baseEnvelope,
+        meta: {
+          page: 1,
+          limit: 20,
+          total: 2,
+          externalDataUnavailable: true,
+          resultsTruncated: true,
+          provider: 'serpapi',
+          providerResultLimit: 200,
+          locationStored: false,
+        },
+      }?.data,
+      {
+        ...baseEnvelope,
+        meta: {
+          page: 1,
+          limit: 20,
+          total: 2,
+          externalDataUnavailable: true,
+          resultsTruncated: true,
+          provider: 'serpapi',
+          providerResultLimit: 200,
+          locationStored: false,
+        },
+      }?.meta
+    );
     expect(result.meta.externalDataUnavailable).toBe(true);
     expect(result.meta.resultsTruncated).toBe(true);
     expect(result.meta.provider).toBe('serpapi');
@@ -363,7 +385,7 @@ describe('RestaurantMapper.toDiscoveryModel — meta và cảnh báo', () => {
   });
 
   it('meta null → fallback an toàn và vẫn giữ đúng số lượng quán', () => {
-    const result = restaurantMapper.toDiscoveryModel({ success: true, data: baseEnvelope.data });
+    const result = restaurantMapper.toDiscoveryModel(baseEnvelope.data, undefined);
     expect(result.restaurants).toHaveLength(2);
     expect(result.meta.page).toBe(1);
     expect(result.meta.limit).toBe(DEFAULT_RADIUS_M > 0 ? 20 : 20);
@@ -371,20 +393,22 @@ describe('RestaurantMapper.toDiscoveryModel — meta và cảnh báo', () => {
   });
 
   it('loại bỏ item rỗng và envelope null', () => {
-    const result = restaurantMapper.toDiscoveryModel({
-      success: true,
-      data: [{ id: 'keep' }, { id: '' }, null],
-      meta: null,
-    });
+    const result = restaurantMapper.toDiscoveryModel([{ id: 'keep' }, { id: '' }, null], null);
     expect(result.restaurants.map((r) => r.id)).toEqual(['keep']);
     expect(restaurantMapper.toDiscoveryModel(null).restaurants).toEqual([]);
   });
 
   it('sinh notice UNAVAILABLE khi provider không phản hồi', () => {
-    const result = restaurantMapper.toDiscoveryModel({
-      ...baseEnvelope,
-      meta: { page: 1, limit: 20, total: 2, externalDataUnavailable: true, provider: 'google' },
-    });
+    const result = restaurantMapper.toDiscoveryModel(
+      {
+        ...baseEnvelope,
+        meta: { page: 1, limit: 20, total: 2, externalDataUnavailable: true, provider: 'google' },
+      }?.data,
+      {
+        ...baseEnvelope,
+        meta: { page: 1, limit: 20, total: 2, externalDataUnavailable: true, provider: 'google' },
+      }?.meta
+    );
     const notice = result.notices.find((n) => n.kind === 'UNAVAILABLE');
     expect(notice).toBeDefined();
     expect(notice?.tone).toBe('warning');
@@ -392,24 +416,29 @@ describe('RestaurantMapper.toDiscoveryModel — meta và cảnh báo', () => {
   });
 
   it('sinh notice TRUNCATED kèm số giới hạn của nhà cung cấp', () => {
-    const result = restaurantMapper.toDiscoveryModel({
-      ...baseEnvelope,
-      meta: { page: 1, limit: 20, total: 2, resultsTruncated: true, providerResultLimit: 200 },
-    });
+    const result = restaurantMapper.toDiscoveryModel(
+      {
+        ...baseEnvelope,
+        meta: { page: 1, limit: 20, total: 2, resultsTruncated: true, providerResultLimit: 200 },
+      }?.data,
+      {
+        ...baseEnvelope,
+        meta: { page: 1, limit: 20, total: 2, resultsTruncated: true, providerResultLimit: 200 },
+      }?.meta
+    );
     const notice = result.notices.find((n) => n.kind === 'TRUNCATED');
     expect(notice).toBeDefined();
     expect(notice?.message).toContain('200');
   });
 
   it('sinh notice ATTRIBUTION nêu đích danh nhà cung cấp', () => {
-    const result = restaurantMapper.toDiscoveryModel({
-      success: true,
-      data: [
+    const result = restaurantMapper.toDiscoveryModel(
+      [
         { id: 'r1', source: 'INTERNAL' },
         { id: 'r2', source: 'GOOGLE', attribution: 'Google Maps' },
       ],
-      meta: { page: 1, limit: 20, total: 2, provider: 'google' },
-    });
+      { page: 1, limit: 20, total: 2, provider: 'google' }
+    );
     const notice = result.notices.find((n) => n.kind === 'ATTRIBUTION');
     expect(notice).toBeDefined();
     expect(notice?.tone).toBe('info');
@@ -417,10 +446,12 @@ describe('RestaurantMapper.toDiscoveryModel — meta và cảnh báo', () => {
   });
 
   it('sinh notice PRIVACY khi backend xác nhận không lưu vị trí', () => {
-    const result = restaurantMapper.toDiscoveryModel({
-      success: true,
-      data: [{ id: 'r1', source: 'INTERNAL' }],
-      meta: { page: 1, limit: 20, total: 1, provider: 'fake', locationStored: false },
+    const result = restaurantMapper.toDiscoveryModel([{ id: 'r1', source: 'INTERNAL' }], {
+      page: 1,
+      limit: 20,
+      total: 1,
+      provider: 'fake',
+      locationStored: false,
     });
     const notice = result.notices.find((n) => n.kind === 'PRIVACY');
     expect(notice).toBeDefined();
@@ -428,15 +459,14 @@ describe('RestaurantMapper.toDiscoveryModel — meta và cảnh báo', () => {
   });
 
   it('sinh notice STALE khi có quán quá 30 ngày chưa cập nhật', () => {
-    const result = restaurantMapper.toDiscoveryModel({
-      success: true,
-      data: [
+    const result = restaurantMapper.toDiscoveryModel(
+      [
         { id: 'fresh' },
         { id: 'old', fetchedAt: '2020-01-01T00:00:00.000Z' },
         { id: 'older', fetchedAt: '2019-06-01T00:00:00.000Z' },
       ],
-      meta: { page: 1, limit: 20, total: 3 },
-    });
+      { page: 1, limit: 20, total: 3 }
+    );
     const notice = result.notices.find((n) => n.kind === 'STALE');
     expect(notice).toBeDefined();
     expect(notice?.tone).toBe('info');
@@ -444,10 +474,11 @@ describe('RestaurantMapper.toDiscoveryModel — meta và cảnh báo', () => {
   });
 
   it('chỉ sinh notice PRIVACY khi không có cảnh báo nào khác', () => {
-    const result = restaurantMapper.toDiscoveryModel({
-      success: true,
-      data: [{ id: 'r1', source: 'INTERNAL' }],
-      meta: { page: 1, limit: 20, total: 1, provider: 'fake' },
+    const result = restaurantMapper.toDiscoveryModel([{ id: 'r1', source: 'INTERNAL' }], {
+      page: 1,
+      limit: 20,
+      total: 1,
+      provider: 'fake',
     });
     // Backend luôn trả `locationStored: false` nên cam kết riêng tư luôn hiện (SC-007).
     // Không có cảnh báo nào khác vì dữ liệu không suy giảm, không bị cắt và toàn quán nội bộ.
@@ -455,15 +486,14 @@ describe('RestaurantMapper.toDiscoveryModel — meta và cảnh báo', () => {
   });
 
   it('giữ nguyên thứ tự backend trả về — không tự sắp xếp lại', () => {
-    const result = restaurantMapper.toDiscoveryModel({
-      success: true,
-      data: [
+    const result = restaurantMapper.toDiscoveryModel(
+      [
         { id: 'low', rating: 3 },
         { id: 'high', rating: 5 },
         { id: 'null-rating', rating: null },
       ],
-      meta: { page: 1, limit: 20, total: 3 },
-    });
+      { page: 1, limit: 20, total: 3 }
+    );
     expect(result.restaurants.map((r) => r.id)).toEqual(['low', 'high', 'null-rating']);
   });
 });
@@ -635,11 +665,7 @@ describe('RestaurantMapper.toDiscoveryParams', () => {
 
 describe('RestaurantMapper.toGeocodeResult (FR-033 — không bịa dữ liệu)', () => {
   it('data null → isAvailable false và tọa độ null, KHÔNG thay bằng tọa độ mặc định', () => {
-    const result = restaurantMapper.toGeocodeResult({
-      success: true,
-      data: null,
-      externalDataUnavailable: true,
-    });
+    const result = restaurantMapper.toGeocodeResult(null);
     expect(result.isAvailable).toBe(false);
     expect(result.lat).toBeNull();
     expect(result.lng).toBeNull();
@@ -647,19 +673,16 @@ describe('RestaurantMapper.toGeocodeResult (FR-033 — không bịa dữ liệu)
 
   it('envelope null hoặc data thiếu → isAvailable false', () => {
     expect(restaurantMapper.toGeocodeResult(null).isAvailable).toBe(false);
-    expect(restaurantMapper.toGeocodeResult({ success: true }).isAvailable).toBe(false);
+    expect(restaurantMapper.toGeocodeResult(undefined).isAvailable).toBe(false);
   });
 
   it('data hợp lệ → isAvailable true, nhãn lấy từ address', () => {
     const result = restaurantMapper.toGeocodeResult({
-      success: true,
-      data: {
-        address: 'Hồ Gươm, Hà Nội',
-        latitude: 21.0285,
-        longitude: 105.8542,
-        placeId: 'fake:abc',
-        attribution: 'Dữ liệu minh hoạ',
-      },
+      address: 'Hồ Gươm, Hà Nội',
+      latitude: 21.0285,
+      longitude: 105.8542,
+      placeId: 'fake:abc',
+      attribution: 'Dữ liệu minh hoạ',
     });
     expect(result.isAvailable).toBe(true);
     expect(result.lat).toBeCloseTo(21.0285);
@@ -670,8 +693,9 @@ describe('RestaurantMapper.toGeocodeResult (FR-033 — không bịa dữ liệu)
 
   it('hỗ trợ alias lat/lng và label', () => {
     const result = restaurantMapper.toGeocodeResult({
-      success: true,
-      data: { lat: 10.776, lng: 106.7, label: 'Bến Thành' },
+      lat: 10.776,
+      lng: 106.7,
+      label: 'Bến Thành',
     });
     expect(result.lat).toBeCloseTo(10.776);
     expect(result.label).toBe('Bến Thành');
@@ -679,8 +703,9 @@ describe('RestaurantMapper.toGeocodeResult (FR-033 — không bịa dữ liệu)
 
   it('data có mặt nhưng tọa độ không đọc được → isAvailable false', () => {
     const result = restaurantMapper.toGeocodeResult({
-      success: true,
-      data: { address: 'Không rõ', latitude: 'abc', longitude: null },
+      address: 'Không rõ',
+      latitude: 'abc',
+      longitude: null,
     });
     expect(result.isAvailable).toBe(false);
     expect(result.lat).toBeNull();
@@ -755,28 +780,21 @@ describe('RestaurantMapper.toSubmitDto (payload đúng contract)', () => {
 
 describe('RestaurantMapper — tương thích màn hình quản trị (ngoài phạm vi redesign)', () => {
   it('toSingleModel map chi tiết quán', () => {
-    const item = restaurantMapper.toSingleModel({
-      success: true,
-      data: { id: 'r', latitude: 10.8, longitude: 106.7 },
-    });
+    const item = restaurantMapper.toSingleModel({ id: 'r', latitude: 10.8, longitude: 106.7 });
     expect(item.id).toBe('r');
     expect(item.lat).toBeCloseTo(10.8);
   });
 
   it('toQueueModel lọc bản ghi không có id', () => {
-    const queue = restaurantMapper.toQueueModel({
-      success: true,
-      data: [{ id: 'q1', status: 'PENDING' }, { id: '' }],
-      meta: null,
-    });
+    const queue = restaurantMapper.toQueueModel(
+      [{ id: 'q1', status: 'PENDING' }, { id: '' }],
+      null
+    );
     expect(queue.items.map((i) => i.id)).toEqual(['q1']);
   });
 
   it('toReviewedModel giữ trạng thái sau khi duyệt', () => {
-    const reviewed = restaurantMapper.toReviewedModel({
-      success: true,
-      data: { id: 'q1', status: 'PUBLISHED' },
-    });
+    const reviewed = restaurantMapper.toReviewedModel({ id: 'q1', status: 'PUBLISHED' });
     expect(reviewed.status).toBe(RestaurantStatus.PUBLISHED);
   });
 
@@ -806,16 +824,12 @@ describe('formatDistance', () => {
 
 describe('Restaurant discovery — merge regressions', () => {
   it('giữ thông báo ràng buộc khi danh sách rỗng', () => {
-    const result = restaurantMapper.toDiscoveryModel({
-      success: true,
-      data: [],
-      meta: {
-        page: 1,
-        limit: 20,
-        total: 0,
-        externalResultsSuppressed: true,
-        externalDataUnavailable: true,
-      },
+    const result = restaurantMapper.toDiscoveryModel([], {
+      page: 1,
+      limit: 20,
+      total: 0,
+      externalResultsSuppressed: true,
+      externalDataUnavailable: true,
     });
     expect(result.meta.externalResultsSuppressed).toBe(true);
     expect(result.meta.totalPages).toBe(0);

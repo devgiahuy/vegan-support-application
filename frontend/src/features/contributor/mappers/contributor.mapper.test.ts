@@ -22,11 +22,7 @@ const pendingDto = {
 
 describe('ContributorMapper applications', () => {
   it('map đơn PENDING + PLATFORM_TRACK_RECORD + links lọc rỗng + label Việt', () => {
-    const app = contributorMapper.toSingleApplication({
-      success: true,
-      data: pendingDto,
-      meta: null,
-    });
+    const app = contributorMapper.toSingleApplication(pendingDto);
     expect(app.claimedApprovalBasis).toBe(ContributorApprovalBasis.PLATFORM_TRACK_RECORD);
     expect(app.claimedApprovalBasisLabel).toBe('Thành viên uy tín trên nền tảng');
     expect(app.status).toBe(ContributorApplicationStatus.PENDING);
@@ -39,15 +35,11 @@ describe('ContributorMapper applications', () => {
 
   it('map đơn ORGANIZATION_AFFILIATION + organizationClaim', () => {
     const app = contributorMapper.toSingleApplication({
-      success: true,
-      data: {
-        id: 'app-org',
-        claimedApprovalBasis: 'ORGANIZATION_AFFILIATION',
-        organizationClaim: 'Hội Ẩm thực Chay Việt Nam',
-        experience: 'Giảng viên ẩm thực chay với 8 năm kinh nghiệm...',
-        status: 'PENDING',
-      },
-      meta: null,
+      id: 'app-org',
+      claimedApprovalBasis: 'ORGANIZATION_AFFILIATION',
+      organizationClaim: 'Hội Ẩm thực Chay Việt Nam',
+      experience: 'Giảng viên ẩm thực chay với 8 năm kinh nghiệm...',
+      status: 'PENDING',
     });
     expect(app.claimedApprovalBasis).toBe(ContributorApprovalBasis.ORGANIZATION_AFFILIATION);
     expect(app.claimedApprovalBasisLabel).toBe('Tổ chức đối tác / Viện ẩm thực');
@@ -56,17 +48,13 @@ describe('ContributorMapper applications', () => {
 
   it('map đơn ADMIN_INVITED + invitedBy + invitationReason', () => {
     const app = contributorMapper.toSingleApplication({
-      success: true,
-      data: {
-        id: 'app-invite',
-        claimedApprovalBasis: 'ADMIN_INVITED',
-        approvalBasis: 'ADMIN_INVITED',
-        status: 'APPROVED',
-        source: 'ADMIN_INVITATION',
-        invitedBy: { id: 'admin-1', displayName: 'Admin Tổng' },
-        invitationReason: 'Thành viên xuất sắc đóng góp liên tục trong năm 2026',
-      },
-      meta: null,
+      id: 'app-invite',
+      claimedApprovalBasis: 'ADMIN_INVITED',
+      approvalBasis: 'ADMIN_INVITED',
+      status: 'APPROVED',
+      source: 'ADMIN_INVITATION',
+      invitedBy: { id: 'admin-1', displayName: 'Admin Tổng' },
+      invitationReason: 'Thành viên xuất sắc đóng góp liên tục trong năm 2026',
     });
     expect(app.claimedApprovalBasis).toBe(ContributorApprovalBasis.ADMIN_INVITED);
     expect(app.approvalBasis).toBe(ContributorApprovalBasis.ADMIN_INVITED);
@@ -85,11 +73,7 @@ describe('ContributorMapper applications', () => {
   });
 
   it('experience dài bị rút gọn 160 ký tự kèm dấu …', () => {
-    const app = contributorMapper.toSingleApplication({
-      success: true,
-      data: { id: 'a', experience: 'x'.repeat(200) },
-      meta: null,
-    });
+    const app = contributorMapper.toSingleApplication({ id: 'a', experience: 'x'.repeat(200) });
     expect(app.experienceShort).toHaveLength(161);
     expect(app.experienceShort.endsWith('…')).toBe(true);
     expect(app.experience).toHaveLength(200);
@@ -109,7 +93,7 @@ describe('ContributorMapper applications', () => {
       ],
       meta: { page: 1, limit: 10, total: 1, total_pages: 1 },
     };
-    const result = contributorMapper.toApplicationList(envelope);
+    const result = contributorMapper.toApplicationList(envelope?.data, envelope?.meta);
     expect(result.items).toHaveLength(1);
     expect(result.items[0].claimedApprovalBasisLabel).toBe('Tổ chức đối tác / Viện ẩm thực');
     expect(result.items[0].approvalBasis).toBe(ContributorApprovalBasis.ORGANIZATION_AFFILIATION);
@@ -118,14 +102,10 @@ describe('ContributorMapper applications', () => {
 
   it('basis lạ → fallback PLATFORM_TRACK_RECORD, source lạ giữ nguyên', () => {
     const app = contributorMapper.toSingleApplication({
-      success: true,
-      data: {
-        id: 'a',
-        claimedApprovalBasis: 'UNKNOWN_BASIS',
-        source: 'WEIRD',
-        status: 'GHOST',
-      },
-      meta: null,
+      id: 'a',
+      claimedApprovalBasis: 'UNKNOWN_BASIS',
+      source: 'WEIRD',
+      status: 'GHOST',
     });
     expect(app.claimedApprovalBasis).toBe(ContributorApprovalBasis.PLATFORM_TRACK_RECORD);
     expect(app.sourceLabel).toBe('WEIRD');
@@ -135,13 +115,9 @@ describe('ContributorMapper applications', () => {
   it('reapplyEligibleAt tương lai → isReapplyBlocked = true', () => {
     const futureDate = new Date(Date.now() + 86400000).toISOString();
     const app = contributorMapper.toSingleApplication({
-      success: true,
-      data: {
-        id: 'a',
-        status: 'REJECTED',
-        reapply_eligible_at: futureDate,
-      },
-      meta: null,
+      id: 'a',
+      status: 'REJECTED',
+      reapply_eligible_at: futureDate,
     });
     expect(app.statusLabel).toBe('Bị từ chối');
     expect(app.reapplyEligibleAt).not.toBeNull();
@@ -195,15 +171,11 @@ describe('ContributorMapper review, submit, invite & revoke DTOs', () => {
     });
 
     const result = contributorMapper.toRevocationResult({
-      success: true,
-      data: {
-        userId: 'u1',
-        role: 'MEMBER',
-        revokedAt: '2026-09-23T12:00:00.000Z',
-        revokedBy: { displayName: 'Admin Trưởng' },
-        reason: 'Vi phạm quy tắc cộng đồng',
-      },
-      meta: null,
+      userId: 'u1',
+      role: 'MEMBER',
+      revokedAt: '2026-09-23T12:00:00.000Z',
+      revokedBy: { displayName: 'Admin Trưởng' },
+      reason: 'Vi phạm quy tắc cộng đồng',
     });
 
     expect(result.userId).toBe('u1');

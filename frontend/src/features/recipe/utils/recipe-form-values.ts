@@ -3,6 +3,23 @@ import { bodyToSteps } from '../mappers/recipe.mapper';
 import type { RecipeFormValues } from '../schemas/recipe-form.schema';
 import type { Recipe } from '../types/recipe.model';
 
+/** Chỉ điền thông tin cơ bản còn trống, kể cả khi thời gian được nhập là 0. */
+export function applyDraftBasics(current: RecipeFormValues, draft: Partial<RecipeFormValues>) {
+  return {
+    title: current.title.trim() ? current.title : (draft.title ?? ''),
+    description: current.description?.trim() ? current.description : (draft.description ?? ''),
+    servings: Number.isNaN(current.servings)
+      ? (draft.servings ?? current.servings)
+      : current.servings,
+    prepTimeMinutes: Number.isNaN(current.prepTimeMinutes)
+      ? (draft.prepTimeMinutes ?? current.prepTimeMinutes)
+      : current.prepTimeMinutes,
+    cookTimeMinutes: Number.isNaN(current.cookTimeMinutes)
+      ? (draft.cookTimeMinutes ?? current.cookTimeMinutes)
+      : current.cookTimeMinutes,
+  };
+}
+
 /** Giá trị form → domain `Recipe` truyền cho `recipeMapper.toCreateDto/toUpdateDto`. */
 export function recipeFormToRecipe(values: RecipeFormValues): Partial<Recipe> {
   return {

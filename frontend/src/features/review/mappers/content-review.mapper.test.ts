@@ -9,10 +9,7 @@ import {
   parsePostReviewStatus,
   parsePostType,
 } from './content-review.mapper';
-import {
-  PostReviewStatus,
-  ReviewDecisionEnum,
-} from '../types/content-review.model';
+import { PostReviewStatus, ReviewDecisionEnum } from '../types/content-review.model';
 import { ModerationPriority, PostType } from '@/common/enums';
 import type {
   AdminContentReviewDetailDto,
@@ -165,7 +162,7 @@ describe('ContentReviewMapper', () => {
       },
     };
 
-    const result = contentReviewMapper.toQueuePagination(dto);
+    const result = contentReviewMapper.toQueuePagination(dto.data, dto.meta);
 
     expect(result.items).toHaveLength(2);
     expect(result.items[0].postId).toBe('post-1');
@@ -303,7 +300,7 @@ describe('ContentReviewMapper', () => {
       },
     };
 
-    const history = contentReviewMapper.toHistoryModel(dto);
+    const history = contentReviewMapper.toHistoryModel(dto.data);
 
     expect(history.postId).toBe('post-100');
     expect(history.postStatus).toBe(PostReviewStatus.PUBLISHED);
@@ -319,9 +316,7 @@ describe('ContentReviewMapper', () => {
     // Kiểm tra bản revision 1 bị từ chối kèm lý do
     expect(history.revisions[2].status).toBe(PostReviewStatus.REJECTED);
     expect(history.revisions[2].statusLabel).toBe('Bị từ chối');
-    expect(history.revisions[2].reviewNote).toBe(
-      'Ảnh bìa bị vỡ nét, vui lòng thay ảnh rõ hơn.'
-    );
+    expect(history.revisions[2].reviewNote).toBe('Ảnh bìa bị vỡ nét, vui lòng thay ảnh rõ hơn.');
   });
 
   // Test 11: Chuyển đổi payload quyết định duyệt / từ chối

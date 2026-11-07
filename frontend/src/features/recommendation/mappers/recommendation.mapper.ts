@@ -10,10 +10,8 @@ import {
 import type {
   CreateBehaviorEventRequestDto,
   PersonalizationDto,
-  PersonalizationResponseDto,
   RecommendationItemDto,
   RecommendationMetaDto,
-  RecommendationResponseDto,
   UpdatePersonalizationRequestDto,
 } from '../types/recommendation.dto';
 import type {
@@ -93,8 +91,7 @@ export class RecommendationMapper extends BaseMapper<RecommendationItemDto, Reco
   }
 
   /** `GET /recommendations/home` — mảng món (meta đọc riêng). */
-  toHomeList(dto: RecommendationResponseDto | null | undefined): Recommendation[] {
-    const rawItems = pickField(dto, ['data'], null) as (RecommendationItemDto | null)[] | null;
+  toHomeList(rawItems: (RecommendationItemDto | null)[] | null | undefined): Recommendation[] {
     return this.toModelList(
       safeArray<RecommendationItemDto | null, RecommendationItemDto | null>(
         rawItems,
@@ -104,8 +101,7 @@ export class RecommendationMapper extends BaseMapper<RecommendationItemDto, Reco
   }
 
   /** Meta chấm điểm + ràng buộc đã áp dụng. */
-  toHomeMeta(dto: RecommendationResponseDto | null | undefined): RecommendationMeta {
-    const meta = pickField(dto, ['meta'], null) as RecommendationMetaDto | null;
+  toHomeMeta(meta: RecommendationMetaDto | null | undefined): RecommendationMeta {
     const personalized = pickField<boolean>(meta, ['personalized'], false);
     const constraints = pickField(meta, ['appliedConstraints'], null) as
       RecommendationMetaDto['appliedConstraints'] | null;
@@ -130,8 +126,7 @@ export class RecommendationMapper extends BaseMapper<RecommendationItemDto, Reco
   }
 
   /** `GET/PUT /users/me/personalization` → consent. */
-  toConsentModel(dto: PersonalizationResponseDto | null | undefined): PersonalizationConsent {
-    const data = pickField(dto, ['data'], null) as PersonalizationDto | null;
+  toConsentModel(data: PersonalizationDto | null | undefined): PersonalizationConsent {
     return {
       enabled: pickField<boolean>(data, ['enabled'], false),
       consentVersion: safeString(pickField(data, ['consentVersion', 'consent_version'], '')),

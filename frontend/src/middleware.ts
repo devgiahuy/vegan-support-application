@@ -53,6 +53,8 @@ export function middleware(request: NextRequest) {
   // Chấp nhận cả 2 tên để tương thích BE cũ/mới: accessToken | access_token
   const accessToken =
     request.cookies.get('accessToken')?.value ?? request.cookies.get('access_token')?.value;
+  const hasRefreshToken = Boolean(request.cookies.get('refreshToken')?.value);
+  const hasValidAccessToken = Boolean(accessToken && !isTokenExpired(accessToken));
 
   // Ví dụ bảo vệ route dashboard:
   const isProtectedPath = pathname.startsWith('/dashboard') || pathname.startsWith('/profile');
@@ -60,7 +62,7 @@ export function middleware(request: NextRequest) {
   const isContributorPath = pathname.startsWith('/contributor');
 
   if (isProtectedPath) {
-    if (!accessToken || isTokenExpired(accessToken)) {
+    if (!hasValidAccessToken && !hasRefreshToken) {
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('from', pathname);
       return NextResponse.redirect(loginUrl);
@@ -69,12 +71,12 @@ export function middleware(request: NextRequest) {
 
   // Route /admin/*: cần token hợp lệ + role ADMIN (đọc từ JWT payload).
   if (isAdminPath) {
-    if (!accessToken || isTokenExpired(accessToken)) {
+    if (!hasValidAccessToken && !hasRefreshToken) {
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('from', pathname);
       return NextResponse.redirect(loginUrl);
     }
-    const role = getTokenRole(accessToken);
+    const role = hasValidAccessToken && accessToken ? getTokenRole(accessToken) : null;
     if (role && !ADMIN_ROLES.includes(role)) {
       return NextResponse.redirect(new URL('/', request.url));
     }
@@ -82,12 +84,12 @@ export function middleware(request: NextRequest) {
 
   // Route /contributor/*: cần token hợp lệ + role CONTRIBUTOR hoặc ADMIN.
   if (isContributorPath) {
-    if (!accessToken || isTokenExpired(accessToken)) {
+    if (!hasValidAccessToken && !hasRefreshToken) {
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('from', pathname);
       return NextResponse.redirect(loginUrl);
     }
-    const role = getTokenRole(accessToken);
+    const role = hasValidAccessToken && accessToken ? getTokenRole(accessToken) : null;
     if (role && !CONTRIBUTOR_ROLES.includes(role)) {
       return NextResponse.redirect(new URL('/', request.url));
     }

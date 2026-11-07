@@ -41,17 +41,24 @@ export const COMMON_UNITS_CONFIG = [
   },
 ] as const;
 
-/** Chọn đơn vị từ danh sách nhóm sẵn hoặc "Tự nhập đơn vị khác…". */
+export interface UnitGroup {
+  category: string;
+  units: readonly { value: string; label: string }[];
+}
+
+/** Chọn đơn vị từ danh sách nhóm sẵn (mặc định là danh sách công thức) hoặc "Tự nhập đơn vị khác…". */
 export function RecipeUnitPicker({
   value,
   onChange,
   invalid,
   label,
+  groups = COMMON_UNITS_CONFIG,
 }: {
   value: string;
   onChange: (unit: string) => void;
   invalid?: boolean;
   label: string;
+  groups?: readonly UnitGroup[];
 }) {
   const colors = useIconColors();
   const [open, setOpen] = React.useState(false);
@@ -98,7 +105,7 @@ export function RecipeUnitPicker({
       </Pressable>
       {open ? (
         <FormSheet title="Chọn đơn vị" variant="popup" onClose={() => setOpen(false)}>
-          {COMMON_UNITS_CONFIG.map((group) => (
+          {groups.map((group) => (
             <View key={group.category} className="gap-1">
               <Text className="text-[11px] font-semibold uppercase text-muted-foreground">{group.category}</Text>
               {group.units.map((unit) => (

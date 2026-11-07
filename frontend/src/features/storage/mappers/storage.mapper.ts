@@ -1,4 +1,4 @@
-import { pickField, safeBoolean, safeDate, safeNumber, safeString } from '@/lib/mapper';
+import { pickField, safeArray, safeBoolean, safeDate, safeNumber, safeString } from '@/lib/mapper';
 import { calculateUsedPercent, formatBytes, formatDeltaBytes } from '../utils/format-bytes';
 import type {
   MediaAssetDto,
@@ -7,6 +7,8 @@ import type {
   StoragePolicyDto,
   StorageUsageDto,
   UploadReservationDto,
+  UploadProviderParamsDto,
+  StoragePageResponseDto,
 } from '../types/storage.dto';
 import type {
   MediaAsset,
@@ -15,9 +17,35 @@ import type {
   StoragePolicy,
   StorageUsage,
   UploadReservation,
+  StorageUploadParams,
 } from '../types/storage.model';
 
 export class StorageMapper {
+  toPageModel<TDto, TModel>(
+    data: TDto[],
+    meta: StoragePageResponseDto<TDto>['meta'],
+    mapItem: (dto: TDto) => TModel
+  ): { items: TModel[]; total: number; page: number; limit: number; totalPages: number } {
+    return {
+      items: safeArray<TDto>(data).map(mapItem),
+      total: safeNumber(pickField(meta, ['total'], 0)),
+      page: safeNumber(pickField(meta, ['page'], 1)),
+      limit: safeNumber(pickField(meta, ['limit'], 20)),
+      totalPages: safeNumber(pickField(meta, ['totalPages'], 0)),
+    };
+  }
+
+  toUploadParamsModel(dto: UploadProviderParamsDto | null | undefined): StorageUploadParams {
+    return {
+      uploadUrl: safeString(pickField(dto, ['uploadUrl', 'url'], '')),
+      apiKey: dto?.apiKey,
+      timestamp: dto?.timestamp,
+      signature: dto?.signature,
+      folder: dto?.folder,
+      fields: { ...(dto?.fields ?? {}) },
+    };
+  }
+
   toUsageModel(dto: StorageUsageDto | null | undefined): StorageUsage {
     const usedBytes = safeNumber(pickField(dto, ['usedBytes', 'used_bytes'], 0));
     const reservedBytes = safeNumber(pickField(dto, ['reservedBytes', 'reserved_bytes'], 0));

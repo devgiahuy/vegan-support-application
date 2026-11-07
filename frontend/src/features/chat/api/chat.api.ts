@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { CHAT_ENDPOINTS } from '@/features/chat/constants/chat.endpoints';
 import type { PaginationResult } from '@/types/api';
 import type {
   ChatFeedbackResponseDto,
@@ -14,17 +14,17 @@ import { chatMapper } from '../mappers/chat.mapper';
 /**
  * Consumer 4/5 endpoint chat private qua axios.
  * Riêng gửi câu hỏi (SSE stream) nằm ở `chat-stream.ts` — KHÔNG qua interceptor.
- * Envelope `{success, data, meta}` đọc `res.data` trực tiếp.
+ * API đọc data và metadata từ envelope trước khi gọi mapper.
  */
 export const chatApi = {
   /** `POST /chat/sessions` — backend tự cấp cookie `chatGuest` cho khách. */
   createSession: async (title?: string): Promise<ChatSession> => {
     const res = await api.post<ChatSessionResponseDto>(
-      API_ENDPOINTS.CHAT.SESSIONS,
+      CHAT_ENDPOINTS.SESSIONS,
       title ? { title } : {},
       { silent: true }
     );
-    return chatMapper.toSingleSession(res.data);
+    return chatMapper.toSingleSession(res.data?.data);
   },
 
   /** `GET /chat/sessions` — chỉ user đăng nhập (query layer gate `enabled`). */
@@ -32,11 +32,11 @@ export const chatApi = {
     page?: number;
     limit?: number;
   }): Promise<PaginationResult<ChatSession>> => {
-    const res = await api.get<ChatSessionListResponseDto>(API_ENDPOINTS.CHAT.SESSIONS, {
+    const res = await api.get<ChatSessionListResponseDto>(CHAT_ENDPOINTS.SESSIONS, {
       params: { page: params?.page, limit: params?.limit },
       silent: true,
     });
-    return chatMapper.toSessionList(res.data);
+    return chatMapper.toSessionList(res.data?.data, res.data?.meta);
   },
 
   /** `GET /chat/sessions/:id/messages` — lịch sử theo ownership. */
@@ -45,13 +45,13 @@ export const chatApi = {
     params?: { page?: number; limit?: number }
   ): Promise<PaginationResult<ChatMessage>> => {
     const res = await api.get<ChatMessageListResponseDto>(
-      API_ENDPOINTS.CHAT.SESSION_MESSAGES(sessionId),
+      CHAT_ENDPOINTS.SESSION_MESSAGES(sessionId),
       {
         params: { page: params?.page, limit: params?.limit },
         silent: true,
       }
     );
-    return chatMapper.toMessageList(res.data);
+    return chatMapper.toMessageList(res.data?.data, res.data?.meta);
   },
 
   /** `POST /chat/messages/:id/feedback` — upsert UP/DOWN. */
@@ -61,10 +61,10 @@ export const chatApi = {
     reason?: string
   ): Promise<MessageFeedback> => {
     const res = await api.post<ChatFeedbackResponseDto>(
-      API_ENDPOINTS.CHAT.MESSAGE_FEEDBACK(messageId),
+      CHAT_ENDPOINTS.MESSAGE_FEEDBACK(messageId),
       chatMapper.toFeedbackDto(value, reason),
       { showErrorToast: true }
     );
-    return chatMapper.toFeedbackModel(res.data);
+    return chatMapper.toFeedbackModel(res.data?.data);
   },
 };

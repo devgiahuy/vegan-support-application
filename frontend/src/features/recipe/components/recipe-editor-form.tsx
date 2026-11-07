@@ -54,6 +54,7 @@ import { flattenCategories } from '@/features/category/utils/flatten-categories'
 import { ImageUploader } from '@/features/post/components/image-uploader';
 import { RecipeNutritionPreviewDrawer } from '@/features/recipe-nutrition/components/recipe-nutrition-preview-drawer';
 import { recipeFormSchema, type RecipeFormValues } from '../schemas/recipe-form.schema';
+import { applyDraftBasics } from '../utils/recipe-form-values';
 import type { AiRecipeDraftSeed } from './ai-recipe-draft-assistant';
 import { RecipeIngredientRow } from './recipe-ingredient-row';
 import {
@@ -182,10 +183,17 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
           {
             ...current,
             ...values,
-            title: current.title?.trim() ? current.title : (values.title ?? ''),
-            description: current.description?.trim()
-              ? current.description
-              : (values.description ?? ''),
+            ...applyDraftBasics(current, values),
+            ingredients:
+              values.ingredients?.map((ingredient) => ({
+                ...ingredient,
+                ingredientId:
+                  current.ingredients.find(
+                    (existing) =>
+                      existing.name.trim().toLocaleLowerCase('vi') ===
+                      ingredient.name.trim().toLocaleLowerCase('vi')
+                  )?.ingredientId ?? null,
+              })) ?? current.ingredients,
             categoryId: values.categoryId || current.categoryId,
             coverImageUrl: values.coverImageUrl || current.coverImageUrl,
             coverMedia: values.coverMedia ?? current.coverMedia,
@@ -265,6 +273,10 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
 
     const handleNext = async () => {
       if (step === 'review' || !next) return;
+      if (step === 'basics') {
+        goTo(next.id);
+        return;
+      }
       const valid = await form.trigger(STEP_FIELDS[step]);
       if (!valid) {
         const issues = collectFieldIssues(form.formState.errors).filter((i) => i.step === step);
@@ -312,6 +324,9 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
     const seed: AiRecipeDraftSeed = {
       title: values.title ?? '',
       description: values.description ?? '',
+      servings: values.servings,
+      prepTimeMinutes: values.prepTimeMinutes,
+      cookTimeMinutes: values.cookTimeMinutes,
       ingredientNames: (values.ingredients ?? [])
         .map((ing) => ing.name?.trim())
         .filter((name): name is string => Boolean(name)),

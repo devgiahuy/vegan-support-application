@@ -1,5 +1,115 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-07] — Cho phép AI bổ sung thông tin công thức còn trống
+
+- **Mục tiêu:** Cho phép bỏ trống thông tin cơ bản để AI gợi ý, giữ dữ liệu tác giả và kiểm tra khi gửi.
+- **Đã làm:** Cho phép chuyển bước cơ bản; endpoint nhận tên tùy chọn và AI đề xuất tên/mô tả cùng khẩu phần/thời gian còn trống. Form giữ thông tin đã nhập kể cả thời gian 0; kiểm tra bắt buộc khi gửi. Ảnh bìa vẫn tải riêng, không được endpoint AI tạo.
+- **File chính:** backend `src/modules/content/recipe-draft.*`, frontend `src/features/recipe/components/{recipe-editor-form,ai-recipe-draft-assistant}.tsx`, `src/features/recipe/utils/recipe-form-values.ts`, mapper/types, OpenAPI và tài liệu tích hợp.
+- **Kiểm chứng:** Backend lint/typecheck/build/OpenAPI pass, frontend typecheck, lint phạm vi, 786 tests, build 47 trang pass. Docker backend được cập nhật không chạy seed. OpenAI live trả 200 khi chỉ có hai nguyên liệu; một request khác giữ nguyên tên, mô tả, 3 người, sơ chế 0 phút, nấu 20 phút. Chưa kiểm thử tay trên trình duyệt.
+- **PROGRESS:** Giữ nguyên 100% scaffold; cải thiện luồng nhập liệu.
+
+## [2026-11-07] — Dễ đọc cảnh báo thực đơn và giữ sơ đồ quán
+
+- **Mục tiêu:** Trình bày tóm tắt thực đơn dễ đọc và giữ bản đồ hiển thị khi mở cụm quán.
+- **Đã làm:** Mapper tách nội dung theo dấu chấm phẩy, bỏ mục trống; trang chi tiết hiển thị từng mục thành gạch đầu dòng. Popup cụm quán trên sơ đồ dự phòng dùng dialog không khóa nền và nằm về bên phải trên desktop.
+- **File chính:** `src/features/meal-plan/{types/meal-plan.model.ts,mappers/meal-plan.mapper.ts,mappers/meal-plan.mapper.test.ts}`, `src/app/(site)/meal-plans/[id]/page.tsx`, `src/features/restaurant/components/map-fallback.tsx`.
+- **Kiểm chứng:** `npx tsc --noEmit` pass, `npm test` 95 files/785 tests pass, các test liên quan 33/33 pass, `npm run build` 47 trang pass, `git diff --check` pass. Lint phạm vi sửa không có lỗi, còn một cảnh báo biến `swapMutation` chưa dùng trong trang meal-plan. Chưa kiểm thử thủ công trên trình duyệt.
+- **PROGRESS:** Các tỷ lệ scaffold giữ nguyên; chỉ thay đổi cách trình bày và tương tác.
+
+## [2026-11-07] — Khởi động lại backend và kết nối thông số AI
+
+- **Mục tiêu:** Nạp backend mới và kiểm tra thay đổi bản nháp AI.
+- **Đã làm:** Recreate backend Docker từ image mới, `RUN_SEED=false`, giữ MongoDB volume; đồng bộ Swagger live. Endpoint cho phép mô tả trống, nhận khẩu phần/thời gian và giữ lại trong bản nháp. Frontend chuyển các giá trị tác giả vào DTO và cho phép tạo khi mô tả trống; image không gửi cho provider.
+- **Kiểm chứng:** OpenAPI live có các trường mới; OpenAI trả 200 cho mô tả bỏ trống, 3 người, sơ chế 12 phút, nấu 20 phút; anonymous 401. `npx tsc --noEmit` pass, mapper test 7/7 và bộ test editor 9/9 pass. Chưa chạy lại toàn bộ test/build hoặc kiểm thử trình duyệt sau thay đổi.
+- **Tiến độ:** Scaffold AI giữ 100%; khám phá cần xác nhận sau sửa nguyên liệu, popup đi chợ chưa phân bổ tồn kho giữa các món, bản đồ và phiên cần kiểm thử trực quan.
+
+## [2026-11-06] — Kiểm tra backend live và cảnh báo nguyên liệu
+
+- **Mục tiêu:** Kiểm tra món không hiện và provider AI sau khi backend được khởi động.
+- **Đã làm:** Đồng bộ Swagger từ cổng 4000; dùng tài khoản demo member kiểm tra công thức đã duyệt “đậu hủ xào xã”. API trả món ở tab không phù hợp với `UNRESOLVED_INGREDIENT` (“XÃ”) và `DIET_PATTERN`; resolver không nhận “XÃ”, còn “sả” khớp danh mục. Không tự thay dữ liệu hoặc bỏ qua ràng buộc. Thêm cảnh báo có thể quay lại bước nguyên liệu ở màn xem lại. Provider OpenAI của server hiện tại trả bản nháp thành công; OpenAPI live vẫn là hợp đồng cũ, chưa có các trường mới trong source.
+- **File chính:** `src/features/recipe/components/recipe-editor-review.tsx`, catalog Swagger, tài liệu tiến độ.
+- **Kiểm chứng:** API live trả thành công bản xem trước AI với provider OpenAI; hai phiên demo member/admin độc lập lấy đúng role và refresh HTTP 200. Chưa tái hiện phiên trên trình duyệt. Typecheck và lint phạm vi cảnh báo bị dừng sau khi chạy lâu không có kết quả; cần chạy lại.
+- **Còn lại:** Server frontend chưa chạy để kiểm tra trình duyệt; server backend live cần nạp bản build mới trước khi kiểm thử hợp đồng AI mới. Chưa sửa trực tiếp công thức đã xuất bản; tác giả cần xác nhận nguyên liệu và gửi revision theo quy trình duyệt. Tỷ lệ scaffold giữ nguyên.
+
+## [2026-11-06] — Khám phá công thức, phiên, đi chợ và bản đồ
+
+- **Mục tiêu:** Xử lý các vấn đề người dùng báo về công thức, thực đơn, bản đồ và phiên admin.
+- **Đã làm:** Khám phá có phân trang và refetch khi quay lại cửa sổ; giữ khẩu phần/thời gian và liên kết nguyên liệu đã chọn khi áp dụng bản nháp AI. Middleware cho phép client thử khôi phục phiên bằng refresh cookie, tránh gọi refresh lần hai sau lỗi Web Locks và tránh vòng refresh khi tải hồ sơ. Popup theo món gọi preview đã tích hợp, ghi rõ tồn kho được so sánh riêng. Google Maps hiển thị ghim đánh giá và nút toàn màn hình. Backend AI nhận mô tả tùy chọn và thông số tác giả, nhưng frontend chưa dùng hợp đồng mới vì endpoint còn `IN_PROGRESS`.
+- **File chính:** `src/app/(site)/recipes/page.tsx`, `src/app/(site)/meal-plans/[id]/page.tsx`, `src/features/{recipe,meal-plan,restaurant}`, `src/lib/auth-refresh.ts`, `src/middleware.ts`, backend `src/modules/content/recipe-draft.*`.
+- **Kiểm chứng:** `npm test` 95 files/783 tests pass trước thay đổi phân trang cuối; `npx tsc --noEmit` và `npm run build` (47 trang) pass. Backend lint/typecheck/build và OpenAPI generation đã chạy; Swagger đã đồng bộ. `git diff --check` pass. Scoped frontend lint bị dừng sau khi chạy lâu không có kết quả. Chưa kiểm thử tay vì backend không chạy; chưa xác nhận provider AI thật.
+- **PROGRESS:** Các tỷ lệ scaffold giữ nguyên; đây là công việc một phần. Cần kiểm chứng món cụ thể, phân bổ tủ bếp giữa các món, hoàn thiện luồng AI sau khi endpoint READY và kiểm thử bản đồ/phiên trên trình duyệt thực.
+
+## [2026-11-05] — Kiểm tra lại response và lỗi API
+
+- **Mục tiêu:** Rà soát lần hai toàn bộ consumer response theo luồng Query/UI → API → mapper và đối chiếu catalog Swagger.
+- **Đã làm:** `/posts` READY không còn trả fixture hoặc thành công giả khi lỗi mạng/server/ghi dữ liệu; GET meal analysis chỉ trả `null` cho `MEAL_ANALYSIS_NOT_FOUND`, còn `MEAL_ANALYSIS_STALE`, lỗi mạng và payload sai đi tới Query error; meal program detail/create/patch/progress kiểm tra envelope trước khi map. Xóa hai API `/uploads/signature` đã REMOVED, fixture và helper fallback không còn consumer; chuyển `UploadedMediaMeta` sang storage model. Thêm test cho lỗi API và payload thiếu. Không đổi backend contract.
+- **File chính:** `src/features/{post,recipe,video,meal-analysis,meal-program,storage}`, `src/common/constants/endpoints/uploads.endpoints.ts`, `docs/BACKEND_INTEGRATION.md`, `docs/PROGRESS.md`, `docs/WORK-LOG.md`.
+- **Kiểm chứng:** `npm run sync:swagger -- ../backend/openapi.json`, `npx tsc --noEmit`, scoped ESLint (0 lỗi), `npm test` (95 files/783 tests), `npm run build` (47 routes) pass. Chưa kiểm thử tay với backend live.
+- **Tiến độ:** Không đổi %. Các endpoint và trạng thái tích hợp giữ nguyên.
+
+## [2026-11-05] — Rà soát cuối các luồng response frontend
+
+- **Mục tiêu:** Kiểm tra mọi consumer API trong `src/features`, sửa luồng còn đọc sai envelope hoặc trả DTO chưa map.
+- **Đã làm:** Đối chiếu các consumer với catalog Swagger 189 endpoints. Sửa danh sách meal program đọc mảng `data` và phân trang `meta` ở envelope; custom meal dùng envelope chuẩn, báo lỗi khi thiếu dữ liệu; storage admin dùng mảng phân trang chuẩn và mapper cho tham số upload nội bộ. Thêm test API cho ba domain và cập nhật test mapper. Không đổi endpoint/backend contract hoặc trạng thái tích hợp.
+- **File chính:** `src/features/meal-program/{api,types,mappers}`, `src/features/custom-meal/{api,types}`, `src/features/storage/{api,types,mappers}`, `docs/BACKEND_INTEGRATION.md`, `docs/PROGRESS.md`, `docs/WORK-LOG.md`.
+- **Kiểm chứng:** `npm run sync:swagger -- ../backend/openapi.json`, `npx tsc --noEmit`, scoped ESLint, `npm test` (96 files/787 tests), `npm run build` (47 routes) pass. Chưa chạy kiểm thử tay với backend live.
+- **Tiến độ:** Phase 15/17/19 giữ 100% → 100%. Luồng SSE chat và phản hồi Cloudinary trực tiếp không phải envelope backend; hai module upload signature cũ không có consumer runtime.
+
+## [2026-11-05] — Chuẩn hóa Model chi tiết nội dung quản trị
+
+- `adminContentApi.getContent` tách response, dùng mapper theo loại và trả `AdminContentDetail` gồm `type` và Model recipe/bài viết/video. Query detail không còn nhận `BasePostDto`; loại không hỗ trợ được báo lỗi.
+- Đã đồng bộ Swagger từ OpenAPI local, cập nhật mapper/API tests; typecheck, scoped lint, 780 tests và build 47 routes pass. Endpoint/backend contract và trạng thái tích hợp không đổi.
+
+## [2026-11-05] — Hoàn tất lượt rà soát envelope trong mapper frontend
+
+- Chuyển AI governance, duyệt nội dung, nội dung quản trị, AI artifacts, fixture chia sẻ chat, danh sách chương trình thực đơn và tủ bếp sang nhận data/metadata đã tách. Giữ cách xử lý nhiều shape danh sách chương trình và kết quả rỗng của AI artifacts.
+- Rà soát truy cập `data` trên tham số mapper: `food-data` đọc `data` thuộc bản ghi nghiệp vụ; API đã tách envelope trước đó. Chat stream SSE và fixture chia sẻ giữ trạng thái hiện tại; không bổ sung backend capability.
+- Đồng bộ Swagger từ OpenAPI local; typecheck, 774 tests và build 47 routes pass; scoped lint 0 lỗi, 11 cảnh báo unused. Không đổi backend contract.
+
+## [2026-11-05] — Tách response cộng đồng, Contributor, kiểm duyệt và nhà hàng
+
+- Chuyển API/mapper và các nhánh fixture cộng đồng; giữ phân trang, dữ liệu trạng thái Contributor, cờ bảo vệ admin, metadata nhà cung cấp và fallback geocode.
+- Đồng bộ Swagger từ OpenAPI local; typecheck, scoped lint, 764 tests và build 47 routes pass. Các domain khác chưa hoàn tất.
+
+## [2026-11-05] — Tiếp tục tách response xác thực và dinh dưỡng
+
+- Chuyển mapper xác thực, chế độ ăn, phân tích thực đơn và panel dinh dưỡng duyệt sang nhận data; bảo toàn fallback response phẳng của refresh và phân tích, cùng dữ liệu nguồn và độ tin cậy dinh dưỡng.
+- Đồng bộ Swagger từ OpenAPI local; typecheck, scoped lint, 758 tests và build 47 routes pass. Các domain còn lại chưa hoàn thành.
+
+## [2026-11-05] — Tiếp tục tách response theo domain
+
+- Chuyển meal plan, nguyên liệu công khai/quản trị, recommendation, chat riêng tư và thống kê sử dụng AI; giữ metadata phân trang và ràng buộc recommendation. Chat stream SSE giữ luồng riêng.
+- Đồng bộ Swagger từ OpenAPI local, cập nhật mapper test và thêm API test. Typecheck, scoped lint, 752 tests và build 47 routes pass. Các domain còn lại chưa hoàn thành.
+
+## [2026-11-05] — Tiếp tục chuẩn hóa response frontend
+
+- Chuyển API hồ sơ cơ bản, danh mục dị ứng, báo cáo an toàn và gợi ý bản nháp công thức sang truyền data DTO trực tiếp cho mapper; giữ kiểm tra lỗi và fallback hiện tại.
+- Đồng bộ Swagger từ OpenAPI local; cập nhật mapper test và thêm API test. Typecheck, scoped lint, 743 tests và build 47 routes pass. Các mapper còn lại chưa hoàn thành.
+
+## [2026-11-05] — Tách response thông báo
+
+- Notification API đọc data và metadata từ envelope; mapper nhận trực tiếp dữ liệu để xử lý danh sách, số chưa đọc và kết quả đánh dấu đã đọc.
+- Cập nhật mapper test và bổ sung API test; Swagger sync từ OpenAPI local, typecheck, scoped lint, 738 tests và build 47 routes pass. Không đổi backend contract; các domain khác chưa hoàn tất.
+
+## [2026-11-05] — Tiếp tục tách response cho danh mục quản trị
+
+- API danh mục quản trị đọc data và metadata từ envelope; mapper nhận dữ liệu trực tiếp. Giữ fallback và metadata phân trang.
+- Đã cập nhật mapper test, bổ sung test response API; typecheck, scoped lint, 736 tests và build 47 routes pass. Đã sync Swagger từ OpenAPI local; không đổi backend contract.
+- Các domain khác còn mapper nhận response envelope và chưa được chuyển đổi trong thay đổi này.
+
+## [2026-11-05] — Tách endpoint theo feature và làm rõ response flow
+
+- **Yêu cầu**: Dễ tìm endpoint theo feature và kiểm tra độ phức tạp của luồng response.
+- **Thay đổi**: Tách 43 nhóm constants, đặt nhóm nhiều feature dùng vào common; chuyển các consumer và cập nhật quy tắc kiến trúc. Category API đọc envelope và chuyển data DTO cho mapper. Các mapper khác giữ cách xử lý hiện tại trong khi chuyển đổi dần.
+- **Kiểm chứng**: Swagger sync từ `backend/openapi.json`; so sánh AST xác nhận 43 nhóm endpoint giữ nguyên giá trị; typecheck, scoped lint, 734 tests và build 47 routes pass. Không đổi contract hoặc trạng thái tích hợp.
+
+## [2026-11-05] — Refactor quản lý ảnh trong hai luồng quét
+
+- **Yêu cầu**: Tạo nhánh riêng và refactor `frontend/src` mà không đổi hành vi.
+- **Nhánh**: `codex/refactor-src` (từ `dev`).
+- **Thay đổi**: Thêm `features/storage/hooks/use-selected-upload-images.ts` để dùng chung thao tác chọn, xác thực, sắp xếp, xóa và thu hồi URL ảnh. `fridge-upload-zone.tsx` và `receipt-upload-zone.tsx` gọi hook; giới hạn ảnh, thông báo và cách tạo job vẫn giữ nguyên.
+- **Kiểm chứng**: `npx tsc --noEmit`, scoped ESLint, `npm test` (68 files, 732 tests) và `npm run build` (47 routes) pass. `npm run lint` toàn frontend còn 82 lỗi và 318 cảnh báo tại các file ngoài phạm vi sửa. Không đổi endpoint, DTO, mapper hoặc backend contract nên không chạy Swagger sync.
+
 ## [2026-10-29] — Trang /admin/dashboard: Chuẩn hóa hiển thị lý do báo cáo & thêm 2 nút cuộn ngang thanh tabs
 
 - **Yêu cầu**:

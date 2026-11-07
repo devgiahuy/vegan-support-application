@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.14
+**Version:** 4.15
 
-**Updated:** 2026-10-28
+**Updated:** 2026-11-06
 
 **Status:** Approved implementation baseline
 
@@ -41,7 +41,7 @@ The current API contract may still contain legacy Contributor subtype fields unt
 | D21 | Documentation | `docs/SRS.md` is canonical; runtime capability status stays in frontend integration docs; roadmap is separate from implementation phases. |
 | D22 | Safety | Nutrition, freshness, compatibility, BMI, and AI answers are educational support, not diagnosis or guaranteed safety. |
 | D23 | Usage billing | User-approved 2026-10-13 and payOS conversion 2026-10-14: payOS exclusively for new one-time cumulative AI usage/Pantry capacity packages and, since 2026-10-27, a non-renewing combo with 1-month/3-month/1-year durations (BL-20.1). App rollout remains development/test; payOS checkout is real money, without sandbox or mock fallback. No recurring or media-storage purchase. |
-| D24 | AI recipe draft | Accept title, description and ordered ingredient names without image analysis; return editable amount/unit/serving/time/step suggestions. The author edits and saves via the existing DRAFT content flow. AI output does not publish or become canonical nutrition data. Approved by user 2026-10-24. |
+| D24 | AI recipe draft | Accept ordered ingredient names and optional author-supplied title, description, servings and preparation/cooking times. Preserve supplied values and suggest missing values; return an editable draft for the existing DRAFT content flow. Cover images are supplied separately. AI output does not publish or become canonical nutrition data. Updated at user request 2026-11-07. |
 
 ## 3. MVP scope
 

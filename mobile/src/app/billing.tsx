@@ -6,6 +6,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useQueryClient } from '@tanstack/react-query';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { ShowMoreButton, useShowMore } from '@/components/shared/show-more';
 import { LoadingState } from '@/components/shared/state-views';
 import { useAuthStore } from '@/store/useAuthStore';
 import { billingErrorMessage } from '@/features/billing/lib/billing-errors';
@@ -24,7 +25,12 @@ import {
   useReconcileBillingOrderMutation,
 } from '@/features/billing/queries/billing.queries';
 import type { BillingOrder, BillingProduct, EntitlementSubscription } from '@/features/billing/types/billing.model';
+import { QrCode } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
+import { useIconColors } from '@/lib/theme-colors';
+
+/** Số dòng "Biến động quyền lợi" hiện sẵn; phần còn lại nằm sau nút "Xem thêm". */
+const LEDGER_PREVIEW_COUNT = 3;
 
 function openCheckout(url: string) {
   // Expo web opens in the current tab, so an async order request cannot lose
@@ -143,6 +149,7 @@ function DurationPlans({
   anyPurchasing: boolean;
   onBuy: (productId: string) => void;
 }) {
+  const colors = useIconColors();
   const [selectedPlanId, setSelectedPlanId] = React.useState('');
   const selected = plans.find((plan) => plan.id === selectedPlanId) ?? plans[0];
   if (!selected) return null;
@@ -180,7 +187,9 @@ function DurationPlans({
           </Text>
         ))}
         <PrimaryButton
-          label="Thanh toán qua payOS"
+          label={purchasingId === selected.id ? 'Đang tạo đơn…' : `Thanh toán gói ${selected.durationLabel} qua payOS`}
+          icon={<QrCode size={18} color={colors.primaryForeground} />}
+          iconPosition="left"
           loading={purchasingId === selected.id}
           disabled={!enabled || !selected.canBuy || anyPurchasing}
           onPress={() => onBuy(selected.id)}
@@ -191,6 +200,7 @@ function DurationPlans({
 }
 
 export default function BillingScreen() {
+  const colors = useIconColors();
   const authenticated = useAuthStore((state) => state.isAuthenticated);
   const client = useQueryClient();
   const params = useLocalSearchParams<{ orderId?: string }>();
@@ -204,6 +214,8 @@ export default function BillingScreen() {
   const intents = React.useRef(new Map<string, string>());
   const catalog = useBillingCatalogQuery();
   const allowances = useEntitlementsQuery();
+  // Biến động quyền lợi chỉ hiện 3 dòng mới nhất, phần còn lại mở bằng "Xem thêm".
+  const ledgerView = useShowMore(allowances.data?.ledger ?? [], LEDGER_PREVIEW_COUNT);
   const history = useBillingOrdersQuery(page);
   const selected = useBillingOrderQuery(selectedId);
   const purchase = useCreateBillingOrderMutation();
@@ -362,7 +374,13 @@ export default function BillingScreen() {
                     Cộng dồn · Không hết hạn trong bản demo
                   </Text>
                   <PrimaryButton
-                    label="Thanh toán qua payOS"
+                    label={
+                      purchase.isPending && purchase.variables?.productId === product.id
+                        ? 'Đang tạo đơn…'
+                        : 'Thanh toán qua payOS'
+                    }
+                    icon={<QrCode size={18} color={colors.primaryForeground} />}
+                    iconPosition="left"
                     loading={purchase.isPending && purchase.variables?.productId === product.id}
                     disabled={!catalog.data?.enabled || !product.canBuy || purchase.isPending}
                     onPress={() => void buy(product.id)}
@@ -421,7 +439,7 @@ export default function BillingScreen() {
               {allowances.data?.ledger.length === 0 && (
                 <Text className="text-muted-foreground">Chưa có biến động.</Text>
               )}
-              {allowances.data?.ledger.map((entry) => (
+              {ledgerView.visible.map((entry) => (
                 <View
                   key={entry.id}
                   className="flex-row items-center justify-between gap-3 border-b border-border py-3"
@@ -432,9 +450,26 @@ export default function BillingScreen() {
                     </Text>
                     <Text className="text-xs text-muted-foreground">{entry.createdAtLabel}</Text>
                   </View>
-                  <Text className="font-semibold text-foreground">{entry.deltaLabel}</Text>
+                  <Text
+                    className={cn(
+                      'font-semibold',
+                      entry.delta > 0
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : entry.delta < 0
+                          ? 'text-rose-600 dark:text-rose-400'
+                          : 'text-muted-foreground'
+                    )}
+                  >
+                    {entry.deltaLabel}
+                  </Text>
                 </View>
               ))}
+              <ShowMoreButton
+                collapsible={ledgerView.collapsible}
+                expanded={ledgerView.expanded}
+                hiddenCount={ledgerView.hiddenCount}
+                onPress={ledgerView.toggle}
+              />
             </View>
             <View className="flex-row gap-2">
               <Link href={'/pantry' as Href} asChild>

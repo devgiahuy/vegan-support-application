@@ -114,7 +114,7 @@ export class AiArtifactMapper extends BaseMapper<AiArtifactDto, AiArtifact> {
   }
 
   toPaginationModel(
-    response: PublicAiArtifactListResponseDto | PaginationResult<AiArtifactDto> | null | undefined
+    response: PaginationResult<AiArtifactDto> | null | undefined
   ): PaginationResult<AiArtifact> {
     if (!response) {
       return {
@@ -130,21 +130,18 @@ export class AiArtifactMapper extends BaseMapper<AiArtifactDto, AiArtifact> {
       };
     }
 
-    const rawItems: AiArtifactDto[] =
-      'data' in response && Array.isArray(response.data)
-        ? response.data
-        : 'items' in response && Array.isArray(response.items)
-          ? response.items
-          : [];
+    return this.toPublicListModel(response.items, response.metadata);
+  }
 
-    const items = rawItems.map((item) => this.toModel(item));
-
-    const meta =
-      'meta' in response && response.meta
-        ? response.meta
-        : 'metadata' in response && response.metadata
-          ? response.metadata
-          : null;
+  toPublicListModel(
+    rawItems: AiArtifactDto[] | null | undefined,
+    meta:
+      | PublicAiArtifactListResponseDto['meta']
+      | PaginationResult<AiArtifactDto>['metadata']
+      | null
+      | undefined
+  ): PaginationResult<AiArtifact> {
+    const items = (Array.isArray(rawItems) ? rawItems : []).map((item) => this.toModel(item));
 
     const page = safeNumber(meta?.page, 1);
     const limit = safeNumber(meta?.limit, 20);

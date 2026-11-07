@@ -7,6 +7,14 @@
  */
 
 import type { PostStatus, PostType, VideoSource } from '@/common/enums';
+import type { Recipe } from '@/features/recipe/types/recipe.model';
+import type { Article } from '@/features/post/types/post.model';
+import type { Video } from '@/features/video/types/video.model';
+
+export type AdminContentDetail =
+  | { type: PostType.RECIPE; content: Recipe }
+  | { type: PostType.BLOG; content: Article }
+  | { type: PostType.VIDEO; content: Video };
 
 export type AdminContentType = PostType;
 

@@ -1,5 +1,5 @@
 import { BaseMapper, pickField, safeArray, safeString } from '@/lib/mapper';
-import type { AllergenDto, AllergenCatalogResponseDto } from '../types/allergen.dto';
+import type { AllergenDto } from '../types/allergen.dto';
 import type { AllergenOption } from '../types/allergen.model';
 
 export class AllergenMapper extends BaseMapper<AllergenDto, AllergenOption> {
@@ -13,8 +13,8 @@ export class AllergenMapper extends BaseMapper<AllergenDto, AllergenOption> {
         .filter(Boolean),
     };
   }
-  catalog(dto: AllergenCatalogResponseDto): AllergenOption[] {
-    return safeArray<AllergenDto>(pickField(dto, ['data'], []))
+  catalog(data: (AllergenDto | null)[] | null | undefined): AllergenOption[] {
+    return safeArray<AllergenDto | null>(data)
       .map((item) => this.toModel(item))
       .filter((item) => item.code && item.label);
   }

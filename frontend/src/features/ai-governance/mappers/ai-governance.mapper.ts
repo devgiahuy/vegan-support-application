@@ -8,8 +8,6 @@ import type {
   AiGovernanceControlsResponseDto,
   AiGovernanceFlagItemDto,
   AiGovernanceFlagsResponseDto,
-  AiGovernanceHealthResponseDto,
-  AiGovernanceMetricsResponseDto,
   AiGovernanceRequestItemDto,
   AiGovernanceRequestsResponseDto,
   AiHealthSummaryDto,
@@ -103,8 +101,8 @@ export class AiGovernanceMapper extends BaseMapper<AiGovernanceRequestItemDto, A
   }
 
   /** `GET /admin/ai/health` — Tổng quan 24 giờ */
-  toHealthSummary(dto: AiGovernanceHealthResponseDto | null | undefined): AiOperationalHealth {
-    const data = (pickField(dto, ['data'], null) as AiHealthSummaryDto | null) ?? {};
+  toHealthSummary(dto: AiHealthSummaryDto | null | undefined): AiOperationalHealth {
+    const data = dto ?? {};
     const last24h = data.last24Hours ?? {};
     const controls = safeArray(data.controls, (c) => c).filter(Boolean);
 
@@ -120,8 +118,8 @@ export class AiGovernanceMapper extends BaseMapper<AiGovernanceRequestItemDto, A
   }
 
   /** `GET /admin/ai/metrics` — Chỉ số tổng hợp */
-  toMetricsSummary(dto: AiGovernanceMetricsResponseDto | null | undefined): AiGovernanceMetrics {
-    const data = (pickField(dto, ['data'], null) as AiMetricsDataDto | null) ?? {};
+  toMetricsSummary(dto: AiMetricsDataDto | null | undefined): AiGovernanceMetrics {
+    const data = dto ?? {};
     const windowRaw = data.window ?? {};
     const requestsRaw = safeArray(data.requests, (r) => r);
 
@@ -265,15 +263,13 @@ export class AiGovernanceMapper extends BaseMapper<AiGovernanceRequestItemDto, A
 
   /** `GET /admin/ai/requests` — Danh sách phân trang */
   toRequestsList(
-    dto: AiGovernanceRequestsResponseDto | null | undefined
+    rawItems: AiGovernanceRequestsResponseDto['data'],
+    meta?: AiGovernanceRequestsResponseDto['meta']
   ): PaginationResult<AiRequestLog> {
-    const rawItems =
-      (pickField(dto, ['data'], null) as (AiGovernanceRequestItemDto | null)[] | null) ?? [];
     const items = safeArray<AiGovernanceRequestItemDto | null, AiRequestLog>(
       rawItems,
       (item: AiGovernanceRequestItemDto | null | undefined) => this.toRequestLog(item)
     ).filter((item) => item.id.length > 0);
-    const meta = pickField(dto, ['meta'], null) as AiGovernanceRequestsResponseDto['meta'];
     return {
       items,
       metadata: meta
@@ -309,9 +305,7 @@ export class AiGovernanceMapper extends BaseMapper<AiGovernanceRequestItemDto, A
     };
   }
 
-  toFlagsList(dto: AiGovernanceFlagsResponseDto | null | undefined): AiFlag[] {
-    const rawItems =
-      (pickField(dto, ['data'], null) as (AiGovernanceFlagItemDto | null)[] | null) ?? [];
+  toFlagsList(rawItems: AiGovernanceFlagsResponseDto['data']): AiFlag[] {
     return safeArray<AiGovernanceFlagItemDto | null, AiFlag>(
       rawItems,
       (item: AiGovernanceFlagItemDto | null | undefined) => this.toFlag(item)
@@ -336,9 +330,7 @@ export class AiGovernanceMapper extends BaseMapper<AiGovernanceRequestItemDto, A
     };
   }
 
-  toFeaturesList(dto: AiGovernanceControlsResponseDto | null | undefined): AiFeatureToggle[] {
-    const rawItems =
-      (pickField(dto, ['data'], null) as (AiGovernanceControlItemDto | null)[] | null) ?? [];
+  toFeaturesList(rawItems: AiGovernanceControlsResponseDto['data']): AiFeatureToggle[] {
     return safeArray<AiGovernanceControlItemDto | null, AiFeatureToggle>(
       rawItems,
       (item: AiGovernanceControlItemDto | null | undefined) => this.toFeature(item)
@@ -346,8 +338,7 @@ export class AiGovernanceMapper extends BaseMapper<AiGovernanceRequestItemDto, A
   }
 
   /** `PATCH /admin/ai/features/:feature` → item sau cập nhật */
-  toToggledFeature(dto: AiGovernanceControlResponseDto | null | undefined): AiFeatureToggle {
-    const data = pickField(dto, ['data'], null) as AiGovernanceControlItemDto | null;
+  toToggledFeature(data: AiGovernanceControlResponseDto['data']): AiFeatureToggle {
     return this.toFeature(data);
   }
 
@@ -371,15 +362,13 @@ export class AiGovernanceMapper extends BaseMapper<AiGovernanceRequestItemDto, A
   }
 
   toAuditList(
-    dto: AiGovernanceControlAuditResponseDto | null | undefined
+    rawItems: AiGovernanceControlAuditResponseDto['data'],
+    meta?: AiGovernanceControlAuditResponseDto['meta']
   ): PaginationResult<AiFeatureAuditLog> {
-    const rawItems =
-      (pickField(dto, ['data'], null) as (AiGovernanceControlAuditItemDto | null)[] | null) ?? [];
     const items = safeArray<AiGovernanceControlAuditItemDto | null, AiFeatureAuditLog>(
       rawItems,
       (item: AiGovernanceControlAuditItemDto | null | undefined) => this.toAuditItem(item)
     ).filter((item) => item.id.length > 0);
-    const meta = pickField(dto, ['meta'], null) as AiGovernanceControlAuditResponseDto['meta'];
     return {
       items,
       metadata: meta

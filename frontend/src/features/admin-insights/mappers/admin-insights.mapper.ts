@@ -213,11 +213,14 @@ function toAiUsageRow(dto: AdminAiUsageItemDto): AiUsageRow {
   };
 }
 
-export function toAiUsagePage(dto: AdminAiUsageResponseDto | null | undefined): AiUsagePage {
+export function toAiUsagePage(
+  data: AdminAiUsageResponseDto['data'] | null | undefined,
+  meta?: AdminAiUsageResponseDto['meta'] | null
+): AiUsagePage {
   return {
-    items: safeArray<AdminAiUsageItemDto, AiUsageRow>(pickField(dto, ['data'], []), toAiUsageRow),
-    page: Math.max(1, count(pickField(dto?.meta, ['page'], 1))),
-    totalPages: count(pickField(dto?.meta, ['totalPages'], 0)),
-    total: count(pickField(dto?.meta, ['total'], 0)),
+    items: safeArray<AdminAiUsageItemDto, AiUsageRow>(data, toAiUsageRow),
+    page: Math.max(1, count(pickField(meta, ['page'], 1))),
+    totalPages: count(pickField(meta, ['totalPages'], 0)),
+    total: count(pickField(meta, ['total'], 0)),
   };
 }

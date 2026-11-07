@@ -15,7 +15,6 @@ import type {
   MealPlanDayDto,
   MealPlanDto,
   MealPlanListResponseDto,
-  MealPlanResponseDto,
   MealSlotDto,
   PlanUserSummaryDto,
   PlanWarningAffectedSlotDto,
@@ -467,10 +466,15 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
 
   private toUserSummary(dto: PlanUserSummaryDto | null | undefined): PlanUserSummary | null {
     if (!dto || typeof dto !== 'object') return null;
+    const detail = safeString(pickField(dto, ['detail'], ''));
     return {
       status: safeString(pickField(dto, ['status'], 'NO_SERIOUS_ISSUE')),
       title: safeString(pickField(dto, ['title'], '')),
-      detail: safeString(pickField(dto, ['detail'], '')),
+      detail,
+      detailLines: detail
+        .split(';')
+        .map((line) => line.trim())
+        .filter(Boolean),
       suggestion: pickField(dto, ['suggestion'], null)
         ? safeString(pickField(dto, ['suggestion'], ''))
         : null,
@@ -515,12 +519,13 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
   }
 
   /** `GET /meal-plans` — data là mảng summary. */
-  toListModel(dto: MealPlanListResponseDto | null | undefined): PaginationResult<MealPlan> {
-    const rawItems = pickField(dto, ['data'], null) as (MealPlanDto | null)[] | null;
+  toListModel(
+    rawItems: MealPlanListResponseDto['data'],
+    meta?: MealPlanListResponseDto['meta']
+  ): PaginationResult<MealPlan> {
     const items = this.toModelList(
       safeArray<MealPlanDto | null, MealPlanDto | null>(rawItems, (item) => item)
     );
-    const meta = pickField(dto, ['meta'], null) as MealPlanListResponseDto['meta'];
     const page = safeNumber(pickField(meta, ['page'], 1));
     const limit = safeNumber(pickField(meta, ['limit'], 10));
     const totalItems = safeNumber(pickField(meta, ['total'], items.length));
@@ -539,17 +544,15 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
   }
 
   /** `POST /meal-plans/generate` / `GET /meal-plans/:id` / swap → 1 detail. */
-  toDetailModel(dto: MealPlanResponseDto | null | undefined): MealPlan {
-    const data = pickField(dto, ['data'], null) as MealPlanDto | null;
+  toDetailModel(data: MealPlanDto | null | undefined): MealPlan {
     return this.toModel(data);
   }
 
   /** `DELETE /meal-plans/:id` → `{id, deleted}`. */
-  toDeleteModel(dto: DeleteMealPlanResponseDto | null | undefined): {
+  toDeleteModel(data: DeleteMealPlanResponseDto['data']): {
     id: string;
     deleted: boolean;
   } {
-    const data = pickField(dto, ['data'], null) as DeleteMealPlanResponseDto['data'];
     return {
       id: safeString(pickField(data, ['id'], '')),
       deleted: pickField<boolean>(data, ['deleted'], false),

@@ -3,14 +3,19 @@ import { createRecipePostRequestSchema } from './content.schemas.js';
 
 export const generateRecipeDraftRequestSchema = z
   .object({
-    title: z.string().trim().min(3).max(200),
-    description: z.string().trim().min(1).max(500),
+    title: z.string().trim().max(200).refine((value) => !value || value.length >= 3).default(''),
+    description: z.string().trim().max(500).default(''),
+    servings: z.number().int().min(1).max(100).optional(),
+    prepTimeMinutes: z.number().int().min(0).max(10_080).optional(),
+    cookTimeMinutes: z.number().int().min(0).max(10_080).optional(),
     ingredientNames: z.array(z.string().trim().min(1).max(160)).min(1).max(50),
   })
   .strict();
 
 export const recipeDraftSuggestionSchema = z
   .object({
+    title: z.string().trim().min(5).max(200),
+    description: z.string().trim().min(1).max(500),
     body: z.string().trim().min(20).max(100_000),
     servings: z.number().int().min(1).max(100),
     prepTimeMinutes: z.number().int().min(0).max(10_080),

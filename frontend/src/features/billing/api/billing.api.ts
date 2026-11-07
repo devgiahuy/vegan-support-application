@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { BILLING_ENDPOINTS } from '@/features/billing/constants/billing.endpoints';
 import type {
   BillingCatalogResponseDto,
   BillingOrderResponseDto,
@@ -17,20 +17,20 @@ import {
 export const billingApi = {
   async catalog() {
     return catalogMapper.toModel(
-      (await api.get<BillingCatalogResponseDto>(API_ENDPOINTS.BILLING.PRODUCTS, { silent: true }))
-        .data.data
+      (await api.get<BillingCatalogResponseDto>(BILLING_ENDPOINTS.PRODUCTS, { silent: true })).data
+        .data
     );
   },
   async entitlements() {
     return entitlementMapper.toModel(
-      (await api.get<EntitlementResponseDto>(API_ENDPOINTS.BILLING.ENTITLEMENTS, { silent: true }))
-        .data.data
+      (await api.get<EntitlementResponseDto>(BILLING_ENDPOINTS.ENTITLEMENTS, { silent: true })).data
+        .data
     );
   },
   async orders(params: BillingOrdersRequestDto) {
     return orderMapper.toOrders(
       (
-        await api.get<BillingOrdersResponseDto>(API_ENDPOINTS.BILLING.ORDERS, {
+        await api.get<BillingOrdersResponseDto>(BILLING_ENDPOINTS.ORDERS, {
           params,
           silent: true,
         })
@@ -39,14 +39,14 @@ export const billingApi = {
   },
   async order(id: string) {
     return orderMapper.toModel(
-      (await api.get<BillingOrderResponseDto>(API_ENDPOINTS.BILLING.ORDER(id), { silent: true }))
-        .data.data
+      (await api.get<BillingOrderResponseDto>(BILLING_ENDPOINTS.ORDER(id), { silent: true })).data
+        .data
     );
   },
   async create(input: CreateBillingOrderRequestDto) {
     return orderMapper.toModel(
       (
-        await api.post<BillingOrderResponseDto>(API_ENDPOINTS.BILLING.ORDERS, input, {
+        await api.post<BillingOrderResponseDto>(BILLING_ENDPOINTS.ORDERS, input, {
           silent: true,
         })
       ).data.data
@@ -55,7 +55,7 @@ export const billingApi = {
   async reconcile(id: string) {
     return orderMapper.toModel(
       (
-        await api.post<BillingOrderResponseDto>(API_ENDPOINTS.BILLING.RECONCILE(id), undefined, {
+        await api.post<BillingOrderResponseDto>(BILLING_ENDPOINTS.RECONCILE(id), undefined, {
           silent: true,
         })
       ).data.data
