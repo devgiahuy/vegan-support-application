@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { RECEIPT_JOBS_ENDPOINTS } from '@/features/receipt/constants/receipt-jobs.endpoints';
 import type {
   AddReceiptImagesRequestDto,
   ReceiptConfirmationEnvelopeDto,
@@ -20,7 +20,7 @@ export const receiptApi = {
    */
   createJob: async (input: CreateReceiptJobInput): Promise<ReceiptJob> => {
     const payload = receiptMapper.toCreateJobDto(input);
-    const res = await api.post<ReceiptJobEnvelopeDto>(API_ENDPOINTS.RECEIPT_JOBS.JOBS, payload, {
+    const res = await api.post<ReceiptJobEnvelopeDto>(RECEIPT_JOBS_ENDPOINTS.JOBS, payload, {
       showErrorToast: true,
     });
     return receiptMapper.toModel(res.data.data);
@@ -30,7 +30,7 @@ export const receiptApi = {
    * Lấy chi tiết tác vụ bóc tách hóa đơn, tiến trình xử lý và danh sách dòng sản phẩm
    */
   getJob: async (id: string): Promise<ReceiptJob> => {
-    const res = await api.get<ReceiptJobEnvelopeDto>(API_ENDPOINTS.RECEIPT_JOBS.JOB_DETAIL(id), {
+    const res = await api.get<ReceiptJobEnvelopeDto>(RECEIPT_JOBS_ENDPOINTS.JOB_DETAIL(id), {
       silent: true,
     });
     return receiptMapper.toModel(res.data.data);
@@ -46,7 +46,7 @@ export const receiptApi = {
   ): Promise<ReceiptJob> => {
     const payload = receiptMapper.toUpdateCandidateDto(input);
     const res = await api.patch<ReceiptJobEnvelopeDto>(
-      API_ENDPOINTS.RECEIPT_JOBS.UPDATE_CANDIDATE(jobId, candidateId),
+      RECEIPT_JOBS_ENDPOINTS.UPDATE_CANDIDATE(jobId, candidateId),
       payload,
       { showErrorToast: true }
     );
@@ -62,7 +62,7 @@ export const receiptApi = {
   ): Promise<ReceiptConfirmationDiff> => {
     const payload = receiptMapper.toConfirmJobDto(input);
     const res = await api.post<ReceiptConfirmationEnvelopeDto>(
-      API_ENDPOINTS.RECEIPT_JOBS.CONFIRM(jobId),
+      RECEIPT_JOBS_ENDPOINTS.CONFIRM(jobId),
       payload,
       { showErrorToast: true }
     );
@@ -74,7 +74,7 @@ export const receiptApi = {
    */
   cancelJob: async (jobId: string): Promise<ReceiptJob> => {
     const res = await api.post<ReceiptJobEnvelopeDto>(
-      API_ENDPOINTS.RECEIPT_JOBS.CANCEL(jobId),
+      RECEIPT_JOBS_ENDPOINTS.CANCEL(jobId),
       {},
       { showErrorToast: true }
     );
@@ -93,7 +93,7 @@ export const receiptApi = {
           : `retry-${Date.now()}`),
     };
     const res = await api.post<ReceiptJobEnvelopeDto>(
-      API_ENDPOINTS.RECEIPT_JOBS.RETRY(jobId),
+      RECEIPT_JOBS_ENDPOINTS.RETRY(jobId),
       payload,
       { showErrorToast: true }
     );
@@ -105,7 +105,7 @@ export const receiptApi = {
    */
   addImages: async (jobId: string, payload: AddReceiptImagesRequestDto): Promise<ReceiptJob> => {
     const res = await api.post<ReceiptJobEnvelopeDto>(
-      API_ENDPOINTS.RECEIPT_JOBS.ADD_IMAGES(jobId),
+      RECEIPT_JOBS_ENDPOINTS.ADD_IMAGES(jobId),
       payload,
       { showErrorToast: true }
     );

@@ -33,7 +33,7 @@ describe('ModerationMapper reports', () => {
       ],
       meta: { page: 1, limit: 10, total: 1, totalPages: 1 },
     };
-    const result = moderationMapper.toReportsList(envelope);
+    const result = moderationMapper.toReportsList(envelope?.data, envelope?.meta);
     expect(result.items).toHaveLength(1);
     const report = result.items[0];
     expect(report.targetType).toBe(ReportTargetType.POST);
@@ -46,9 +46,9 @@ describe('ModerationMapper reports', () => {
 
   it('decision lạ giữ nguyên qua fallback + envelope null', () => {
     const report = moderationMapper.toResolvedReport({
-      success: true,
-      data: { id: 'r', status: 'RESOLVED', resolution: { decision: 'MYSTERY' } },
-      meta: null,
+      id: 'r',
+      status: 'RESOLVED',
+      resolution: { decision: 'MYSTERY' },
     });
     expect(report.status).toBe(ReportStatus.RESOLVED);
     // safeEnum fallback NO_VIOLATION khi mã lạ
@@ -112,7 +112,7 @@ describe('ModerationMapper users', () => {
       ],
       meta: { page: 1, limit: 10, total: 2, total_pages: 1 },
     };
-    const result = moderationMapper.toUsersList(envelope);
+    const result = moderationMapper.toUsersList(envelope?.data, envelope?.meta);
     expect(result.items[0].status).toBe(MemberStatus.BANNED);
     expect(result.items[0].statusLabel).toBe('Đã cấm');
     expect(result.items[1].isProtectedAdmin).toBe(true);
@@ -120,11 +120,7 @@ describe('ModerationMapper users', () => {
   });
 
   it('status lạ → ACTIVE, envelope null → defaults', () => {
-    const user = moderationMapper.toSingleUser({
-      success: true,
-      data: { id: 'u', status: 'GHOST' },
-      meta: null,
-    });
+    const user = moderationMapper.toSingleUser({ id: 'u', status: 'GHOST' });
     expect(user.status).toBe(MemberStatus.ACTIVE);
     expect(moderationMapper.toSingleUser(null).id).toBe('');
   });
@@ -156,7 +152,7 @@ describe('ModerationMapper comments', () => {
       ],
       meta: { page: 1, limit: 10, total: 2, totalPages: 1 },
     };
-    const result = moderationMapper.toModCommentsList(envelope);
+    const result = moderationMapper.toModCommentsList(envelope?.data, envelope?.meta);
     expect(result.items).toHaveLength(2);
     expect(result.items[0].statusLabel).toBe('Đã ẩn');
     expect(result.items[0].authorName).toBe('Người dùng ẩn danh');
@@ -174,24 +170,20 @@ describe('ModerationMapper comments', () => {
 
   it('toAuditEntry trả resolution hoặc null', () => {
     const resolved = moderationMapper.toResolvedReport({
-      success: true,
-      data: { id: 'r', resolution: { decision: 'WARN', reason: 'Nhắc', resolvedBy: 'A' } },
-      meta: null,
+      id: 'r',
+      resolution: { decision: 'WARN', reason: 'Nhắc', resolvedBy: 'A' },
     });
     expect(moderationMapper.toAuditEntry(resolved)?.decisionLabel).toBe('Cảnh cáo');
-    const open = moderationMapper.toResolvedReport({
-      success: true,
-      data: { id: 'r2' },
-      meta: null,
-    });
+    const open = moderationMapper.toResolvedReport({ id: 'r2' });
     expect(moderationMapper.toAuditEntry(open)).toBeNull();
   });
 
   it('target COMMENT + status lạ + priority mặc định', () => {
     const report = moderationMapper.toResolvedReport({
-      success: true,
-      data: { id: 'r', targetType: 'COMMENT', status: 'WEIRD', openCount: 0 },
-      meta: null,
+      id: 'r',
+      targetType: 'COMMENT',
+      status: 'WEIRD',
+      openCount: 0,
     });
     expect(report.targetTypeLabel).toBe('Bình luận');
     expect(report.status).toBe(ReportStatus.OPEN);
@@ -200,16 +192,16 @@ describe('ModerationMapper comments', () => {
   });
 
   it('user list lọc rỗng + meta thiếu', () => {
-    const result = moderationMapper.toUsersList({ success: true, data: [{ id: '' }], meta: null });
+    const result = moderationMapper.toUsersList([{ id: '' }], null);
     expect(result.items).toEqual([]);
     expect(result.metadata.totalItems).toBe(0);
   });
 
   it('comment VISIBLE label + author có tên', () => {
     const comment = moderationMapper.toSingleModComment({
-      success: true,
-      data: { id: 'c', status: 'VISIBLE', author: { displayName: 'Bình' } },
-      meta: null,
+      id: 'c',
+      status: 'VISIBLE',
+      author: { displayName: 'Bình' },
     });
     expect(comment.statusLabel).toBe('Hiển thị');
     expect(comment.authorName).toBe('Bình');

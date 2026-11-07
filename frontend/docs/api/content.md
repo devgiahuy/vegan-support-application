@@ -51,7 +51,7 @@ Soft-delete content thuộc quyền sở hữu
 - Responses: `200` → DeletePostResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ## POST `/api/v1/recipe-drafts/generate`
-Generate an editable recipe draft from a title, description and ingredient names
+Generate an editable recipe draft from ingredient names and optional basic information
 - operationId: `generateRecipeDraft`
 - Params: —
 - Request: `GenerateRecipeDraftRequest`
@@ -297,8 +297,6 @@ Generate an editable recipe draft from a title, description and ingredient names
 {
   "type": "object",
   "required": [
-    "title",
-    "description",
     "ingredientNames"
   ],
   "properties": {
@@ -307,6 +305,15 @@ Generate an editable recipe draft from a title, description and ingredient names
     },
     "description": {
       "type": "string"
+    },
+    "servings": {
+      "type": "integer"
+    },
+    "prepTimeMinutes": {
+      "type": "integer"
+    },
+    "cookTimeMinutes": {
+      "type": "integer"
     },
     "ingredientNames": {
       "type": "array",

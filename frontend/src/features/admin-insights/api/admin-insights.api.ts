@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { ADMIN_INSIGHTS_ENDPOINTS } from '@/features/admin-insights/constants/admin-insights.endpoints';
 import type {
   AdminAiUsageRequestDto,
   AdminAiUsageResponseDto,
@@ -16,7 +16,7 @@ export const adminInsightsApi = {
   async revenue(params: AdminRevenueRequestDto) {
     return toRevenueStats(
       (
-        await api.get<AdminRevenueResponseDto>(API_ENDPOINTS.ADMIN_INSIGHTS.BILLING_REVENUE, {
+        await api.get<AdminRevenueResponseDto>(ADMIN_INSIGHTS_ENDPOINTS.BILLING_REVENUE, {
           params,
         })
       ).data.data
@@ -24,9 +24,9 @@ export const adminInsightsApi = {
   },
   /** `GET /admin/ai/usage` — bảng truy vết sử dụng AI (không chứa nội dung prompt) */
   async usage(params: AdminAiUsageRequestDto) {
-    return toAiUsagePage(
-      (await api.get<AdminAiUsageResponseDto>(API_ENDPOINTS.ADMIN_INSIGHTS.AI_USAGE, { params }))
-        .data
-    );
+    const response = await api.get<AdminAiUsageResponseDto>(ADMIN_INSIGHTS_ENDPOINTS.AI_USAGE, {
+      params,
+    });
+    return toAiUsagePage(response.data?.data, response.data?.meta);
   },
 };

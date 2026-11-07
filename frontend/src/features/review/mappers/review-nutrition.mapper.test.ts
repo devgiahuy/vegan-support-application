@@ -117,7 +117,7 @@ const response: ReviewNutritionPanelResponseDto = {
 
 describe('ReviewNutritionMapper', () => {
   it('maps the five review metrics in fixed order, filling absent ones as missing', () => {
-    const panel = reviewNutritionMapper.toResponse(response);
+    const panel = reviewNutritionMapper.toModel(response.data);
 
     expect(panel.metrics.map((metric) => metric.key)).toEqual([
       ReviewNutritionMetricKey.CALORIES,
@@ -133,7 +133,7 @@ describe('ReviewNutritionMapper', () => {
   });
 
   it('keeps source labels, confidence and reviewer overrides', () => {
-    const panel = reviewNutritionMapper.toResponse(response);
+    const panel = reviewNutritionMapper.toModel(response.data);
     const [calories, protein] = panel.metrics;
 
     expect(calories.finalOrigin).toBe(ReviewNutritionOrigin.CANONICAL_CALCULATED);
@@ -147,7 +147,7 @@ describe('ReviewNutritionMapper', () => {
   });
 
   it('never presents a partial sum as the value of a missing metric', () => {
-    const fiber = reviewNutritionMapper.toResponse(response).metrics[4];
+    const fiber = reviewNutritionMapper.toModel(response.data).metrics[4];
 
     expect(fiber.finalValue).toBeNull();
     expect(fiber.partialValue).toBe(1.2);
@@ -155,7 +155,7 @@ describe('ReviewNutritionMapper', () => {
   });
 
   it('maps job state, retry schedule and error label', () => {
-    const job = reviewNutritionMapper.toResponse(response).aiJob;
+    const job = reviewNutritionMapper.toModel(response.data).aiJob;
 
     expect(job?.state).toBe(ReviewNutritionJobState.RETRY_SCHEDULED);
     expect(job?.isActive).toBe(true);
@@ -167,7 +167,7 @@ describe('ReviewNutritionMapper', () => {
   });
 
   it('maps uncovered ingredients, previous approved reference and audit', () => {
-    const panel = reviewNutritionMapper.toResponse(response);
+    const panel = reviewNutritionMapper.toModel(response.data);
 
     expect(panel.uncoveredIngredients[0]).toMatchObject({
       displayName: 'Rau thơm',

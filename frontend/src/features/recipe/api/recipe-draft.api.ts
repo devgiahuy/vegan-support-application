@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { RECIPE_DRAFTS_ENDPOINTS } from '@/features/recipe/constants/recipe-drafts.endpoints';
 import { recipeDraftMapper } from '../mappers/recipe-draft.mapper';
 import type {
   GenerateRecipeDraftRequestDto,
@@ -14,7 +14,7 @@ export const recipeDraftApi = {
   generateDraft: async (prompt: RecipeDraftPrompt): Promise<RecipeDraftSuggestion> => {
     const payload: GenerateRecipeDraftRequestDto = recipeDraftMapper.toDto(prompt);
     const res = await api.post<GenerateRecipeDraftResponseDto>(
-      API_ENDPOINTS.RECIPE_DRAFTS.GENERATE,
+      RECIPE_DRAFTS_ENDPOINTS.GENERATE,
       payload,
       {
         timeout: 60000,
@@ -23,7 +23,7 @@ export const recipeDraftApi = {
     );
 
     if (res.data?.success && res.data.data) {
-      return recipeDraftMapper.toModel(res.data);
+      return recipeDraftMapper.toModel(res.data.data);
     }
     throw new Error('Phản hồi gợi ý công thức AI không đúng định dạng.');
   },

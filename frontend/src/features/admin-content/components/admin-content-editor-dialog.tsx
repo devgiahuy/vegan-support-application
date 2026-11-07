@@ -32,7 +32,7 @@ import { ADMIN_CONTENT_TYPE_OPTIONS } from '../types/admin-content.options';
 import { RecipeEditorForm } from '@/features/recipe/components/recipe-editor-form';
 import type { RecipeFormValues } from '@/features/recipe/schemas/recipe-form.schema';
 import { ImageUploader } from '@/features/post/components/image-uploader';
-import type { UploadedMediaMeta } from '@/features/post/api/upload.api';
+import type { UploadedMediaMeta } from '@/features/storage/types/storage.model';
 import { StorageQuotaWidget } from '@/features/storage/components/storage-quota-widget';
 import { postFormSchema, type PostFormValues } from '@/features/post/schemas/post-form.schema';
 import { VideoUploader } from '@/features/video/components/video-uploader';

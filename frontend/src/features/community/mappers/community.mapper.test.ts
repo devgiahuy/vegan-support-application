@@ -40,7 +40,7 @@ const threadEnvelope: CommunityCommentListResponseDto = {
 
 describe('CommunityMapper comments', () => {
   it('map thread: root + reply 1 tầng, author null → ẩn danh', () => {
-    const result = communityMapper.toThreadModel(threadEnvelope);
+    const result = communityMapper.toThreadModel(threadEnvelope?.data, threadEnvelope?.meta);
     expect(result.items).toHaveLength(2);
     const root = result.items[0];
     expect(root.author?.displayName).toBe('An Chay');
@@ -52,7 +52,7 @@ describe('CommunityMapper comments', () => {
   });
 
   it('loại reply tầng 2 (chỉ giữ trực tiếp có id)', () => {
-    const result = communityMapper.toThreadModel(threadEnvelope);
+    const result = communityMapper.toThreadModel(threadEnvelope?.data, threadEnvelope?.meta);
     const allIds: string[] = [];
     for (const item of result.items) {
       allIds.push(item.id, ...item.replies.map((r) => r.id));
@@ -61,11 +61,10 @@ describe('CommunityMapper comments', () => {
   });
 
   it('placeholder null-content + meta snake_case', () => {
-    const result = communityMapper.toThreadModel({
-      success: true,
-      data: [{ id: 'c9', status: 'DELETED', is_placeholder: true, content: null }],
-      meta: { page: 1, limit: 10, total: 1, total_pages: 1 },
-    });
+    const result = communityMapper.toThreadModel(
+      [{ id: 'c9', status: 'DELETED', is_placeholder: true, content: null }],
+      { page: 1, limit: 10, total: 1, total_pages: 1 }
+    );
     expect(result.items[0].content).toBeNull();
     expect(result.items[0].isPlaceholder).toBe(true);
     expect(result.metadata.totalItems).toBe(1);
@@ -79,9 +78,9 @@ describe('CommunityMapper comments', () => {
 
   it('status lạ → VISIBLE, author rỗng → ẩn danh', () => {
     const comment = communityMapper.toSingleComment({
-      success: true,
-      data: { id: 'cx', status: 'GHOST', author: { id: '', displayName: '' } },
-      meta: null,
+      id: 'cx',
+      status: 'GHOST',
+      author: { id: '', displayName: '' },
     });
     expect(comment.status).toBe(CommentStatus.VISIBLE);
     expect(comment.author?.displayName).toBe('Người dùng ẩn danh');
@@ -97,9 +96,10 @@ describe('CommunityMapper comments', () => {
 describe('CommunityMapper summary/vote/rating/bookmark', () => {
   it('summary null-safe cho guest', () => {
     const summary = communityMapper.toSummaryModel({
-      success: true,
-      data: { postId: 'p1', voteCount: '12', rating: null, viewer: null },
-      meta: null,
+      postId: 'p1',
+      voteCount: '12',
+      rating: null,
+      viewer: null,
     });
     expect(summary).toMatchObject({
       voteCount: 12,
@@ -121,7 +121,7 @@ describe('CommunityMapper summary/vote/rating/bookmark', () => {
       },
       meta: null,
     };
-    const summary = communityMapper.toSummaryModel(envelope);
+    const summary = communityMapper.toSummaryModel(envelope?.data);
     expect(summary.tasteAverage).toBe(4.5);
     expect(summary.viewerTaste).toBe(5);
     expect(summary.viewerBookmarked).toBe(false);
@@ -142,7 +142,7 @@ describe('CommunityMapper summary/vote/rating/bookmark', () => {
       meta: null,
     };
     const summary = communityMapper.toSummaryModel(
-      envelope as unknown as CommunitySummaryResponseDto
+      (envelope as unknown as CommunitySummaryResponseDto)?.data
     );
     expect(summary.ratingCount).toBe(1);
     expect(summary.tasteAverage).toBe(4);
@@ -150,17 +150,15 @@ describe('CommunityMapper summary/vote/rating/bookmark', () => {
   });
 
   it('vote idempotent + rating thiếu 1 chiều → giữ 0', () => {
-    expect(
-      communityMapper.toVoteModel({
-        success: true,
-        data: { postId: 'p', voted: true, voteCount: 7 },
-        meta: null,
-      })
-    ).toEqual({ postId: 'p', voted: true, voteCount: 7 });
+    expect(communityMapper.toVoteModel({ postId: 'p', voted: true, voteCount: 7 })).toEqual({
+      postId: 'p',
+      voted: true,
+      voteCount: 7,
+    });
     const rating = communityMapper.toRatingModel({
-      success: true,
-      data: { postId: 'p', rating: { taste: 5 }, aggregate: null },
-      meta: null,
+      postId: 'p',
+      rating: { taste: 5 },
+      aggregate: null,
     });
     expect(rating.difficulty).toBe(0);
     expect(rating.aggregateCount).toBe(0);
@@ -168,13 +166,10 @@ describe('CommunityMapper summary/vote/rating/bookmark', () => {
   });
 
   it('bookmark toggle + list lọc rỗng', () => {
-    expect(
-      communityMapper.toBookmarkModel({
-        success: true,
-        data: { postId: 'p', bookmarked: false },
-        meta: null,
-      })
-    ).toEqual({ postId: 'p', bookmarked: false });
+    expect(communityMapper.toBookmarkModel({ postId: 'p', bookmarked: false })).toEqual({
+      postId: 'p',
+      bookmarked: false,
+    });
     const envelope: CommunityBookmarkListResponseDto = {
       success: true,
       data: [
@@ -189,20 +184,19 @@ describe('CommunityMapper summary/vote/rating/bookmark', () => {
       ],
       meta: { page: 1, limit: 10, total: 1, totalPages: 1 },
     };
-    const result = communityMapper.toBookmarksList(envelope);
+    const result = communityMapper.toBookmarksList(envelope?.data, envelope?.meta);
     expect(result.items).toHaveLength(1);
     expect(result.items[0].title).toBe('Món 1');
   });
 
   it('thread lọc item rỗng id + meta snake_case', () => {
-    const result = communityMapper.toThreadModel({
-      success: true,
-      data: [
+    const result = communityMapper.toThreadModel(
+      [
         { id: '', content: 'rác' },
         { id: 'c1', content: 'giữ' },
       ],
-      meta: { page: 2, limit: 5, total: 11, total_pages: 3 },
-    });
+      { page: 2, limit: 5, total: 11, total_pages: 3 }
+    );
     expect(result.items.map((i) => i.id)).toEqual(['c1']);
     expect(result.metadata).toMatchObject({
       page: 2,
@@ -214,9 +208,10 @@ describe('CommunityMapper summary/vote/rating/bookmark', () => {
 
   it('summary viewer rating null khi khách', () => {
     const summary = communityMapper.toSummaryModel({
-      success: true,
-      data: { postId: 'p', voteCount: 0, rating: { count: 0 }, viewer: { voted: false } },
-      meta: null,
+      postId: 'p',
+      voteCount: 0,
+      rating: { count: 0 },
+      viewer: { voted: false },
     });
     expect(summary.viewerTaste).toBeNull();
     expect(summary.viewerDifficulty).toBeNull();

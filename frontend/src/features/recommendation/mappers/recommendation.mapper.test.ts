@@ -43,7 +43,7 @@ const homeEnvelope: RecommendationResponseDto = {
 
 describe('RecommendationMapper home', () => {
   it('map món thật: tối đa 2 reasons + label Việt', () => {
-    const items = recommendationMapper.toHomeList(homeEnvelope);
+    const items = recommendationMapper.toHomeList(homeEnvelope.data);
     expect(items).toHaveLength(1);
     expect(items[0].title).toBe('Gạo lứt đậu hũ 600 kcal');
     expect(items[0].reasonCodes).toEqual(['INGREDIENT_PREFERENCE', 'BOOKMARK_SIMILAR']);
@@ -53,11 +53,13 @@ describe('RecommendationMapper home', () => {
   });
 
   it('reason lạ giữ nguyên văn, calories null khi thiếu', () => {
-    const items = recommendationMapper.toHomeList({
-      success: true,
-      data: [{ id: 'x', title: 'Món X', reasonCodes: ['MYSTERY_CODE'], calories: null }],
-      meta: null,
-    });
+    const items = recommendationMapper.toHomeList(
+      {
+        success: true,
+        data: [{ id: 'x', title: 'Món X', reasonCodes: ['MYSTERY_CODE'], calories: null }],
+        meta: null,
+      }.data
+    );
     expect(items[0].reasonLabels).toEqual(['MYSTERY_CODE']);
     expect(items[0].calories).toBeNull();
     expect(items[0].coverImageUrl).toBeNull();
@@ -68,14 +70,14 @@ describe('RecommendationMapper home', () => {
   });
 
   it('meta constraints gọn tiếng Việt', () => {
-    const meta = recommendationMapper.toHomeMeta(homeEnvelope);
+    const meta = recommendationMapper.toHomeMeta(homeEnvelope.meta);
     expect(meta.scoringVersion).toBe('behavioral-v1');
     expect(meta.personalized).toBe(true);
     expect(meta.constraintsSummary).toBe('Đã lọc: chay trường · 1 dị ứng · 1 loại trừ');
   });
 
   it('meta thiếu → summary null', () => {
-    const meta = recommendationMapper.toHomeMeta({ success: true, data: [], meta: null });
+    const meta = recommendationMapper.toHomeMeta({ success: true, data: [], meta: null }.meta);
     expect(meta.constraintsSummary).toBeNull();
     expect(meta.personalized).toBe(false);
   });
@@ -83,16 +85,18 @@ describe('RecommendationMapper home', () => {
 
 describe('RecommendationMapper consent', () => {
   it('map consent live + snake_case', () => {
-    const consent = recommendationMapper.toConsentModel({
-      success: true,
-      data: {
-        enabled: true,
-        consentVersion: 'behavior-personalization-v1',
-        consentedAt: '2026-09-16T12:16:52.632Z',
-        disabledAt: null,
-      },
-      meta: null,
-    });
+    const consent = recommendationMapper.toConsentModel(
+      {
+        success: true,
+        data: {
+          enabled: true,
+          consentVersion: 'behavior-personalization-v1',
+          consentedAt: '2026-09-16T12:16:52.632Z',
+          disabledAt: null,
+        },
+        meta: null,
+      }.data
+    );
     expect(consent.enabled).toBe(true);
     expect(consent.consentVersion).toBe('behavior-personalization-v1');
     expect(consent.disabledAt).toBeNull();
@@ -157,11 +161,13 @@ describe('RecommendationMapper event builders', () => {
   });
 
   it('difficulty lạ giữ nguyên mã, excerpt rỗng ẩn', () => {
-    const items = recommendationMapper.toHomeList({
-      success: true,
-      data: [{ id: 'y', title: 'Món Y', difficulty: 'EXPERT', excerpt: '' }],
-      meta: null,
-    });
+    const items = recommendationMapper.toHomeList(
+      {
+        success: true,
+        data: [{ id: 'y', title: 'Món Y', difficulty: 'EXPERT', excerpt: '' }],
+        meta: null,
+      }.data
+    );
     expect(items[0].difficultyLabel).toBe('EXPERT');
     expect(items[0].excerpt).toBe('');
   });

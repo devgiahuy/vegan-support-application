@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { PANTRY_ENDPOINTS } from '@/features/pantry/constants/pantry.endpoints';
 import type { PaginationResult } from '@/types/api';
 import type {
   PantryItemDto,
@@ -26,18 +26,18 @@ export const pantryApi = {
    * Danh sách nguyên liệu trong tủ bếp của tôi (có phân trang & lọc)
    */
   getItems: async (params?: PantryListQueryDto): Promise<PaginationResult<PantryItem>> => {
-    const res = await api.get<PantryListEnvelopeDto>(API_ENDPOINTS.PANTRY.ITEMS, {
+    const res = await api.get<PantryListEnvelopeDto>(PANTRY_ENDPOINTS.ITEMS, {
       params,
       silent: true,
     });
-    return pantryMapper.toPantryPaginationModel(res.data);
+    return pantryMapper.toPantryPaginationModel(res.data?.data, res.data?.meta);
   },
 
   /**
    * Chi tiết nguyên liệu trong tủ bếp
    */
   getItemById: async (id: string): Promise<PantryItem> => {
-    const res = await api.get<PantryItemEnvelopeDto>(API_ENDPOINTS.PANTRY.ITEM_DETAIL(id), {
+    const res = await api.get<PantryItemEnvelopeDto>(PANTRY_ENDPOINTS.ITEM_DETAIL(id), {
       silent: true,
     });
     return pantryMapper.toModel(res.data.data);
@@ -49,7 +49,7 @@ export const pantryApi = {
   createItem: async (
     payload: CreatePantryItemReqDto
   ): Promise<{ item: PantryItem; adjustment: PantryAdjustment }> => {
-    const res = await api.post<PantryAdjustmentEnvelopeDto>(API_ENDPOINTS.PANTRY.ITEMS, payload, {
+    const res = await api.post<PantryAdjustmentEnvelopeDto>(PANTRY_ENDPOINTS.ITEMS, payload, {
       showErrorToast: true,
     });
     return {
@@ -62,11 +62,9 @@ export const pantryApi = {
    * Cập nhật thông tin độ tươi / hạn dùng nguyên liệu (Optimistic Concurrency)
    */
   updateItem: async (id: string, payload: UpdatePantryItemReqDto): Promise<PantryItem> => {
-    const res = await api.patch<PantryItemEnvelopeDto>(
-      API_ENDPOINTS.PANTRY.ITEM_DETAIL(id),
-      payload,
-      { showErrorToast: true }
-    );
+    const res = await api.patch<PantryItemEnvelopeDto>(PANTRY_ENDPOINTS.ITEM_DETAIL(id), payload, {
+      showErrorToast: true,
+    });
     return pantryMapper.toModel(res.data.data);
   },
 
@@ -74,7 +72,7 @@ export const pantryApi = {
    * Xóa mềm nguyên liệu khỏi tủ bếp
    */
   deleteItem: async (id: string, expectedVersion: number): Promise<void> => {
-    await api.delete(API_ENDPOINTS.PANTRY.ITEM_DETAIL(id), {
+    await api.delete(PANTRY_ENDPOINTS.ITEM_DETAIL(id), {
       params: { expectedVersion },
       showErrorToast: true,
     });
@@ -84,11 +82,11 @@ export const pantryApi = {
    * Danh sách nguyên liệu sắp hết hạn (mặc định trong 7 ngày tới)
    */
   getExpiringSoon: async (params?: ExpiringSoonQueryDto): Promise<PaginationResult<PantryItem>> => {
-    const res = await api.get<PantryListEnvelopeDto>(API_ENDPOINTS.PANTRY.EXPIRING_SOON, {
+    const res = await api.get<PantryListEnvelopeDto>(PANTRY_ENDPOINTS.EXPIRING_SOON, {
       params,
       silent: true,
     });
-    return pantryMapper.toPantryPaginationModel(res.data);
+    return pantryMapper.toPantryPaginationModel(res.data?.data, res.data?.meta);
   },
 
   /**
@@ -98,13 +96,10 @@ export const pantryApi = {
     id: string,
     params?: PantryAdjustmentListQueryDto
   ): Promise<PaginationResult<PantryAdjustment>> => {
-    const res = await api.get<PantryAdjustmentListEnvelopeDto>(
-      API_ENDPOINTS.PANTRY.ADJUSTMENTS(id),
-      {
-        params,
-        silent: true,
-      }
-    );
+    const res = await api.get<PantryAdjustmentListEnvelopeDto>(PANTRY_ENDPOINTS.ADJUSTMENTS(id), {
+      params,
+      silent: true,
+    });
     const meta = res.data.meta || {
       page: 1,
       limit: 20,
@@ -132,7 +127,7 @@ export const pantryApi = {
     payload: CreatePantryAdjustmentReqDto
   ): Promise<{ item: PantryItem; adjustment: PantryAdjustment }> => {
     const res = await api.post<PantryAdjustmentEnvelopeDto>(
-      API_ENDPOINTS.PANTRY.ADJUSTMENTS(id),
+      PANTRY_ENDPOINTS.ADJUSTMENTS(id),
       payload,
       { showErrorToast: true }
     );
@@ -146,11 +141,9 @@ export const pantryApi = {
    * Xem trước kết quả gộp nguyên liệu trùng lặp
    */
   previewMerge: async (payload: MergePreviewReqDto): Promise<PantryMergePreview> => {
-    const res = await api.post<MergePreviewEnvelopeDto>(
-      API_ENDPOINTS.PANTRY.MERGE_PREVIEW,
-      payload,
-      { showErrorToast: true }
-    );
+    const res = await api.post<MergePreviewEnvelopeDto>(PANTRY_ENDPOINTS.MERGE_PREVIEW, payload, {
+      showErrorToast: true,
+    });
     return pantryMapper.toMergePreviewModel(res.data.data);
   },
 
@@ -158,7 +151,7 @@ export const pantryApi = {
    * Gộp các nguyên liệu trùng lặp nguyên tử
    */
   mergeItems: async (payload: MergePantryItemsReqDto): Promise<PantryItem> => {
-    const res = await api.post<PantryItemEnvelopeDto>(API_ENDPOINTS.PANTRY.MERGE, payload, {
+    const res = await api.post<PantryItemEnvelopeDto>(PANTRY_ENDPOINTS.MERGE, payload, {
       showErrorToast: true,
     });
     return pantryMapper.toModel(res.data.data);

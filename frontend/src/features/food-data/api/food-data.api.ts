@@ -1,5 +1,6 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { FOOD_DATA_ENDPOINTS } from '@/features/food-data/constants/food-data.endpoints';
+import { ADMIN_FOOD_DATA_ENDPOINTS } from '@/features/food-data/constants/admin-food-data.endpoints';
 import type { PaginationResult } from '@/types/api';
 import type {
   AdminFoodDataRecordDto,
@@ -47,7 +48,7 @@ export const foodDataApi = {
     params?: { preparation?: string; locale?: string }
   ): Promise<IngredientNutritionFact> => {
     const res = await api.get<FoodDataRecordResponseDto<IngredientNutrientsDataDto>>(
-      API_ENDPOINTS.FOOD_DATA.NUTRIENTS(ingredientId),
+      FOOD_DATA_ENDPOINTS.NUTRIENTS(ingredientId),
       {
         params: params || {},
         silent: true,
@@ -63,7 +64,7 @@ export const foodDataApi = {
     params?: FoodDataQueryParams
   ): Promise<PaginationResult<ReferenceIntakeItem>> => {
     const res = await api.get<FoodDataListResponseDto<NutrientReferenceIntakeDto>>(
-      API_ENDPOINTS.FOOD_DATA.REFERENCE_INTAKES,
+      FOOD_DATA_ENDPOINTS.REFERENCE_INTAKES,
       { params: params || {} }
     );
     const items = foodDataMapper.toReferenceIntakeList(res.data?.data);
@@ -78,7 +79,7 @@ export const foodDataApi = {
     params?: FoodDataQueryParams
   ): Promise<PaginationResult<IngredientGuidelineItem>> => {
     const res = await api.get<FoodDataListResponseDto<IngredientIntakeGuidelineDto>>(
-      API_ENDPOINTS.FOOD_DATA.GUIDELINES,
+      FOOD_DATA_ENDPOINTS.GUIDELINES,
       { params: params || {} }
     );
     const items = foodDataMapper.toGuidelineList(res.data?.data);
@@ -94,7 +95,7 @@ export const foodDataApi = {
     limit?: number;
   }): Promise<PaginationResult<CookingMethodItem>> => {
     const res = await api.get<FoodDataListResponseDto<CookingMethodDto>>(
-      API_ENDPOINTS.FOOD_DATA.COOKING_METHODS,
+      FOOD_DATA_ENDPOINTS.COOKING_METHODS,
       { params: params || {} }
     );
     const items = foodDataMapper.toCookingMethodList(res.data?.data);
@@ -109,7 +110,7 @@ export const foodDataApi = {
     params?: FoodDataQueryParams
   ): Promise<PaginationResult<FoodInteractionRuleItem>> => {
     const res = await api.get<FoodDataListResponseDto<IngredientInteractionRuleDto>>(
-      API_ENDPOINTS.FOOD_DATA.INTERACTIONS,
+      FOOD_DATA_ENDPOINTS.INTERACTIONS,
       { params: params || {} }
     );
     const items = foodDataMapper.toInteractionRuleList(res.data?.data);
@@ -126,7 +127,7 @@ export const foodDataApi = {
     limit?: number;
   }): Promise<PaginationResult<AdminRecordItem>> => {
     const res = await api.get<FoodDataListResponseDto<AdminFoodDataRecordDto>>(
-      API_ENDPOINTS.ADMIN_FOOD_DATA.RECORDS,
+      ADMIN_FOOD_DATA_ENDPOINTS.RECORDS,
       { params }
     );
     const items = foodDataMapper.toAdminRecordList(res.data?.data);
@@ -139,7 +140,7 @@ export const foodDataApi = {
    */
   createAdminRecord: async (input: CreateFoodDataRecordRequestDto): Promise<AdminRecordItem> => {
     const res = await api.post<FoodDataRecordResponseDto<AdminFoodDataRecordDto>>(
-      API_ENDPOINTS.ADMIN_FOOD_DATA.RECORDS,
+      ADMIN_FOOD_DATA_ENDPOINTS.RECORDS,
       input
     );
     return foodDataMapper.toAdminRecordModel(res.data?.data);
@@ -153,7 +154,7 @@ export const foodDataApi = {
     input: ReplaceFoodDataRecordRequestDto
   ): Promise<AdminRecordItem> => {
     const res = await api.put<FoodDataRecordResponseDto<AdminFoodDataRecordDto>>(
-      API_ENDPOINTS.ADMIN_FOOD_DATA.RECORD(id),
+      ADMIN_FOOD_DATA_ENDPOINTS.RECORD(id),
       input
     );
     return foodDataMapper.toAdminRecordModel(res.data?.data);
@@ -164,7 +165,7 @@ export const foodDataApi = {
    */
   archiveAdminRecord: async (id: string, kind: FoodDataRecordKind): Promise<AdminRecordItem> => {
     const res = await api.delete<FoodDataRecordResponseDto<AdminFoodDataRecordDto>>(
-      API_ENDPOINTS.ADMIN_FOOD_DATA.RECORD(id),
+      ADMIN_FOOD_DATA_ENDPOINTS.RECORD(id),
       { params: { kind } }
     );
     return foodDataMapper.toAdminRecordModel(res.data?.data);
@@ -177,7 +178,7 @@ export const foodDataApi = {
     input: PreviewFoodDataImportRequestDto
   ): Promise<FoodDataImportPreviewResult> => {
     const res = await api.post<FoodDataImportResponseDto>(
-      API_ENDPOINTS.ADMIN_FOOD_DATA.IMPORT_PREVIEW,
+      ADMIN_FOOD_DATA_ENDPOINTS.IMPORT_PREVIEW,
       input
     );
     return foodDataMapper.toImportPreviewResult(res.data?.data);
@@ -190,7 +191,7 @@ export const foodDataApi = {
     input: CommitFoodDataImportRequestDto
   ): Promise<FoodDataImportPreviewResult> => {
     const res = await api.post<FoodDataImportResponseDto>(
-      API_ENDPOINTS.ADMIN_FOOD_DATA.IMPORT_COMMIT,
+      ADMIN_FOOD_DATA_ENDPOINTS.IMPORT_COMMIT,
       input
     );
     return foodDataMapper.toImportPreviewResult(res.data?.data);

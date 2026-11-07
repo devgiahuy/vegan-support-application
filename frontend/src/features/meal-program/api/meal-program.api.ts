@@ -1,9 +1,10 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { MEAL_PROGRAMS_ENDPOINTS } from '@/features/meal-program/constants/meal-programs.endpoints';
 import type {
   CreateMealProgramRequestDto,
   MealProgramDto,
   MealProgramListResponseDto,
+  MealProgramResponseDto,
   PatchMealProgramActionDto,
   RegenerateWeekRequestDto,
   UpdateMealProgramRequestDto,
@@ -25,24 +26,33 @@ function generateIdempotencyKey(prefix = 'mp'): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
 }
 
+function unwrapMealProgram(body: MealProgramResponseDto | null | undefined): MealProgramDto {
+  if (body?.success !== true || !body.data || !body.data.id) {
+    throw new Error('Phản hồi chương trình dinh dưỡng không đúng định dạng.');
+  }
+  return body.data;
+}
+
 export const mealProgramApi = {
   /**
    * Lấy danh sách chương trình dinh dưỡng (Mẫu hoặc cá nhân)
    */
   getMealPrograms: async (params?: MealProgramQueryParams): Promise<MealProgramListResult> => {
-    const res = await api.get<{ data: MealProgramListResponseDto }>(
-      API_ENDPOINTS.MEAL_PROGRAMS.LIST,
-      { params }
-    );
-    return mealProgramMapper.toListResult(res.data?.data);
+    const res = await api.get<MealProgramListResponseDto>(MEAL_PROGRAMS_ENDPOINTS.LIST, {
+      params,
+    });
+    if (res.data?.success !== true || !Array.isArray(res.data.data) || !res.data.meta) {
+      throw new Error('Phản hồi danh sách chương trình không đúng định dạng.');
+    }
+    return mealProgramMapper.toListResult(res.data.data, res.data.meta);
   },
 
   /**
    * Lấy chi tiết một chương trình dinh dưỡng
    */
   getMealProgramDetail: async (id: string): Promise<MealProgram> => {
-    const res = await api.get<{ data: MealProgramDto }>(API_ENDPOINTS.MEAL_PROGRAMS.DETAIL(id));
-    return mealProgramMapper.toModel(res.data?.data);
+    const res = await api.get<MealProgramResponseDto>(MEAL_PROGRAMS_ENDPOINTS.DETAIL(id));
+    return mealProgramMapper.toModel(unwrapMealProgram(res.data));
   },
 
   /**
@@ -65,12 +75,11 @@ export const mealProgramApi = {
       ...(data.seed?.trim() ? { seed: data.seed.trim() } : {}),
       idempotencyKey: data.idempotencyKey?.trim() || generateIdempotencyKey('create'),
     };
-    const res = await api.post<{ data: MealProgramDto }>(
-      API_ENDPOINTS.MEAL_PROGRAMS.CREATE,
-      payload,
-      { timeout: 180_000, silent: true }
-    );
-    return mealProgramMapper.toModel(res.data?.data);
+    const res = await api.post<MealProgramResponseDto>(MEAL_PROGRAMS_ENDPOINTS.CREATE, payload, {
+      timeout: 180_000,
+      silent: true,
+    });
+    return mealProgramMapper.toModel(unwrapMealProgram(res.data));
   },
 
   /**
@@ -82,12 +91,12 @@ export const mealProgramApi = {
       idempotencyKey:
         action.idempotencyKey?.trim() || generateIdempotencyKey(action.action.toLowerCase()),
     };
-    const res = await api.patch<{ data: MealProgramDto }>(
-      API_ENDPOINTS.MEAL_PROGRAMS.UPDATE(id),
+    const res = await api.patch<MealProgramResponseDto>(
+      MEAL_PROGRAMS_ENDPOINTS.UPDATE(id),
       payload,
       action.action === 'REGENERATE_WEEK' ? { timeout: 180_000, silent: true } : undefined
     );
-    return mealProgramMapper.toModel(res.data?.data);
+    return mealProgramMapper.toModel(unwrapMealProgram(res.data));
   },
 
   /**
@@ -177,10 +186,10 @@ export const mealProgramApi = {
     weekNumber: number,
     data: UpdateWeekProgressRequestDto
   ): Promise<MealProgram> => {
-    const res = await api.patch<{ data: MealProgramDto }>(
-      API_ENDPOINTS.MEAL_PROGRAMS.UPDATE_PROGRESS(id, weekNumber),
+    const res = await api.patch<MealProgramResponseDto>(
+      MEAL_PROGRAMS_ENDPOINTS.UPDATE_PROGRESS(id, weekNumber),
       data
     );
-    return mealProgramMapper.toModel(res.data?.data);
+    return mealProgramMapper.toModel(unwrapMealProgram(res.data));
   },
 };

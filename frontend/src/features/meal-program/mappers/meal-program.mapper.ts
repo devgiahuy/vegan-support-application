@@ -180,28 +180,9 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
   }
 
   public toListResult(
-    response: MealProgramListResponseDto | null | undefined
+    rawItems: MealProgramListResponseDto['data'] | null | undefined,
+    meta: MealProgramListResponseDto['meta'] | null | undefined
   ): MealProgramListResult {
-    if (!response) {
-      return {
-        items: [],
-        pagination: {
-          page: 1,
-          limit: 10,
-          totalItems: 0,
-          totalPages: 0,
-        },
-      };
-    }
-
-    const rawItems = Array.isArray(response.data)
-      ? response.data
-      : Array.isArray(response.items)
-        ? response.items
-        : [];
-
-    const meta = response.meta ?? response.pagination;
-
     return {
       items: safeArray<MealProgramListItemDto, MealProgramListItem>(rawItems, (item) =>
         this.toListItem(item)
@@ -209,7 +190,7 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
       pagination: {
         page: safeNumber(meta?.page, 1),
         limit: safeNumber(meta?.limit, 10),
-        totalItems: safeNumber(pickField(meta, ['total', 'totalItems'], 0), 0),
+        totalItems: safeNumber(pickField(meta, ['total'], 0), 0),
         totalPages: safeNumber(meta?.totalPages, 0),
       },
     };

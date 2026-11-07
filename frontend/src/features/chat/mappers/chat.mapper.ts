@@ -15,7 +15,6 @@ import type {
   ChatMessageListResponseDto,
   ChatSessionDto,
   ChatSessionListResponseDto,
-  ChatSessionResponseDto,
   SendChatMessageRequestDto,
 } from '../types/chat.dto';
 import type {
@@ -120,18 +119,18 @@ export class ChatMapper extends BaseMapper<ChatSessionDto, ChatSession> {
   }
 
   /** `POST /chat/sessions` → 1 phiên. */
-  toSingleSession(dto: ChatSessionResponseDto | null | undefined): ChatSession {
-    const data = pickField(dto, ['data'], null) as ChatSessionDto | null;
+  toSingleSession(data: ChatSessionDto | null | undefined): ChatSession {
     return this.toModel(data);
   }
 
   /** `GET /chat/sessions` → mảng phiên + meta. */
-  toSessionList(dto: ChatSessionListResponseDto | null | undefined): PaginationResult<ChatSession> {
-    const rawItems = pickField(dto, ['data'], null) as (ChatSessionDto | null)[] | null;
+  toSessionList(
+    rawItems: ChatSessionListResponseDto['data'],
+    meta?: ChatSessionListResponseDto['meta']
+  ): PaginationResult<ChatSession> {
     const items = this.toModelList(
       safeArray<ChatSessionDto | null, ChatSessionDto | null>(rawItems, (item) => item)
     );
-    const meta = pickField(dto, ['meta'], null) as ChatSessionListResponseDto['meta'];
     const page = safeNumber(pickField(meta, ['page'], 1));
     const limit = safeNumber(pickField(meta, ['limit'], 20));
     const totalItems = safeNumber(pickField(meta, ['total'], items.length));
@@ -175,12 +174,13 @@ export class ChatMapper extends BaseMapper<ChatSessionDto, ChatSession> {
   }
 
   /** `GET /chat/sessions/:id/messages` → mảng tin nhắn + meta. */
-  toMessageList(dto: ChatMessageListResponseDto | null | undefined): PaginationResult<ChatMessage> {
-    const rawItems = pickField(dto, ['data'], null) as (ChatMessageDto | null)[] | null;
+  toMessageList(
+    rawItems: ChatMessageListResponseDto['data'],
+    meta?: ChatMessageListResponseDto['meta']
+  ): PaginationResult<ChatMessage> {
     const items = safeArray<ChatMessageDto | null, ChatMessage>(rawItems, (item) =>
       this.toMessage(item)
     );
-    const meta = pickField(dto, ['meta'], null) as ChatMessageListResponseDto['meta'];
     const page = safeNumber(pickField(meta, ['page'], 1));
     const limit = safeNumber(pickField(meta, ['limit'], 20));
     const totalItems = safeNumber(pickField(meta, ['total'], items.length));
@@ -199,8 +199,7 @@ export class ChatMapper extends BaseMapper<ChatSessionDto, ChatSession> {
   }
 
   /** `POST /chat/messages/:id/feedback` → upsert feedback. */
-  toFeedbackModel(dto: ChatFeedbackResponseDto | null | undefined): MessageFeedback {
-    const data = pickField(dto, ['data'], null) as ChatFeedbackResponseDto['data'];
+  toFeedbackModel(data: ChatFeedbackResponseDto['data']): MessageFeedback {
     return {
       messageId: safeString(pickField(data, ['messageId', 'message_id'], '')),
       value: safeEnum(pickField(data, ['value'], null), FeedbackValue, FeedbackValue.UP),

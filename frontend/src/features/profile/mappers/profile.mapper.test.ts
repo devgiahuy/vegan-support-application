@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { profileMapper } from '@/features/profile/mappers/profile.mapper';
-import { MemberStatus, UserRole } from '@/common/enums';
+import { UserRole } from '@/common/enums';
 
 const FULL_RESPONSE = {
   success: true,
@@ -38,7 +38,7 @@ const FULL_RESPONSE = {
 
 describe('ProfileMapper.toModel', () => {
   it('map đủ user + health + diet tóm tắt + ngày tham gia', () => {
-    const p = profileMapper.toModel(FULL_RESPONSE);
+    const p = profileMapper.toModel(FULL_RESPONSE.data);
 
     expect(p.user.id).toBe('u-1');
     expect(p.user.displayName).toBe('Nguyễn Văn A');
@@ -51,47 +51,51 @@ describe('ProfileMapper.toModel', () => {
   });
 
   it('map ngày chay kỳ trong tóm tắt diet, lọc ngày sai', () => {
-    const p = profileMapper.toModel({
-      success: true,
-      data: {
-        id: 'u-3',
-        email: 'c@example.com',
-        displayName: 'C',
-        role: 'MEMBER',
-        status: 'ACTIVE',
-        dietPreference: {
-          dietPattern: 'VEGAN',
-          practiceSchedule: 'PERIODIC',
-          tradition: 'NONE',
-          schedule: { timezone: 'Asia/Ho_Chi_Minh', dates: ['2026-09-15', 'nope', null] },
+    const p = profileMapper.toModel(
+      {
+        success: true,
+        data: {
+          id: 'u-3',
+          email: 'c@example.com',
+          displayName: 'C',
+          role: 'MEMBER',
+          status: 'ACTIVE',
+          dietPreference: {
+            dietPattern: 'VEGAN',
+            practiceSchedule: 'PERIODIC',
+            tradition: 'NONE',
+            schedule: { timezone: 'Asia/Ho_Chi_Minh', dates: ['2026-09-15', 'nope', null] },
+          },
         },
-      },
-      meta: null,
-    });
+        meta: null,
+      }.data
+    );
 
     expect(p.diet?.scheduleDates).toEqual(['2026-09-15']);
     expect(p.diet?.scheduleTimezone).toBe('Asia/Ho_Chi_Minh');
   });
 
   it('map đầy đủ dị ứng và nguyên liệu kiêng trong dietPreference', () => {
-    const p = profileMapper.toModel({
-      success: true,
-      data: {
-        id: 'u-4',
-        email: 'd@example.com',
-        displayName: 'D',
-        role: 'MEMBER',
-        status: 'ACTIVE',
-        dietPreference: {
-          dietPattern: 'VEGAN',
-          practiceSchedule: 'PERMANENT',
-          tradition: 'NONE',
-          allergies: [{ allergenCode: 'PEANUT', label: 'Đậu phộng', severity: 'MODERATE' }],
-          ingredientExclusions: [{ ingredientName: 'mắm tôm', reason: 'Không thích mùi' }],
+    const p = profileMapper.toModel(
+      {
+        success: true,
+        data: {
+          id: 'u-4',
+          email: 'd@example.com',
+          displayName: 'D',
+          role: 'MEMBER',
+          status: 'ACTIVE',
+          dietPreference: {
+            dietPattern: 'VEGAN',
+            practiceSchedule: 'PERMANENT',
+            tradition: 'NONE',
+            allergies: [{ allergenCode: 'PEANUT', label: 'Đậu phộng', severity: 'MODERATE' }],
+            ingredientExclusions: [{ ingredientName: 'mắm tôm', reason: 'Không thích mùi' }],
+          },
         },
-      },
-      meta: null,
-    });
+        meta: null,
+      }.data
+    );
 
     expect(p.diet?.allergies).toHaveLength(1);
     expect(p.diet?.allergies[0].allergenCode).toBe('PEANUT');
@@ -101,19 +105,21 @@ describe('ProfileMapper.toModel', () => {
   });
 
   it('health/diet null khi backend chưa có dữ liệu', () => {
-    const p = profileMapper.toModel({
-      success: true,
-      data: {
-        id: 'u-2',
-        email: 'b@example.com',
-        displayName: 'B',
-        role: 'MEMBER',
-        status: 'ACTIVE',
-        healthProfile: null,
-        dietPreference: null,
-      },
-      meta: null,
-    });
+    const p = profileMapper.toModel(
+      {
+        success: true,
+        data: {
+          id: 'u-2',
+          email: 'b@example.com',
+          displayName: 'B',
+          role: 'MEMBER',
+          status: 'ACTIVE',
+          healthProfile: null,
+          dietPreference: null,
+        },
+        meta: null,
+      }.data
+    );
 
     expect(p.health).toBeNull();
     expect(p.diet).toBeNull();

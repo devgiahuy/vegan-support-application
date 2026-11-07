@@ -10,23 +10,27 @@ import type {
 
 describe('AiGovernanceMapper health summary', () => {
   it('map đúng dữ liệu tổng quan 24h và retention policy', () => {
-    const health = aiGovernanceMapper.toHealthSummary({
-      success: true,
-      data: {
-        evaluatedAt: '2026-09-27T10:00:00.000Z',
-        last24Hours: {
-          total: 1500,
-          failures: 15,
-          fallback: 5,
-          providerUnavailable: 1,
-        },
-        controls: [
-          { capability: 'CHAT', enabled: true },
-          { capability: 'VISION', enabled: false },
-        ],
-        retentionDays: 90,
-      },
-    } as AiGovernanceHealthResponseDto);
+    const health = aiGovernanceMapper.toHealthSummary(
+      (
+        {
+          success: true,
+          data: {
+            evaluatedAt: '2026-09-27T10:00:00.000Z',
+            last24Hours: {
+              total: 1500,
+              failures: 15,
+              fallback: 5,
+              providerUnavailable: 1,
+            },
+            controls: [
+              { capability: 'CHAT', enabled: true },
+              { capability: 'VISION', enabled: false },
+            ],
+            retentionDays: 90,
+          },
+        } as AiGovernanceHealthResponseDto
+      )?.data
+    );
 
     expect(health.total24h).toBe(1500);
     expect(health.failures24h).toBe(15);
@@ -49,36 +53,40 @@ describe('AiGovernanceMapper health summary', () => {
 
 describe('AiGovernanceMapper metrics summary', () => {
   it('tính toán tổng requests, failures, tỷ lệ phản hồi và độ trễ trung bình', () => {
-    const metrics = aiGovernanceMapper.toMetricsSummary({
-      success: true,
-      data: {
-        window: { from: '2026-09-01', to: '2026-09-27' },
-        requests: [
-          {
-            capability: 'CHAT',
-            provider: 'gemini',
-            total: 100,
-            failures: 2,
-            fallback: 1,
-            avgLatencyMs: 300,
+    const metrics = aiGovernanceMapper.toMetricsSummary(
+      (
+        {
+          success: true,
+          data: {
+            window: { from: '2026-09-01', to: '2026-09-27' },
+            requests: [
+              {
+                capability: 'CHAT',
+                provider: 'gemini',
+                total: 100,
+                failures: 2,
+                fallback: 1,
+                avgLatencyMs: 300,
+              },
+              {
+                capability: 'VISION',
+                provider: 'gemini',
+                total: 50,
+                failures: 1,
+                fallback: 0,
+                avgLatencyMs: 700,
+              },
+            ],
+            feedback: { positive: 90, negative: 10 },
+            moderation: { open: 2, dismissed: 5, actioned: 3, falsePositiveSignals: 1 },
+            recognition: { total: 40, corrected: 4, correctionRate: 0.1 },
+            receipts: { total: 20, corrected: 2, correctionRate: 0.1 },
+            nutrition: { coverage: 0.95, confidence: 0.88 },
+            providerUnavailable: 0,
           },
-          {
-            capability: 'VISION',
-            provider: 'gemini',
-            total: 50,
-            failures: 1,
-            fallback: 0,
-            avgLatencyMs: 700,
-          },
-        ],
-        feedback: { positive: 90, negative: 10 },
-        moderation: { open: 2, dismissed: 5, actioned: 3, falsePositiveSignals: 1 },
-        recognition: { total: 40, corrected: 4, correctionRate: 0.1 },
-        receipts: { total: 20, corrected: 2, correctionRate: 0.1 },
-        nutrition: { coverage: 0.95, confidence: 0.88 },
-        providerUnavailable: 0,
-      },
-    } as AiGovernanceMetricsResponseDto);
+        } as AiGovernanceMetricsResponseDto
+      )?.data
+    );
 
     expect(metrics.totalRequests).toBe(150);
     expect(metrics.totalFailures).toBe(3);
@@ -140,15 +148,30 @@ describe('AiGovernanceMapper redaction & request logs', () => {
   });
 
   it('map danh sách log phân trang chuẩn', () => {
-    const result = aiGovernanceMapper.toRequestsList({
-      success: true,
-      data: [
-        { id: 'r1', capability: 'VISION', status: 'FALLBACK', latencyMs: 650 },
-        { id: 'r2', capability: 'RECEIPT', status: 'ERROR', errorClass: 'TIMEOUT' },
-        null,
-      ],
-      meta: { page: 1, limit: 10, total: 2, total_pages: 1 },
-    } as AiGovernanceRequestsResponseDto);
+    const result = aiGovernanceMapper.toRequestsList(
+      (
+        {
+          success: true,
+          data: [
+            { id: 'r1', capability: 'VISION', status: 'FALLBACK', latencyMs: 650 },
+            { id: 'r2', capability: 'RECEIPT', status: 'ERROR', errorClass: 'TIMEOUT' },
+            null,
+          ],
+          meta: { page: 1, limit: 10, total: 2, total_pages: 1 },
+        } as AiGovernanceRequestsResponseDto
+      )?.data,
+      (
+        {
+          success: true,
+          data: [
+            { id: 'r1', capability: 'VISION', status: 'FALLBACK', latencyMs: 650 },
+            { id: 'r2', capability: 'RECEIPT', status: 'ERROR', errorClass: 'TIMEOUT' },
+            null,
+          ],
+          meta: { page: 1, limit: 10, total: 2, total_pages: 1 },
+        } as AiGovernanceRequestsResponseDto
+      )?.meta
+    );
 
     expect(result.items).toHaveLength(2);
     expect(result.items[0].capabilityLabel).toBe('Nhận diện Tủ lạnh (Vision)');
@@ -166,28 +189,32 @@ describe('AiGovernanceMapper redaction & request logs', () => {
 
 describe('AiGovernanceMapper flags, features & audit', () => {
   it('map danh sách cờ kiểm duyệt an toàn', () => {
-    const flags = aiGovernanceMapper.toFlagsList({
-      success: true,
-      data: [
+    const flags = aiGovernanceMapper.toFlagsList(
+      (
         {
-          id: 'f1',
-          provider: 'gemini',
-          model: 'text-mod',
-          riskLevel: 'HIGH',
-          riskScore: 0.85,
-          status: 'OPEN',
-        },
-        {
-          id: 'f2',
-          provider: 'gemini',
-          model: 'text-mod',
-          riskLevel: 'LOW',
-          riskScore: 0.15,
-          status: 'REVIEWED',
-        },
-        { id: '' },
-      ],
-    } as AiGovernanceFlagsResponseDto);
+          success: true,
+          data: [
+            {
+              id: 'f1',
+              provider: 'gemini',
+              model: 'text-mod',
+              riskLevel: 'HIGH',
+              riskScore: 0.85,
+              status: 'OPEN',
+            },
+            {
+              id: 'f2',
+              provider: 'gemini',
+              model: 'text-mod',
+              riskLevel: 'LOW',
+              riskScore: 0.15,
+              status: 'REVIEWED',
+            },
+            { id: '' },
+          ],
+        } as AiGovernanceFlagsResponseDto
+      )?.data
+    );
 
     expect(flags).toHaveLength(2);
     expect(flags[0].riskLevelLabel).toBe('Cao');
@@ -199,27 +226,24 @@ describe('AiGovernanceMapper flags, features & audit', () => {
   });
 
   it('map danh sách cấu hình tính năng', () => {
-    const features = aiGovernanceMapper.toFeaturesList({
-      success: true,
-      data: [
-        {
-          capability: 'CHAT',
-          provider: 'gemini',
-          modelId: 'gemini-flash',
-          enabled: true,
-          version: 2,
-          fallback: 'HEURISTIC_RULESET',
-        },
-        {
-          capability: 'VISION',
-          provider: 'gemini',
-          modelId: 'gemini-vision',
-          enabled: false,
-          version: 1,
-          fallback: 'DISABLED',
-        },
-      ],
-    });
+    const features = aiGovernanceMapper.toFeaturesList([
+      {
+        capability: 'CHAT',
+        provider: 'gemini',
+        modelId: 'gemini-flash',
+        enabled: true,
+        version: 2,
+        fallback: 'HEURISTIC_RULESET',
+      },
+      {
+        capability: 'VISION',
+        provider: 'gemini',
+        modelId: 'gemini-vision',
+        enabled: false,
+        version: 1,
+        fallback: 'DISABLED',
+      },
+    ]);
 
     expect(features).toHaveLength(2);
     expect(features[0].capabilityLabel).toBe('Trợ lý Dinh dưỡng (Chat)');
@@ -229,22 +253,44 @@ describe('AiGovernanceMapper flags, features & audit', () => {
   });
 
   it('map lịch sử kiểm toán bật/tắt tính năng', () => {
-    const audit = aiGovernanceMapper.toAuditList({
-      success: true,
-      data: [
+    const audit = aiGovernanceMapper.toAuditList(
+      (
         {
-          id: 'aud-1',
-          capability: 'CHAT',
-          provider: 'gemini',
-          enabled: false,
-          version: 3,
-          actorId: 'admin-1',
-          reason: 'PROVIDER_INCIDENT',
-          createdAt: '2026-09-27T10:00:00.000Z',
-        },
-      ],
-      meta: { page: 1, limit: 10, total: 1, totalPages: 1 },
-    } as AiGovernanceControlAuditResponseDto);
+          success: true,
+          data: [
+            {
+              id: 'aud-1',
+              capability: 'CHAT',
+              provider: 'gemini',
+              enabled: false,
+              version: 3,
+              actorId: 'admin-1',
+              reason: 'PROVIDER_INCIDENT',
+              createdAt: '2026-09-27T10:00:00.000Z',
+            },
+          ],
+          meta: { page: 1, limit: 10, total: 1, totalPages: 1 },
+        } as AiGovernanceControlAuditResponseDto
+      )?.data,
+      (
+        {
+          success: true,
+          data: [
+            {
+              id: 'aud-1',
+              capability: 'CHAT',
+              provider: 'gemini',
+              enabled: false,
+              version: 3,
+              actorId: 'admin-1',
+              reason: 'PROVIDER_INCIDENT',
+              createdAt: '2026-09-27T10:00:00.000Z',
+            },
+          ],
+          meta: { page: 1, limit: 10, total: 1, totalPages: 1 },
+        } as AiGovernanceControlAuditResponseDto
+      )?.meta
+    );
 
     expect(audit.items).toHaveLength(1);
     expect(audit.items[0].reasonLabel).toBe('Sự cố nhà cung cấp');

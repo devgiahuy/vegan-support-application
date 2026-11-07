@@ -4,7 +4,6 @@ import type {
   PublicAnswerDto,
   PublicAnswerListResponseDto,
   SharedAnswerDto,
-  ShareAnswerResponseDto,
   VerifyAnswerRequestDto,
   VerifyAnswerResponseDto,
 } from '../types/chat-sharing.dto';
@@ -37,8 +36,7 @@ export class ChatSharingMapper extends BaseMapper<SharedAnswerDto, SharedAnswer>
   }
 
   /** `PATCH /chat/messages/:id/share` → trạng thái chia sẻ. */
-  toSharedAnswer(dto: ShareAnswerResponseDto | null | undefined): SharedAnswer {
-    const data = pickField(dto, ['data'], null) as SharedAnswerDto | null;
+  toSharedAnswer(data: SharedAnswerDto | null | undefined): SharedAnswer {
     return this.toModel(data);
   }
 
@@ -78,13 +76,12 @@ export class ChatSharingMapper extends BaseMapper<SharedAnswerDto, SharedAnswer>
 
   /** `GET /chat/public` → mảng mục + meta. */
   toPublicList(
-    dto: PublicAnswerListResponseDto | null | undefined
+    rawItems: PublicAnswerListResponseDto['data'],
+    meta?: PublicAnswerListResponseDto['meta']
   ): PaginationResult<PublicAnswer> {
-    const rawItems = pickField(dto, ['data'], null) as (PublicAnswerDto | null)[] | null;
     const items = safeArray<PublicAnswerDto | null, PublicAnswer>(rawItems, (item) =>
       this.toPublicAnswer(item)
     ).filter((item) => item.shareId.length > 0);
-    const meta = pickField(dto, ['meta'], null) as PublicAnswerListResponseDto['meta'];
     const page = safeNumber(pickField(meta, ['page'], 1));
     const limit = safeNumber(pickField(meta, ['limit'], 10));
     const totalItems = safeNumber(pickField(meta, ['total'], items.length));
@@ -103,8 +100,7 @@ export class ChatSharingMapper extends BaseMapper<SharedAnswerDto, SharedAnswer>
   }
 
   /** `POST /chat/messages/:id/verification` → kiểm chứng. */
-  toVerificationModel(dto: VerifyAnswerResponseDto | null | undefined): AnswerVerification | null {
-    const data = pickField(dto, ['data'], null) as VerifyAnswerResponseDto['data'];
+  toVerificationModel(data: VerifyAnswerResponseDto['data']): AnswerVerification | null {
     if (!data || typeof data !== 'object') return null;
     const role = safeString(pickField(data, ['verifierRole'], ''));
     return {

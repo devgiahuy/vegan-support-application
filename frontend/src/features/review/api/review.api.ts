@@ -1,5 +1,6 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { CONTENT_REVIEW_ENDPOINTS } from '@/common/constants/endpoints/content-review.endpoints';
+import { ADMIN_CONTENT_REVIEW_ENDPOINTS } from '@/features/review/constants/admin-content-review.endpoints';
 import { PaginationResult } from '@/types/api';
 import { contentReviewMapper } from '../mappers/content-review.mapper';
 import { reviewNutritionMapper } from '../mappers/review-nutrition.mapper';
@@ -31,11 +32,8 @@ export const reviewApi = {
    * Tác giả nộp một bản nháp immutable để Admin kiểm duyệt
    * POST /api/v1/posts/:id/submit
    */
-  submitPost: async (
-    postId: string,
-    input: SubmitPostInput
-  ): Promise<void> => {
-    await api.post(API_ENDPOINTS.CONTENT_REVIEW.SUBMIT(postId), {
+  submitPost: async (postId: string, input: SubmitPostInput): Promise<void> => {
+    await api.post(CONTENT_REVIEW_ENDPOINTS.SUBMIT(postId), {
       revisionId: input.revisionId,
       expectedVersion: input.expectedVersion,
     });
@@ -50,7 +48,7 @@ export const reviewApi = {
     params?: { page?: number; limit?: number }
   ): Promise<ContentReviewHistoryModel> => {
     const res = await api.get<ContentReviewHistoryResponseDto>(
-      API_ENDPOINTS.CONTENT_REVIEW.HISTORY(postId),
+      CONTENT_REVIEW_ENDPOINTS.HISTORY(postId),
       {
         params: {
           page: params?.page,
@@ -60,7 +58,7 @@ export const reviewApi = {
     );
 
     if (res.data?.success && res.data.data) {
-      return contentReviewMapper.toHistoryModel(res.data);
+      return contentReviewMapper.toHistoryModel(res.data.data);
     }
     throw new Error('Phản hồi lịch sử kiểm duyệt không đúng định dạng.');
   },
@@ -76,22 +74,19 @@ export const reviewApi = {
   getAdminQueue: async (
     params?: ReviewQueueQueryParams
   ): Promise<PaginationResult<ContentReviewQueueItem>> => {
-    const res = await api.get<ReviewQueueListResponseDto>(
-      API_ENDPOINTS.ADMIN_CONTENT_REVIEW.LIST,
-      {
-        params: {
-          page: params?.page,
-          limit: params?.limit,
-          status: params?.status,
-          type: params?.type,
-          priority: params?.priority,
-        },
-        silent: true,
-      }
-    );
+    const res = await api.get<ReviewQueueListResponseDto>(ADMIN_CONTENT_REVIEW_ENDPOINTS.LIST, {
+      params: {
+        page: params?.page,
+        limit: params?.limit,
+        status: params?.status,
+        type: params?.type,
+        priority: params?.priority,
+      },
+      silent: true,
+    });
 
     if (res.data?.success && Array.isArray(res.data.data)) {
-      return contentReviewMapper.toQueuePagination(res.data);
+      return contentReviewMapper.toQueuePagination(res.data.data, res.data.meta);
     }
     throw new Error('Phản hồi hàng chờ kiểm duyệt không đúng định dạng.');
   },
@@ -100,15 +95,13 @@ export const reviewApi = {
    * Admin xem chi tiết bản nháp nộp duyệt, media, video, tín hiệu AI
    * GET /api/v1/admin/content-review/:id
    */
-  getAdminDetail: async (
-    revisionId: string
-  ): Promise<AdminContentReviewDetailModel> => {
+  getAdminDetail: async (revisionId: string): Promise<AdminContentReviewDetailModel> => {
     const res = await api.get<AdminContentReviewDetailResponseDto>(
-      API_ENDPOINTS.ADMIN_CONTENT_REVIEW.DETAIL(revisionId)
+      ADMIN_CONTENT_REVIEW_ENDPOINTS.DETAIL(revisionId)
     );
 
     if (res.data?.success && res.data.data) {
-      return contentReviewMapper.toDetailResponse(res.data);
+      return contentReviewMapper.toDetailModel(res.data.data);
     }
     throw new Error('Không tìm thấy chi tiết bản nháp kiểm duyệt.');
   },
@@ -124,12 +117,12 @@ export const reviewApi = {
   ): Promise<AdminContentReviewDetailModel> => {
     const payload = contentReviewMapper.toDecisionDto(decision, reason);
     const res = await api.patch<AdminContentReviewDetailResponseDto>(
-      API_ENDPOINTS.ADMIN_CONTENT_REVIEW.DECISION(revisionId),
+      ADMIN_CONTENT_REVIEW_ENDPOINTS.DECISION(revisionId),
       payload
     );
 
     if (res.data?.success && res.data.data) {
-      return contentReviewMapper.toDetailResponse(res.data);
+      return contentReviewMapper.toDetailModel(res.data.data);
     }
     throw new Error('Không thể ghi nhận quyết định kiểm duyệt.');
   },
@@ -144,11 +137,11 @@ export const reviewApi = {
    */
   getNutritionPanel: async (revisionId: string): Promise<ReviewNutritionPanel> => {
     const res = await api.get<ReviewNutritionPanelResponseDto>(
-      API_ENDPOINTS.ADMIN_CONTENT_REVIEW.NUTRITION(revisionId),
+      ADMIN_CONTENT_REVIEW_ENDPOINTS.NUTRITION(revisionId),
       { silent: true }
     );
     if (res.data?.success && res.data.data) {
-      return reviewNutritionMapper.toResponse(res.data);
+      return reviewNutritionMapper.toModel(res.data.data);
     }
     throw new Error('Phản hồi dinh dưỡng kiểm duyệt không đúng định dạng.');
   },
@@ -163,11 +156,11 @@ export const reviewApi = {
     reason?: string
   ): Promise<ReviewNutritionPanel> => {
     const res = await api.patch<ReviewNutritionPanelResponseDto>(
-      API_ENDPOINTS.ADMIN_CONTENT_REVIEW.NUTRITION(revisionId),
+      ADMIN_CONTENT_REVIEW_ENDPOINTS.NUTRITION(revisionId),
       reviewNutritionMapper.toOverrideRequest(values, reason)
     );
     if (res.data?.success && res.data.data) {
-      return reviewNutritionMapper.toResponse(res.data);
+      return reviewNutritionMapper.toModel(res.data.data);
     }
     throw new Error('Không thể lưu chỉnh sửa dinh dưỡng.');
   },
@@ -178,10 +171,10 @@ export const reviewApi = {
    */
   recalculateNutrition: async (revisionId: string): Promise<ReviewNutritionPanel> => {
     const res = await api.post<ReviewNutritionPanelResponseDto>(
-      API_ENDPOINTS.ADMIN_CONTENT_REVIEW.NUTRITION_RECALCULATE(revisionId)
+      ADMIN_CONTENT_REVIEW_ENDPOINTS.NUTRITION_RECALCULATE(revisionId)
     );
     if (res.data?.success && res.data.data) {
-      return reviewNutritionMapper.toResponse(res.data);
+      return reviewNutritionMapper.toModel(res.data.data);
     }
     throw new Error('Không thể tính lại dinh dưỡng.');
   },

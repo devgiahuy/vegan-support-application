@@ -102,19 +102,6 @@ export interface RelatedPostsResponseDto {
   } | null;
 }
 
-export interface UploadSignatureResponseDto {
-  cloudName: string;
-  apiKey: string;
-  resourceType: 'image' | 'video';
-  uploadUrl: string;
-  timestamp: number;
-  signature: string;
-  folder: string;
-  maxBytes: number;
-  allowedMimeTypes: string[];
-  expiresAt: string;
-}
-
 /** Media input khi tạo/sửa post (`mediaInputSchema` backend Phase 15). */
 export interface MediaInputDto {
   provider: 'CLOUDINARY' | 'YOUTUBE' | string;

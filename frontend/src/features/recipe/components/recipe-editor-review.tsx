@@ -169,6 +169,7 @@ export function RecipeEditorReview({
   onFixIssue: (issue: RecipeFieldIssue) => void;
 }) {
   const ingredients = values.ingredients.filter((i) => i.name?.trim());
+  const unlinkedIngredients = ingredients.filter((ingredient) => !ingredient.ingredientId);
   const steps = values.steps.filter((s) => s.instruction?.trim());
   const cover = values.coverImageUrl?.trim() || null;
 
@@ -205,6 +206,23 @@ export function RecipeEditorReview({
           <AlertTitle>Công thức đã đủ thông tin bắt buộc</AlertTitle>
           <AlertDescription>
             Sau khi gửi, công thức vào hàng chờ duyệt. Hệ thống tự tính dinh dưỡng từ nguyên liệu.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {unlinkedIngredients.length > 0 && (
+        <Alert>
+          <AlertCircle aria-hidden />
+          <AlertTitle>Nguyên liệu chưa liên kết danh mục chuẩn</AlertTitle>
+          <AlertDescription>
+            <p>
+              {unlinkedIngredients.map((ingredient) => ingredient.name).join(', ')}. Nếu hệ thống
+              không nhận diện được nguyên liệu, công thức có thể không xuất hiện với người có ràng
+              buộc ăn uống, kể cả sau khi được duyệt.
+            </p>
+            <Button type="button" variant="outline" size="sm" onClick={() => onEdit('ingredients')}>
+              Kiểm tra nguyên liệu
+            </Button>
           </AlertDescription>
         </Alert>
       )}

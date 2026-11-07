@@ -14,7 +14,6 @@ import type {
   AdminAiFlagDto,
   AdminContentReviewDecisionRequestDto,
   AdminContentReviewDetailDto,
-  AdminContentReviewDetailResponseDto,
   ContentReviewHistoryItemDto,
   ContentReviewHistoryResponseDto,
   ReviewAuthorDto,
@@ -130,10 +129,7 @@ export function formatVideoDuration(seconds?: number | null): string {
 // Class Mapper chính cho Content Review
 // ==========================================
 
-export class ContentReviewMapper extends BaseMapper<
-  ReviewQueueItemDto,
-  ContentReviewQueueItem
-> {
+export class ContentReviewMapper extends BaseMapper<ReviewQueueItemDto, ContentReviewQueueItem> {
   toModel(dto: ReviewQueueItemDto | null | undefined): ContentReviewQueueItem {
     const postStatus = parsePostReviewStatus(
       safeString(pickField(dto, ['postStatus', 'status'], 'DRAFT'))
@@ -206,10 +202,10 @@ export class ContentReviewMapper extends BaseMapper<
   }
 
   toQueuePagination(
-    dto: ReviewQueueListResponseDto | null | undefined
+    data: ReviewQueueListResponseDto['data'] | null | undefined,
+    meta: ReviewQueueListResponseDto['meta'] | null | undefined
   ): PaginationResult<ContentReviewQueueItem> {
-    const items = this.toModelList(dto?.data);
-    const meta = dto?.meta;
+    const items = this.toModelList(data);
     return {
       items,
       metadata: {
@@ -245,9 +241,7 @@ export class ContentReviewMapper extends BaseMapper<
 
     let recipe: ReviewRecipeModel | undefined = undefined;
     if (dto?.recipe) {
-      const rawIngredients = safeArray<ReviewRecipeIngredientDto>(
-        dto.recipe.ingredients
-      );
+      const rawIngredients = safeArray<ReviewRecipeIngredientDto>(dto.recipe.ingredients);
       const ingredients: ReviewRecipeIngredientModel[] = rawIngredients.map((i) => ({
         name: safeString(i?.name),
         amount: safeNumber(i?.amount, 0),
@@ -255,16 +249,12 @@ export class ContentReviewMapper extends BaseMapper<
         notes: i?.notes,
       }));
 
-      const rawInstructions = safeArray<ReviewRecipeInstructionDto>(
-        dto.recipe.instructions
-      );
-      const instructions: ReviewRecipeInstructionModel[] = rawInstructions.map(
-        (inst) => ({
-          stepNumber: safeNumber(inst?.stepNumber, 1),
-          description: safeString(inst?.description),
-          image: inst?.image,
-        })
-      );
+      const rawInstructions = safeArray<ReviewRecipeInstructionDto>(dto.recipe.instructions);
+      const instructions: ReviewRecipeInstructionModel[] = rawInstructions.map((inst) => ({
+        stepNumber: safeNumber(inst?.stepNumber, 1),
+        description: safeString(inst?.description),
+        image: inst?.image,
+      }));
 
       recipe = {
         prepTimeMinutes: safeNumber(dto.recipe.prepTimeMinutes, 0),
@@ -279,9 +269,7 @@ export class ContentReviewMapper extends BaseMapper<
     let video: ReviewVideoModel | undefined = undefined;
     if (dto?.video) {
       const source =
-        safeString(dto.video.source, 'UPLOAD').toUpperCase() === 'YOUTUBE'
-          ? 'YOUTUBE'
-          : 'UPLOAD';
+        safeString(dto.video.source, 'UPLOAD').toUpperCase() === 'YOUTUBE' ? 'YOUTUBE' : 'UPLOAD';
       const externalUrl = dto.video.externalUrl ?? null;
       const mediaAssetId = dto.video.mediaAssetId ?? null;
       const durationSeconds = dto.video.durationSeconds ?? null;
@@ -318,16 +306,9 @@ export class ContentReviewMapper extends BaseMapper<
     };
   }
 
-  toDetailResponse(
-    response: AdminContentReviewDetailResponseDto | null | undefined
-  ): AdminContentReviewDetailModel {
-    return this.toDetailModel(response?.data);
-  }
-
   toHistoryModel(
-    response: ContentReviewHistoryResponseDto | null | undefined
+    data: ContentReviewHistoryResponseDto['data'] | null | undefined
   ): ContentReviewHistoryModel {
-    const data = response?.data;
     const postStatus = parsePostReviewStatus(data?.postStatus);
     const type = parsePostType(data?.type);
     const publishedRevisionId = data?.publishedRevisionId ?? null;
@@ -354,9 +335,7 @@ export class ContentReviewMapper extends BaseMapper<
       };
     });
 
-    const pendingRev = revisions.find(
-      (r) => r.status === PostReviewStatus.PENDING_REVIEW
-    );
+    const pendingRev = revisions.find((r) => r.status === PostReviewStatus.PENDING_REVIEW);
 
     return {
       postId: safeString(data?.postId),

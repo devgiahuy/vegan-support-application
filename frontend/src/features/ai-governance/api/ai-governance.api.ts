@@ -1,5 +1,5 @@
 import apiClient from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { AI_GOVERNANCE_ENDPOINTS } from '@/features/ai-governance/constants/ai-governance.endpoints';
 import type { PaginationResult } from '@/types/api';
 import type {
   AiGovernanceControlAuditResponseDto,
@@ -32,15 +32,15 @@ export const aiGovernanceApi = {
   /** `GET /admin/ai/health` — Tổng quan vận hành 24 giờ */
   getHealth: async (): Promise<AiOperationalHealth> => {
     const response = await apiClient.get<AiGovernanceHealthResponseDto>(
-      API_ENDPOINTS.AI_GOVERNANCE.HEALTH
+      AI_GOVERNANCE_ENDPOINTS.HEALTH
     );
-    return aiGovernanceMapper.toHealthSummary(response.data);
+    return aiGovernanceMapper.toHealthSummary(response.data?.data);
   },
 
   /** `GET /admin/ai/metrics` — Thống kê aggregated metrics */
   getMetrics: async (params?: AiGovernanceQueryParams): Promise<AiGovernanceMetrics> => {
     const response = await apiClient.get<AiGovernanceMetricsResponseDto>(
-      API_ENDPOINTS.AI_GOVERNANCE.METRICS,
+      AI_GOVERNANCE_ENDPOINTS.METRICS,
       {
         params: {
           capability: params?.capability || undefined,
@@ -50,7 +50,7 @@ export const aiGovernanceApi = {
         },
       }
     );
-    return aiGovernanceMapper.toMetricsSummary(response.data);
+    return aiGovernanceMapper.toMetricsSummary(response.data?.data);
   },
 
   /** `GET /admin/ai/requests` — Nhật ký yêu cầu đã che mờ (redacted) */
@@ -58,7 +58,7 @@ export const aiGovernanceApi = {
     params?: AiGovernanceQueryParams
   ): Promise<PaginationResult<AiRequestLog>> => {
     const response = await apiClient.get<AiGovernanceRequestsResponseDto>(
-      API_ENDPOINTS.AI_GOVERNANCE.REQUESTS,
+      AI_GOVERNANCE_ENDPOINTS.REQUESTS,
       {
         params: {
           page: params?.page ?? 1,
@@ -71,13 +71,13 @@ export const aiGovernanceApi = {
         },
       }
     );
-    return aiGovernanceMapper.toRequestsList(response.data);
+    return aiGovernanceMapper.toRequestsList(response.data?.data, response.data?.meta);
   },
 
   /** `GET /admin/ai/flags` — Cờ an toàn kiểm duyệt AI */
   getFlags: async (params?: AiGovernanceQueryParams): Promise<AiFlag[]> => {
     const response = await apiClient.get<AiGovernanceFlagsResponseDto>(
-      API_ENDPOINTS.AI_GOVERNANCE.FLAGS,
+      AI_GOVERNANCE_ENDPOINTS.FLAGS,
       {
         params: {
           page: params?.page ?? 1,
@@ -89,15 +89,15 @@ export const aiGovernanceApi = {
         },
       }
     );
-    return aiGovernanceMapper.toFlagsList(response.data);
+    return aiGovernanceMapper.toFlagsList(response.data?.data);
   },
 
   /** `GET /admin/ai/features` — Danh sách cấu hình tính năng & provider */
   getFeatures: async (): Promise<AiFeatureToggle[]> => {
     const response = await apiClient.get<AiGovernanceControlsResponseDto>(
-      API_ENDPOINTS.AI_GOVERNANCE.FEATURES
+      AI_GOVERNANCE_ENDPOINTS.FEATURES
     );
-    return aiGovernanceMapper.toFeaturesList(response.data);
+    return aiGovernanceMapper.toFeaturesList(response.data?.data);
   },
 
   /** `GET /admin/ai/features/audit` — Lịch sử kiểm toán cấu hình tính năng */
@@ -105,7 +105,7 @@ export const aiGovernanceApi = {
     params?: AiGovernanceQueryParams
   ): Promise<PaginationResult<AiFeatureAuditLog>> => {
     const response = await apiClient.get<AiGovernanceControlAuditResponseDto>(
-      API_ENDPOINTS.AI_GOVERNANCE.FEATURES_AUDIT,
+      AI_GOVERNANCE_ENDPOINTS.FEATURES_AUDIT,
       {
         params: {
           page: params?.page ?? 1,
@@ -117,7 +117,7 @@ export const aiGovernanceApi = {
         },
       }
     );
-    return aiGovernanceMapper.toAuditList(response.data);
+    return aiGovernanceMapper.toAuditList(response.data?.data, response.data?.meta);
   },
 
   /** `PATCH /admin/ai/features/:feature` — Đổi trạng thái hoặc provider với lý do kiểm toán bắt buộc */
@@ -130,9 +130,9 @@ export const aiGovernanceApi = {
   ): Promise<AiFeatureToggle> => {
     const payload = aiGovernanceMapper.toTogglePayload(provider, enabled, expectedVersion, reason);
     const response = await apiClient.patch<AiGovernanceControlResponseDto>(
-      API_ENDPOINTS.AI_GOVERNANCE.FEATURE_TOGGLE(feature),
+      AI_GOVERNANCE_ENDPOINTS.FEATURE_TOGGLE(feature),
       payload
     );
-    return aiGovernanceMapper.toToggledFeature(response.data);
+    return aiGovernanceMapper.toToggledFeature(response.data?.data);
   },
 };

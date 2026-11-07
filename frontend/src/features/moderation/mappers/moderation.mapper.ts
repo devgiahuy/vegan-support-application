@@ -10,14 +10,11 @@ import {
 import type { PaginationResult } from '@/types/api';
 import type {
   AdminModerationCommentListResponseDto,
-  AdminModerationCommentResponseDto,
   AdminModerationUserListResponseDto,
-  AdminModerationUserResponseDto,
   ModeratedCommentDto,
   ModeratedUserDto,
   ModerationReportDto,
   ModerationReportListResponseDto,
-  ModerationReportResponseDto,
   ResolveReportRequestDto,
   UpdateCommentStatusRequestDto,
   UpdateUserStatusRequestDto,
@@ -197,13 +194,12 @@ export class ModerationMapper extends BaseMapper<ModerationReportDto, Moderation
 
   /** `GET /admin/reports` — mục tiêu gộp + meta. */
   toReportsList(
-    dto: ModerationReportListResponseDto | null | undefined
+    rawItems: ModerationReportListResponseDto['data'],
+    meta?: ModerationReportListResponseDto['meta']
   ): PaginationResult<ModerationReport> {
-    const rawItems = pickField(dto, ['data'], null) as (ModerationReportDto | null)[] | null;
     const items = this.toModelList(
       safeArray<ModerationReportDto | null, ModerationReportDto | null>(rawItems, (item) => item)
     ).filter((item) => item.id.length > 0);
-    const meta = pickField(dto, ['meta'], null) as ModerationReportListResponseDto['meta'];
     return {
       items,
       metadata: meta
@@ -213,8 +209,7 @@ export class ModerationMapper extends BaseMapper<ModerationReportDto, Moderation
   }
 
   /** `PATCH /admin/reports/:id/resolve` → báo cáo đã resolve. */
-  toResolvedReport(dto: ModerationReportResponseDto | null | undefined): ModerationReport {
-    const data = pickField(dto, ['data'], null) as ModerationReportDto | null;
+  toResolvedReport(data: ModerationReportDto | null | undefined): ModerationReport {
     return this.toModel(data);
   }
 
@@ -224,9 +219,9 @@ export class ModerationMapper extends BaseMapper<ModerationReportDto, Moderation
 
   /** `GET /admin/users` — mảng user + meta. */
   toUsersList(
-    dto: AdminModerationUserListResponseDto | null | undefined
+    rawItems: AdminModerationUserListResponseDto['data'],
+    meta?: AdminModerationUserListResponseDto['meta']
   ): PaginationResult<ModeratedUser> {
-    const rawItems = pickField(dto, ['data'], null) as (ModeratedUserDto | null)[] | null;
     const items = safeArray<ModeratedUserDto | null, ModeratedUser>(rawItems, (item) => {
       const status = safeEnum(
         pickField(item, ['status'], 'ACTIVE'),
@@ -252,7 +247,6 @@ export class ModerationMapper extends BaseMapper<ModerationReportDto, Moderation
         updatedAt: safeDate(pickField(item, ['updatedAt', 'updated_at'], null)),
       };
     }).filter((user) => user.id.length > 0);
-    const meta = pickField(dto, ['meta'], null) as AdminModerationUserListResponseDto['meta'];
     return {
       items,
       metadata: meta
@@ -262,8 +256,7 @@ export class ModerationMapper extends BaseMapper<ModerationReportDto, Moderation
   }
 
   /** `PATCH /admin/users/:id/status` → user sau đổi. */
-  toSingleUser(dto: AdminModerationUserResponseDto | null | undefined): ModeratedUser {
-    const data = pickField(dto, ['data'], null) as ModeratedUserDto | null;
+  toSingleUser(data: ModeratedUserDto | null | undefined): ModeratedUser {
     const status = safeEnum(
       pickField(data, ['status'], 'ACTIVE'),
       MemberStatus,
@@ -294,13 +287,12 @@ export class ModerationMapper extends BaseMapper<ModerationReportDto, Moderation
 
   /** `GET /admin/comments` — mảng + meta. */
   toModCommentsList(
-    dto: AdminModerationCommentListResponseDto | null | undefined
+    rawItems: AdminModerationCommentListResponseDto['data'],
+    meta?: AdminModerationCommentListResponseDto['meta']
   ): PaginationResult<ModeratedComment> {
-    const rawItems = pickField(dto, ['data'], null) as (ModeratedCommentDto | null)[] | null;
     const items = safeArray<ModeratedCommentDto | null, ModeratedComment>(rawItems, (item) =>
       this.toModComment(item)
     ).filter((comment) => comment.id.length > 0);
-    const meta = pickField(dto, ['meta'], null) as AdminModerationCommentListResponseDto['meta'];
     return {
       items,
       metadata: meta
@@ -334,8 +326,7 @@ export class ModerationMapper extends BaseMapper<ModerationReportDto, Moderation
   }
 
   /** `PATCH /admin/comments/:id/status` → comment sau đổi. */
-  toSingleModComment(dto: AdminModerationCommentResponseDto | null | undefined): ModeratedComment {
-    const data = pickField(dto, ['data'], null) as ModeratedCommentDto | null;
+  toSingleModComment(data: ModeratedCommentDto | null | undefined): ModeratedComment {
     return this.toModComment(data);
   }
 

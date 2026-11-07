@@ -72,13 +72,9 @@ describe('AuthMapper.toModel', () => {
 describe('AuthMapper.toSessionModel', () => {
   it('đọc đúng session lồng data.user, không nhầm data thành user', () => {
     const s = authMapper.toSessionModel({
-      success: true,
-      data: {
-        user: { ...FULL_USER },
-        accessToken: 'jwt-access',
-        accessTokenExpiresAt: '2026-09-15T08:45:00.000Z',
-      },
-      meta: null,
+      user: { ...FULL_USER },
+      accessToken: 'jwt-access',
+      accessTokenExpiresAt: '2026-09-15T08:45:00.000Z',
     });
 
     expect(s.accessToken).toBe('jwt-access');
@@ -98,9 +94,8 @@ describe('AuthMapper.toSessionModel', () => {
 describe('AuthMapper.toRefreshedTokenModel', () => {
   it('map đúng RefreshResponse', () => {
     const t = authMapper.toRefreshedTokenModel({
-      success: true,
-      data: { accessToken: 'jwt-new', accessTokenExpiresAt: '2026-09-15T09:00:00.000Z' },
-      meta: null,
+      accessToken: 'jwt-new',
+      accessTokenExpiresAt: '2026-09-15T09:00:00.000Z',
     });
     expect(t.accessToken).toBe('jwt-new');
     expect(t.accessTokenExpiresAt).toBeInstanceOf(Date);
@@ -114,9 +109,8 @@ describe('AuthMapper.toRefreshedTokenModel', () => {
 describe('AuthMapper.toLogoutResultModel', () => {
   it('map đúng scope ALL_DEVICES', () => {
     const r = authMapper.toLogoutResultModel({
-      success: true,
-      data: { loggedOut: true, scope: 'ALL_DEVICES' },
-      meta: null,
+      loggedOut: true,
+      scope: 'ALL_DEVICES',
     });
     expect(r.loggedOut).toBe(true);
     expect(r.scope).toBe(LogoutScope.ALL_DEVICES);
@@ -129,11 +123,7 @@ describe('AuthMapper.toLogoutResultModel', () => {
 
 describe('AuthMapper.toProfileModel', () => {
   it('map đúng ProfileResponse, bỏ qua health/diet ngoài scope', () => {
-    const u = authMapper.toProfileModel({
-      success: true,
-      data: { ...FULL_USER, healthProfile: { bmi: 21.5 }, dietPreference: null },
-      meta: null,
-    });
+    const u = authMapper.toProfileModel(FULL_USER);
     expect(u.id).toBe(FULL_USER.id);
     expect(u.role).toBe(UserRole.MEMBER);
   });
@@ -205,8 +195,17 @@ describe('Contributor registration validation', () => {
   };
 
   it('yêu cầu tên tổ chức khi khai báo liên kết tổ chức', () => {
-    expect(registerSchema.safeParse({ ...base, claimedApprovalBasis: 'ORGANIZATION_AFFILIATION' }).success).toBe(false);
-    expect(registerSchema.safeParse({ ...base, claimedApprovalBasis: 'ORGANIZATION_AFFILIATION', organizationClaim: 'Bếp Chay Xanh' }).success).toBe(true);
+    expect(
+      registerSchema.safeParse({ ...base, claimedApprovalBasis: 'ORGANIZATION_AFFILIATION' })
+        .success
+    ).toBe(false);
+    expect(
+      registerSchema.safeParse({
+        ...base,
+        claimedApprovalBasis: 'ORGANIZATION_AFFILIATION',
+        organizationClaim: 'Bếp Chay Xanh',
+      }).success
+    ).toBe(true);
   });
 
   it('giới hạn liên kết theo backend', () => {

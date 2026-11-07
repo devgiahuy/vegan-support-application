@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { RECIPE_NUTRITION_ENDPOINTS } from '@/features/recipe-nutrition/constants/recipe-nutrition.endpoints';
 import { recipeNutritionMapper } from '../mappers/recipe-nutrition.mapper';
 import type {
   RecipeNutritionEstimateResponseDto,
@@ -20,7 +20,7 @@ export const recipeNutritionApi = {
    */
   getCurrentNutrition: async (postId: string): Promise<RecipeNutritionEstimateModel> => {
     const res = await api.get<RecipeNutritionEstimateResponseDto>(
-      API_ENDPOINTS.RECIPE_NUTRITION.CURRENT(postId),
+      RECIPE_NUTRITION_ENDPOINTS.CURRENT(postId),
       { silent: true }
     );
     if (res.data?.success && res.data.data) {
@@ -34,7 +34,7 @@ export const recipeNutritionApi = {
    */
   getNutritionStatus: async (postId: string): Promise<RecipeNutritionStatusModel> => {
     const res = await api.get<RecipeNutritionStatusResponseDto>(
-      API_ENDPOINTS.RECIPE_NUTRITION.STATUS(postId),
+      RECIPE_NUTRITION_ENDPOINTS.STATUS(postId),
       { silent: true }
     );
     if (res.data?.success && res.data.data) {
@@ -56,7 +56,7 @@ export const recipeNutritionApi = {
     totalPages: number;
   }> => {
     const res = await api.get<RecipeNutritionHistoryResponseDto>(
-      API_ENDPOINTS.RECIPE_NUTRITION.HISTORY(postId),
+      RECIPE_NUTRITION_ENDPOINTS.HISTORY(postId),
       {
         params: { page, limit },
         silent: true,
@@ -80,7 +80,7 @@ export const recipeNutritionApi = {
     payload: RecipeNutritionPreviewRequestDto = { useAiFallback: false }
   ): Promise<RecipeNutritionEstimateModel> => {
     const res = await api.post<RecipeNutritionEstimateResponseDto>(
-      API_ENDPOINTS.RECIPE_NUTRITION.PREVIEW(postId),
+      RECIPE_NUTRITION_ENDPOINTS.PREVIEW(postId),
       payload
     );
     if (res.data?.success && res.data.data) {
@@ -97,7 +97,7 @@ export const recipeNutritionApi = {
     payload: RecipeNutritionRecalculateRequestDto = { useAiFallback: true }
   ): Promise<RecipeNutritionEstimateModel> => {
     const res = await api.post<RecipeNutritionEstimateResponseDto>(
-      API_ENDPOINTS.RECIPE_NUTRITION.RECALCULATE(postId),
+      RECIPE_NUTRITION_ENDPOINTS.RECALCULATE(postId),
       payload
     );
     if (res.data?.success && res.data.data) {

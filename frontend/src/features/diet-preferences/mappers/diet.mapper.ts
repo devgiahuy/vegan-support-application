@@ -72,8 +72,7 @@ export class DietMapper extends BaseMapper<DietRuleDto, DietRule> {
   }
 
   /** `POST /diet-rules/preview` → `DietPreview`. */
-  toPreviewModel(dto: DietRulePreviewResponseDto | null | undefined): DietPreview {
-    const data = pickField(dto, ['data'], null) as DietRulePreviewResponseDto['data'];
+  toPreviewModel(data: DietRulePreviewResponseDto['data']): DietPreview {
     const selection = pickField(data, ['selection'], null) as {
       dietPattern?: string;
       practiceSchedule?: string;
@@ -112,8 +111,8 @@ export class DietMapper extends BaseMapper<DietRuleDto, DietRule> {
   }
 
   /** `PUT /users/me/diet-preferences` → `DietPreference`. */
-  toPreferenceModel(dto: DietPreferenceResponseDto | null | undefined): DietPreference {
-    const data = (pickField(dto, ['data'], null) ?? {}) as Record<string, unknown>;
+  toPreferenceModel(dto: DietPreferenceResponseDto['data']): DietPreference {
+    const data = dto ?? {};
     const pattern = safeEnum(
       pickField(data, ['dietPattern', 'diet_pattern'], DietPattern.VEGAN),
       DietPattern,
@@ -188,8 +187,7 @@ export class DietMapper extends BaseMapper<DietRuleDto, DietRule> {
   }
 
   /** `PUT /users/me/diet-schedule` → `DietSchedule`. */
-  toScheduleModel(dto: DietScheduleResponseDto | null | undefined): DietSchedule {
-    const data = pickField(dto, ['data'], null) as DietScheduleResponseDto['data'];
+  toScheduleModel(data: DietScheduleResponseDto['data']): DietSchedule {
     return {
       practiceSchedule: safeEnum(
         pickField(data, ['practiceSchedule', 'practice_schedule'], PracticeSchedule.PERIODIC),

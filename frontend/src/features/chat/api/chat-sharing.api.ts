@@ -20,7 +20,7 @@ import {
  * đúng signature dự kiến live.
  *
  * Ngày nối live (TODO(BE-READY)): reconfirm shape 3 endpoint với swagger thật,
- * sửa mapper nếu lệch, thay thân hàm bằng axios qua `API_ENDPOINTS.CHAT_SHARING`,
+ * sửa mapper nếu lệch, khai báo endpoint theo domain và thay thân hàm bằng axios,
  * giữ nguyên chữ ký + kiểu trả về — queries/components KHÔNG đổi.
  * Đồng thời chuyển `__fixtures__` sang test-only hoặc xóa khỏi bundle.
  */
@@ -55,16 +55,14 @@ export const chatSharingApi = {
     const current = shareStates.get(messageId);
     if (!shared) {
       shareStates.set(messageId, { shared: false, shareId: current?.shareId ?? '' });
-      return chatSharingMapper.toSharedAnswer({
-        ...clone(sharedRevokedFixture),
-        data: { ...(sharedRevokedFixture.data ?? {}), messageId },
-      });
+      return chatSharingMapper.toSharedAnswer({ ...(sharedRevokedFixture.data ?? {}), messageId });
     }
     const shareId = current?.shared ? current.shareId : `share-${Date.now().toString(36)}`;
     shareStates.set(messageId, { shared: true, shareId });
     return chatSharingMapper.toSharedAnswer({
-      ...clone(sharedOpenFixture),
-      data: { ...(sharedOpenFixture.data ?? {}), messageId, shareId },
+      ...(sharedOpenFixture.data ?? {}),
+      messageId,
+      shareId,
     });
   },
 
@@ -79,15 +77,11 @@ export const chatSharingApi = {
       const haystack = `${item?.question ?? ''} ${item?.answer ?? ''}`.toLowerCase();
       return haystack.includes(query);
     });
-    return chatSharingMapper.toPublicList({
-      success: true,
-      data: source,
-      meta: {
-        page: params?.page ?? 1,
-        limit: params?.limit ?? 10,
-        total: source.length,
-        totalPages: 1,
-      },
+    return chatSharingMapper.toPublicList(source, {
+      page: params?.page ?? 1,
+      limit: params?.limit ?? 10,
+      total: source.length,
+      totalPages: 1,
     });
   },
 
@@ -102,6 +96,6 @@ export const chatSharingApi = {
   /** `POST /chat/messages/:id/verification` (fixture). */
   verifyAnswer: async (messageId: string, note: string): Promise<AnswerVerification | null> => {
     await delay();
-    return chatSharingMapper.toVerificationModel(verifiedFixture(messageId, note));
+    return chatSharingMapper.toVerificationModel(verifiedFixture(messageId, note)?.data);
   },
 };
