@@ -57,16 +57,16 @@ export class RecipeDraftService {
 
       const draft = createRecipePostRequestSchema.parse({
         type: 'RECIPE',
-        title: input.title,
-        excerpt: input.description,
+        title: input.title || suggestion.title,
+        excerpt: input.description || suggestion.description,
         body: suggestion.body,
         categoryIds: [],
         tags: [],
         media: [],
         recipe: {
-          servings: suggestion.servings,
-          prepTimeMinutes: suggestion.prepTimeMinutes,
-          cookTimeMinutes: suggestion.cookTimeMinutes,
+          servings: input.servings ?? suggestion.servings,
+          prepTimeMinutes: input.prepTimeMinutes ?? suggestion.prepTimeMinutes,
+          cookTimeMinutes: input.cookTimeMinutes ?? suggestion.cookTimeMinutes,
           difficulty: suggestion.difficulty,
           nutrition: {},
           ingredients: ingredients.map((item, position) => ({

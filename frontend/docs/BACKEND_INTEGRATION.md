@@ -1,12 +1,14 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.62
+**Version:** 4.65
 
-**Cập nhật:** 05/11/2026
+**Cập nhật:** 07/11/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
 **Contract target:** `/api/v1`
+
+Changelog 2026-11-07 (4.65): AI recipe draft accepts an optional title and suggests missing basic text and times while preserving supplied values. Backend lint, typecheck, build, OpenAPI and live OpenAI previews passed; Docker backend updated and frontend consumer synchronized. At least one ingredient remains required; no image generation or publication is performed.
 
 > Tài liệu này là registry sống cho capability backend thực tế. Phases 00–26 đã có source/migrations/OpenAPI; Phase 27 release gate đang kiểm tra. Contributor approval basis chỉ dùng cho audit/presentation; client dùng contract thống nhất từ 2026-09-27.
 
@@ -186,9 +188,11 @@ The configured real OpenAI API successfully extracted a synthetic Vietnamese rec
 
 ### Receipt identity and AI recipe draft preview — 2026-10-24
 
+2026-11-07 (4.64): Recipe draft endpoint `READY`: the request accepts optional description and optional author-provided servings and preparation/cooking times. Supplied values are passed to the provider and retained in the response. Existing clients remain compatible. Backend lint, typecheck, build and OpenAPI generation passed; live OpenAI preview without description returned 200 with supplied values preserved; anonymous request returned 401. No persistence, authorization, error-code or publication changes. Frontend sends the author values, permits an empty description and preserves those values when applying suggestions. Image remains outside the text-only AI request.
+
 | Method        | Endpoint                                                                                 | Status        | FE integrated                                                    | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | ------------- | ---------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST          | `/api/v1/recipe-drafts/generate`                                                         | `IN_PROGRESS` | Yes (2026-10-24)                                                 | Authenticated text-only AI preview from `title`, `description`, `ingredientNames[]`; returns an editable `draft` shaped for `POST /posts`, subjective confidence/assumptions and provider provenance. Does not save or publish content. Live provider validation remains. FE: `features/recipe`                                                                                                                                                                  |
+| POST          | `/api/v1/recipe-drafts/generate`                                                         | `READY` | Yes, 2026-11-07 | Authenticated text-only AI preview from ingredient names and optional title, description, servings and times. Supplies missing values, preserves supplied values, and does not save or publish content. |
 | POST/GET/POST | `/api/v1/receipt-jobs`, `/api/v1/receipt-jobs/{id}`, `/api/v1/receipt-jobs/{id}/confirm` | `IN_PROGRESS` | Yes (2026-10-25, current review fields; live validation pending) | Provider template `receipt-v3`; per-image `receiptNumber`, merchant/date/currency/total; `reviewRequired` and `identityDecisionRequired` on job; `duplicateOfJobId` on candidate; `notices[]` and `excludedItems[]` report non-food exclusions; confirmation adds `duplicateCandidates[]`. Same product names on another purchase date remain a new purchase; ambiguous partial overlaps require user decision. Exact repeated receipts do not increment Pantry. |
 
 Frontend migration (2026-10-25): receipt consumer mapping and review UI are complete. For recipe generation, add the endpoint constant, separate request/response DTOs, UI Model, Mapper/API/query and mapper tests; let the author edit all generated fields before calling existing `POST /posts`. Never render AI quantities as verified nutrition values. No image is sent to AI.

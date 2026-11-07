@@ -1,7 +1,7 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "../backend/openapi.json",
-  "generatedAt": "2026-10-28T10:19:43.513Z",
+  "source": "http://localhost:4000/api-docs.json",
+  "generatedAt": "2026-11-07T11:07:14.241Z",
   "stats": {
     "operations": 189,
     "groups": 42,
@@ -1296,7 +1296,7 @@
       "method": "POST",
       "path": "/api/v1/recipe-drafts/generate",
       "group": "Content",
-      "summary": "Generate an editable recipe draft from a title, description and ingredient names",
+      "summary": "Generate an editable recipe draft from ingredient names and optional basic information",
       "operationId": "generateRecipeDraft",
       "params": [],
       "request": {

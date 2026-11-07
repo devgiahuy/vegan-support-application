@@ -97,6 +97,9 @@ export class RecipeDraftMapper extends BaseMapper<
     return {
       title: prompt.title.trim(),
       description: prompt.description.trim(),
+      servings: prompt.servings,
+      prepTimeMinutes: prompt.prepTimeMinutes,
+      cookTimeMinutes: prompt.cookTimeMinutes,
       ingredientNames: prompt.ingredientNames.map((n) => n.trim()).filter(Boolean),
     };
   }

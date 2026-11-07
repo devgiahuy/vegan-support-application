@@ -3,7 +3,7 @@ import { RecipeDifficulty } from '@/common/enums';
 import { recipeMapper } from '../mappers/recipe.mapper';
 import type { RecipeFormValues } from '../schemas/recipe-form.schema';
 import type { Recipe } from '../types/recipe.model';
-import { recipeFormToRecipe, recipeToFormValues } from './recipe-form-values';
+import { applyDraftBasics, recipeFormToRecipe, recipeToFormValues } from './recipe-form-values';
 
 const formValues: RecipeFormValues = {
   title: 'Đậu hũ sốt cà',
@@ -21,6 +21,28 @@ const formValues: RecipeFormValues = {
     { stepNumber: 7, instruction: 'Rưới sốt cà chua.' },
   ],
 };
+
+describe('applyDraftBasics', () => {
+  it('chỉ điền các trường còn trống và giữ thời gian 0 do người dùng nhập', () => {
+    const result = applyDraftBasics(
+      { ...formValues, title: '', description: '', servings: Number.NaN, prepTimeMinutes: 0 },
+      {
+        title: 'Món AI',
+        description: 'Mô tả AI',
+        servings: 4,
+        prepTimeMinutes: 20,
+        cookTimeMinutes: 30,
+      }
+    );
+    expect(result).toEqual({
+      title: 'Món AI',
+      description: 'Mô tả AI',
+      servings: 4,
+      prepTimeMinutes: 0,
+      cookTimeMinutes: 15,
+    });
+  });
+});
 
 describe('recipeFormToRecipe', () => {
   it('renumbers steps by position and keeps description as the excerpt', () => {

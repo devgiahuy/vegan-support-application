@@ -151,6 +151,23 @@ describe('RecipeDraftMapper', () => {
   });
 
   describe('toDto', () => {
+    it('giữ khẩu phần và thời gian kể cả mô tả trống', () => {
+      expect(
+        mapper.toDto({
+          title: 'Đậu hũ xào sả',
+          description: '',
+          ingredientNames: ['Sả'],
+          servings: 3,
+          prepTimeMinutes: 0,
+          cookTimeMinutes: 20,
+        })
+      ).toMatchObject({
+        description: '',
+        servings: 3,
+        prepTimeMinutes: 0,
+        cookTimeMinutes: 20,
+      });
+    });
     it('chuyển đổi RecipeDraftPrompt thành GenerateRecipeDraftRequestDto với trim và loại bỏ chuỗi rỗng', () => {
       const prompt: RecipeDraftPrompt = {
         title: '  Canh chua chay  ',

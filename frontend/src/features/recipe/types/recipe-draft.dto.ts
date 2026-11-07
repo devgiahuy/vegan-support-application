@@ -2,10 +2,13 @@
  * DTO gửi yêu cầu tạo bản nháp công thức qua AI
  */
 export interface GenerateRecipeDraftRequestDto {
-  /** Tiêu đề / tên món ăn (tối thiểu 3, tối đa 200 ký tự) */
+  /** Tên món, để trống để AI gợi ý. */
   title: string;
-  /** Mô tả ngắn hoặc cảm hứng nấu ăn (tối thiểu 1, tối đa 500 ký tự) */
+  /** Mô tả ngắn, để trống để AI gợi ý. */
   description: string;
+  servings?: number;
+  prepTimeMinutes?: number;
+  cookTimeMinutes?: number;
   /** Danh sách tên các nguyên liệu chính (1 - 50 nguyên liệu) */
   ingredientNames: string[];
 }

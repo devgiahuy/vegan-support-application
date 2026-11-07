@@ -6,6 +6,9 @@ import { RecipeDifficulty } from '@/common/enums';
 export interface RecipeDraftPrompt {
   title: string;
   description: string;
+  servings?: number;
+  prepTimeMinutes?: number;
+  cookTimeMinutes?: number;
   ingredientNames: string[];
 }
 
