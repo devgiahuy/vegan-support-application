@@ -92,7 +92,7 @@ export function RestaurantMap({
           zoom: 14,
           mapTypeControl: false,
           streetViewControl: false,
-          fullscreenControl: false,
+          fullscreenControl: true,
         });
       } else {
         googleMapInstance.current.setCenter(center);
@@ -141,10 +141,29 @@ export function RestaurantMap({
         if (!restaurant.hasCoordinates || restaurant.lat === null || restaurant.lng === null)
           return;
         const isSelected = restaurant.id === selectedId;
+        const hasRating = restaurant.rating !== null;
+        const markerSvg = hasRating
+          ? `<svg xmlns="http://www.w3.org/2000/svg" width="54" height="34" viewBox="0 0 54 34"><rect x="1" y="1" width="52" height="25" rx="12.5" fill="${isSelected ? '#166534' : '#171717'}" stroke="white" stroke-width="2"/><path d="M23 25h8l-4 7z" fill="${isSelected ? '#166534' : '#171717'}"/></svg>`
+          : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="6" fill="#171717" stroke="white" stroke-width="2"/></svg>';
         const marker = new window.google.maps.Marker({
           position: { lat: restaurant.lat, lng: restaurant.lng },
           map,
           title: restaurant.name,
+          icon: {
+            url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(markerSvg)}`,
+            scaledSize: new window.google.maps.Size(hasRating ? 54 : 16, hasRating ? 34 : 16),
+            labelOrigin: new window.google.maps.Point(27, 13),
+          },
+          ...(hasRating
+            ? {
+                label: {
+                  text: `★ ${restaurant.ratingLabel}`,
+                  color: '#ffffff',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                },
+              }
+            : {}),
           zIndex: isSelected ? 100 : undefined,
         });
         marker.addListener('click', () => handleSelect(restaurant.id));
