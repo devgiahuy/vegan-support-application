@@ -466,10 +466,15 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
 
   private toUserSummary(dto: PlanUserSummaryDto | null | undefined): PlanUserSummary | null {
     if (!dto || typeof dto !== 'object') return null;
+    const detail = safeString(pickField(dto, ['detail'], ''));
     return {
       status: safeString(pickField(dto, ['status'], 'NO_SERIOUS_ISSUE')),
       title: safeString(pickField(dto, ['title'], '')),
-      detail: safeString(pickField(dto, ['detail'], '')),
+      detail,
+      detailLines: detail
+        .split(';')
+        .map((line) => line.trim())
+        .filter(Boolean),
       suggestion: pickField(dto, ['suggestion'], null)
         ? safeString(pickField(dto, ['suggestion'], ''))
         : null,

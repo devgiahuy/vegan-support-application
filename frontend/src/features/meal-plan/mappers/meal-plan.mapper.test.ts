@@ -326,7 +326,20 @@ describe('MealPlanMapper', () => {
     expect(plan.warningDetails[0].severityLabel).toBe('Lưu ý');
 
     expect(plan.userSummary?.status).toBe('ADVISORY_ADJUSTMENTS');
+    expect(plan.userSummary?.detailLines).toEqual([
+      'Thực đơn tuần có một số lưu ý về tỷ lệ dinh dưỡng.',
+    ]);
     expect(plan.userSummary?.hardConstraintsPreserved).toBe(true);
+  });
+
+  it('tách các món trong tóm tắt thành từng dòng và bỏ dấu phân cách thừa', () => {
+    const plan = mealPlanMapper.toModel({
+      userSummary: { detail: 'Món A: có dị ứng;  Món B: chưa rõ thành phần; ;' },
+    });
+    expect(plan.userSummary?.detailLines).toEqual([
+      'Món A: có dị ứng',
+      'Món B: chưa rõ thành phần',
+    ]);
   });
 
   it('chuẩn hóa date khi backend trả về chuỗi ISO có time (split T)', () => {

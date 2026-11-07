@@ -80,6 +80,7 @@ export interface PlanUserSummary {
   status: string;
   title: string;
   detail: string;
+  detailLines: string[];
   suggestion: string | null;
   hardConstraintsPreserved: boolean;
 }
