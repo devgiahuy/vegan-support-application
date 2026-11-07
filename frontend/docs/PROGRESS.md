@@ -1,5 +1,23 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## AI điền thông tin cơ bản còn thiếu — 2026-11-07
+
+AI recipe giữ 100% → 100% scaffold. Form cho qua bước cơ bản khi chưa nhập; AI điền trường trống và giữ giá trị đã nhập; gửi cuối vẫn kiểm tra trường bắt buộc. Backend và OpenAPI đã cập nhật; provider thật đã được kiểm tra. Ảnh bìa vẫn tải riêng, chưa được AI tạo. Chưa kiểm thử giao diện trình duyệt.
+
+## Định dạng cảnh báo thực đơn và popup bản đồ — 2026-11-07
+
+Tiến độ Meal Plan và Restaurants giữ nguyên: tóm tắt thực đơn tách các mục bằng dấu chấm phẩy thành danh sách; popup cụm quán trên sơ đồ không còn khóa và phủ tối toàn trang. Typecheck, 785 test và build 47 trang pass; chưa kiểm tra trực tiếp trên trình duyệt.
+
+## Cập nhật AI recipe — 2026-11-07
+
+Scaffold AI recipe giữ 100% → 100%. Endpoint được xác minh `READY` với provider thật; frontend gửi khẩu phần/thời gian, cho phép mô tả trống và giữ thông số tác giả khi áp dụng. Cần kiểm thử thao tác trên trình duyệt, đặc biệt bước nhập tên nguyên liệu và xem trước.
+
+## Sửa khám phá, phiên và giao diện thực đơn — 2026-11-06
+
+Kiểm tra live bổ sung: công thức “đậu hủ xào xã” có nguyên liệu “XÃ” chưa được nhận diện; API member trả `UNRESOLVED_INGREDIENT` và `DIET_PATTERN`. Thêm cảnh báo tại bước xem lại để tác giả quay lại liên kết danh mục. Provider AI live trả bản nháp thành công với hợp đồng cũ; server đang chạy chưa nạp hợp đồng mới. Tỷ lệ tính năng không đổi.
+
+Giữ nguyên tỷ lệ scaffold các tính năng. Đã thêm phân trang và tải lại khi quay lại cửa sổ cho khám phá công thức; cho phép khôi phục phiên trước khi chặn route; thêm popup kiểm tra nguyên liệu theo từng món và ghim đánh giá trên Google Maps. Luồng AI mới chưa hoàn tất: endpoint còn `IN_PROGRESS`, chưa kiểm chứng provider thật và frontend chưa áp dụng hợp đồng mới. Danh sách từng món so sánh riêng với tủ bếp, chưa phân bổ tồn kho giữa các món. Chưa xác nhận trực tiếp công thức bị thiếu trong dữ liệu thực.
+
 ## Kiểm tra lại response và lỗi API — Updated 2026-11-05
 
 Đợt rà soát bổ sung tìm thấy fallback fixture còn chạy trên `/posts` READY, nhánh GET meal analysis nuốt lỗi `409 MEAL_ANALYSIS_STALE`, và meal program detail/create/update có thể map payload thiếu thành Model rỗng. Đã sửa các luồng này và bỏ client upload signature không còn endpoint. Các feature liên quan giữ nguyên % vì không thêm capability. Typecheck, 783 tests và build 47 routes pass; lint phạm vi sửa 0 lỗi.

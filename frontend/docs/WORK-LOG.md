@@ -1,5 +1,44 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-07] — Cho phép AI bổ sung thông tin công thức còn trống
+
+- **Mục tiêu:** Cho phép bỏ trống thông tin cơ bản để AI gợi ý, giữ dữ liệu tác giả và kiểm tra khi gửi.
+- **Đã làm:** Cho phép chuyển bước cơ bản; endpoint nhận tên tùy chọn và AI đề xuất tên/mô tả cùng khẩu phần/thời gian còn trống. Form giữ thông tin đã nhập kể cả thời gian 0; kiểm tra bắt buộc khi gửi. Ảnh bìa vẫn tải riêng, không được endpoint AI tạo.
+- **File chính:** backend `src/modules/content/recipe-draft.*`, frontend `src/features/recipe/components/{recipe-editor-form,ai-recipe-draft-assistant}.tsx`, `src/features/recipe/utils/recipe-form-values.ts`, mapper/types, OpenAPI và tài liệu tích hợp.
+- **Kiểm chứng:** Backend lint/typecheck/build/OpenAPI pass, frontend typecheck, lint phạm vi, 786 tests, build 47 trang pass. Docker backend được cập nhật không chạy seed. OpenAI live trả 200 khi chỉ có hai nguyên liệu; một request khác giữ nguyên tên, mô tả, 3 người, sơ chế 0 phút, nấu 20 phút. Chưa kiểm thử tay trên trình duyệt.
+- **PROGRESS:** Giữ nguyên 100% scaffold; cải thiện luồng nhập liệu.
+
+## [2026-11-07] — Dễ đọc cảnh báo thực đơn và giữ sơ đồ quán
+
+- **Mục tiêu:** Trình bày tóm tắt thực đơn dễ đọc và giữ bản đồ hiển thị khi mở cụm quán.
+- **Đã làm:** Mapper tách nội dung theo dấu chấm phẩy, bỏ mục trống; trang chi tiết hiển thị từng mục thành gạch đầu dòng. Popup cụm quán trên sơ đồ dự phòng dùng dialog không khóa nền và nằm về bên phải trên desktop.
+- **File chính:** `src/features/meal-plan/{types/meal-plan.model.ts,mappers/meal-plan.mapper.ts,mappers/meal-plan.mapper.test.ts}`, `src/app/(site)/meal-plans/[id]/page.tsx`, `src/features/restaurant/components/map-fallback.tsx`.
+- **Kiểm chứng:** `npx tsc --noEmit` pass, `npm test` 95 files/785 tests pass, các test liên quan 33/33 pass, `npm run build` 47 trang pass, `git diff --check` pass. Lint phạm vi sửa không có lỗi, còn một cảnh báo biến `swapMutation` chưa dùng trong trang meal-plan. Chưa kiểm thử thủ công trên trình duyệt.
+- **PROGRESS:** Các tỷ lệ scaffold giữ nguyên; chỉ thay đổi cách trình bày và tương tác.
+
+## [2026-11-07] — Khởi động lại backend và kết nối thông số AI
+
+- **Mục tiêu:** Nạp backend mới và kiểm tra thay đổi bản nháp AI.
+- **Đã làm:** Recreate backend Docker từ image mới, `RUN_SEED=false`, giữ MongoDB volume; đồng bộ Swagger live. Endpoint cho phép mô tả trống, nhận khẩu phần/thời gian và giữ lại trong bản nháp. Frontend chuyển các giá trị tác giả vào DTO và cho phép tạo khi mô tả trống; image không gửi cho provider.
+- **Kiểm chứng:** OpenAPI live có các trường mới; OpenAI trả 200 cho mô tả bỏ trống, 3 người, sơ chế 12 phút, nấu 20 phút; anonymous 401. `npx tsc --noEmit` pass, mapper test 7/7 và bộ test editor 9/9 pass. Chưa chạy lại toàn bộ test/build hoặc kiểm thử trình duyệt sau thay đổi.
+- **Tiến độ:** Scaffold AI giữ 100%; khám phá cần xác nhận sau sửa nguyên liệu, popup đi chợ chưa phân bổ tồn kho giữa các món, bản đồ và phiên cần kiểm thử trực quan.
+
+## [2026-11-06] — Kiểm tra backend live và cảnh báo nguyên liệu
+
+- **Mục tiêu:** Kiểm tra món không hiện và provider AI sau khi backend được khởi động.
+- **Đã làm:** Đồng bộ Swagger từ cổng 4000; dùng tài khoản demo member kiểm tra công thức đã duyệt “đậu hủ xào xã”. API trả món ở tab không phù hợp với `UNRESOLVED_INGREDIENT` (“XÃ”) và `DIET_PATTERN`; resolver không nhận “XÃ”, còn “sả” khớp danh mục. Không tự thay dữ liệu hoặc bỏ qua ràng buộc. Thêm cảnh báo có thể quay lại bước nguyên liệu ở màn xem lại. Provider OpenAI của server hiện tại trả bản nháp thành công; OpenAPI live vẫn là hợp đồng cũ, chưa có các trường mới trong source.
+- **File chính:** `src/features/recipe/components/recipe-editor-review.tsx`, catalog Swagger, tài liệu tiến độ.
+- **Kiểm chứng:** API live trả thành công bản xem trước AI với provider OpenAI; hai phiên demo member/admin độc lập lấy đúng role và refresh HTTP 200. Chưa tái hiện phiên trên trình duyệt. Typecheck và lint phạm vi cảnh báo bị dừng sau khi chạy lâu không có kết quả; cần chạy lại.
+- **Còn lại:** Server frontend chưa chạy để kiểm tra trình duyệt; server backend live cần nạp bản build mới trước khi kiểm thử hợp đồng AI mới. Chưa sửa trực tiếp công thức đã xuất bản; tác giả cần xác nhận nguyên liệu và gửi revision theo quy trình duyệt. Tỷ lệ scaffold giữ nguyên.
+
+## [2026-11-06] — Khám phá công thức, phiên, đi chợ và bản đồ
+
+- **Mục tiêu:** Xử lý các vấn đề người dùng báo về công thức, thực đơn, bản đồ và phiên admin.
+- **Đã làm:** Khám phá có phân trang và refetch khi quay lại cửa sổ; giữ khẩu phần/thời gian và liên kết nguyên liệu đã chọn khi áp dụng bản nháp AI. Middleware cho phép client thử khôi phục phiên bằng refresh cookie, tránh gọi refresh lần hai sau lỗi Web Locks và tránh vòng refresh khi tải hồ sơ. Popup theo món gọi preview đã tích hợp, ghi rõ tồn kho được so sánh riêng. Google Maps hiển thị ghim đánh giá và nút toàn màn hình. Backend AI nhận mô tả tùy chọn và thông số tác giả, nhưng frontend chưa dùng hợp đồng mới vì endpoint còn `IN_PROGRESS`.
+- **File chính:** `src/app/(site)/recipes/page.tsx`, `src/app/(site)/meal-plans/[id]/page.tsx`, `src/features/{recipe,meal-plan,restaurant}`, `src/lib/auth-refresh.ts`, `src/middleware.ts`, backend `src/modules/content/recipe-draft.*`.
+- **Kiểm chứng:** `npm test` 95 files/783 tests pass trước thay đổi phân trang cuối; `npx tsc --noEmit` và `npm run build` (47 trang) pass. Backend lint/typecheck/build và OpenAPI generation đã chạy; Swagger đã đồng bộ. `git diff --check` pass. Scoped frontend lint bị dừng sau khi chạy lâu không có kết quả. Chưa kiểm thử tay vì backend không chạy; chưa xác nhận provider AI thật.
+- **PROGRESS:** Các tỷ lệ scaffold giữ nguyên; đây là công việc một phần. Cần kiểm chứng món cụ thể, phân bổ tủ bếp giữa các món, hoàn thiện luồng AI sau khi endpoint READY và kiểm thử bản đồ/phiên trên trình duyệt thực.
+
 ## [2026-11-05] — Kiểm tra lại response và lỗi API
 
 - **Mục tiêu:** Rà soát lần hai toàn bộ consumer response theo luồng Query/UI → API → mapper và đối chiếu catalog Swagger.
