@@ -4,7 +4,9 @@ import axios from 'axios';
 import { setAccessToken, clearAccessToken } from './auth-token';
 import { useAuthStore } from '@/store/useAuthStore';
 import { authMapper } from '@/features/auth/mappers/auth.mapper';
-import type { RefreshResponseDto } from '@/features/auth/types/auth.dto';
+import type { ProfileResponseDto, RefreshResponseDto } from '@/features/auth/types/auth.dto';
+import { USERS_ENDPOINTS } from '@/common/constants/endpoints/users.endpoints';
+import { API_BASE_URL } from './env';
 
 /**
  * Singleton refresh cho toàn bộ tab.
@@ -68,8 +70,13 @@ async function doFetchRefresh(): Promise<string> {
     useAuthStore.getState().setToken(token);
     // Nếu đã có user, refresh lại profile để đồng bộ role
     try {
-      const { authApi } = await import('@/features/auth/api/auth.api');
-      const user = await authApi.getMe();
+      const response = await axios.get<ProfileResponseDto>(USERS_ENDPOINTS.ME, {
+        baseURL: API_BASE_URL,
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
+        timeout: 15000,
+      });
+      const user = authMapper.toProfileModel(response.data?.data);
       if (user.id) useAuthStore.getState().setUser(user);
     } catch {
       /* không chặn refresh nếu getMe fail */
@@ -126,11 +133,7 @@ export async function sharedRefresh(): Promise<string> {
         locks: { request: (name: string, fn: () => Promise<string>) => Promise<string> };
       }
     ).locks;
-    try {
-      return await locks.request('auth-refresh', run);
-    } catch {
-      return run();
-    }
+    return locks.request('auth-refresh', run);
   }
   return run();
 }
