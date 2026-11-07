@@ -8,6 +8,7 @@ import { ErrorState, LoadingState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useIconColors } from '@/lib/theme-colors';
 import { PostType } from '@/common/enums';
+import { VideoPlayer } from '@/features/video/components/video-player';
 import { useContentReviewDetailQuery, useReviewNutritionPanelQuery } from '../queries/content-review.queries';
 import { ReviewNutritionPanel } from './review-nutrition-panel';
 import type { ContentReviewDecision } from '../types/content-review.model';
@@ -106,7 +107,11 @@ export function ContentReviewDetailSheet({
           ) : null}
 
           {data.videoUrl ? (
-            <PrimaryButton label="Mở video để xem trước" variant="outline" icon={<Play size={16} color={colors.primary} />} onPress={() => void Linking.openURL(data.videoUrl as string)} />
+            <View className="gap-2">
+              <Text className="text-xs font-bold uppercase text-muted-foreground">Xem trước video</Text>
+              <VideoPlayer videoUrl={data.videoUrl} posterUrl={data.coverUrl ?? undefined} title={data.title} />
+              <PrimaryButton label="Mở bằng trình duyệt" variant="outline" icon={<Play size={16} color={colors.primary} />} onPress={() => void Linking.openURL(data.videoUrl as string)} />
+            </View>
           ) : null}
 
           {data.excerpt ? (

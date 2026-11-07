@@ -61,6 +61,8 @@ export interface BillingOrders {
 export interface EntitlementLedger {
   id: string;
   featureLabel: string;
+  /** Số lượt thay đổi (dương = cộng, âm = trừ) — dùng để tô màu; `deltaLabel` là bản hiển thị. */
+  delta: number;
   deltaLabel: string;
   reasonLabel: string;
   createdAtLabel: string;

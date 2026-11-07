@@ -129,9 +129,20 @@ test('entitlements add period credits on top of permanent balances and label new
   assert.match(model.usageRows[0]!.note, /gồm 80 lượt chu kỳ gói/);
   assert.equal(model.subscription?.periodRows[0]!.value, '80 / 100');
   assert.equal(model.ledger[0]!.reasonLabel, 'Cấp lượt chu kỳ gói tiện ích');
+  assert.equal(model.ledger[0]!.delta, 100);
 });
 test('subscription without an end date is ignored and orders expose their duration', () => {
   assert.equal(entitlementMapper.toModel({ subscription: { chatCredits: 3 } }).subscription, null);
   assert.equal(orderMapper.toModel({ durationMonths: 3 }).durationLabel, '3 tháng');
   assert.equal(orderMapper.toModel({}).durationLabel, 'Mua một lần');
+});
+test('ledger keeps the numeric delta so positive and negative changes can be coloured', () => {
+  const model = entitlementMapper.toModel({
+    ledger: [
+      { id: 'a', feature: 'CHAT', delta: '-1', reason: 'USAGE_RESERVED' },
+      { id: 'b', feature: 'RECEIPT', delta: '3', reason: 'TRIAL_GRANT' },
+      { id: 'c', feature: 'RECEIPT', delta: 0, reason: 'USAGE_COMPLETED' },
+    ],
+  });
+  assert.deepEqual(model.ledger.map((entry) => [entry.delta, entry.deltaLabel]), [[-1, '-1'], [3, '+3'], [0, '0']]);
 });
