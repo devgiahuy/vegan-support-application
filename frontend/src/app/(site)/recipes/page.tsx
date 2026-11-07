@@ -72,7 +72,11 @@ export default function RecipeDiscoveryPage() {
   } = useCategoryTreeQuery(CategoryType.RECIPE_GROUP);
 
   const [eligibilityTab, setEligibilityTab] = React.useState<RecipeEligibilityFilter>('ELIGIBLE');
+  const scope = JSON.stringify([query.trim(), checkedIds[0], difficulty, eligibilityTab]);
+  const [pagination, setPagination] = React.useState({ scope: '', page: 1 });
+  const page = pagination.scope === scope ? pagination.page : 1;
   const recipeParams = {
+    page,
     q: query.trim() || undefined,
     category: checkedIds[0] || undefined,
     difficulty: difficulty || undefined,
@@ -490,6 +494,31 @@ export default function RecipeDiscoveryPage() {
               </div>
             )}
           </div>
+
+          {recipesPagination && recipesPagination.metadata.totalPages > 1 && (
+            <nav
+              aria-label="Phân trang công thức"
+              className="mt-6 flex items-center justify-center gap-4"
+            >
+              <Button
+                variant="outline"
+                disabled={page <= 1 || isRecipesLoading}
+                onClick={() => setPagination({ scope, page: page - 1 })}
+              >
+                Trước
+              </Button>
+              <span className="text-sm" aria-live="polite">
+                Trang {page} / {recipesPagination.metadata.totalPages}
+              </span>
+              <Button
+                variant="outline"
+                disabled={page >= recipesPagination.metadata.totalPages || isRecipesLoading}
+                onClick={() => setPagination({ scope, page: page + 1 })}
+              >
+                Tiếp
+              </Button>
+            </nav>
+          )}
 
           {/* AI card */}
           <Card className="mt-8 border-primary/20 bg-gradient-to-br from-primary/5 to-cta/5">
