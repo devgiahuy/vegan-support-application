@@ -376,7 +376,10 @@ export class AdminInsightsService {
             feature: reservation.feature as UsageTraceItem['feature'],
             occurredAt: reservation.createdAt.toISOString(),
             user: userMap.get(reservation.ownerId) ?? null,
-            quotaSource: (reservation.source ?? 'CREDITS') as UsageTraceItem['quotaSource'],
+            quotaSource:
+              reservation.source === 'DAILY_FREE'
+                ? 'FREE_DAILY'
+                : ((reservation.source ?? 'CREDITS') as UsageTraceItem['quotaSource']),
             quotaCharged: charged(reservation.status),
             outcome: reservation.status,
             aiStatus: job?.status ?? null,

@@ -168,7 +168,7 @@ function DurationPlanCard({
           <p className="tabular-nums text-2xl font-semibold">{plan.priceLabel}</p>
           {plan.durationMonths !== null && plan.durationMonths > 1 && (
             <p className="tabular-nums text-sm text-muted-foreground">
-              Tương đương {plan.monthlyPriceLabel} / tháng
+              Tương đương {plan.monthlyPriceLabel} / 30 ngày
             </p>
           )}
         </div>
@@ -240,9 +240,10 @@ function BillingContent() {
         <p className="text-sm font-medium text-primary">Gói tiện ích VeggieConnect</p>
         <h1 className="text-balance text-3xl font-semibold sm:text-4xl">Thêm lượt, chủ động hơn</h1>
         <p className="max-w-2xl text-pretty text-muted-foreground">
-          Gói tiện ích chọn thời hạn 1 tháng, 3 tháng hoặc 1 năm và nhận lượt mới mỗi 30 ngày. Gói
-          lẻ mua một lần, cộng dồn vào tài khoản. Lượt chat miễn phí được dùng trước. Không tự gia
-          hạn và không tăng dung lượng ảnh lưu trữ.
+          Gói tiện ích chọn thời hạn 30, 90 hoặc 360 ngày và nhận lượt mới mỗi 30 ngày. Mỗi ngày có
+          3 lượt chat, 1 lượt quét tủ lạnh và 1 lượt quét hóa đơn miễn phí. Gói lẻ mua một lần, cộng
+          dồn vào tài khoản. Lượt chat miễn phí được dùng trước. Không tự gia hạn và không tăng dung
+          lượng ảnh lưu trữ.
         </p>
       </header>
       <Alert>

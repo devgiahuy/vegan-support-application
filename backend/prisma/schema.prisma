@@ -156,6 +156,7 @@ model UsageReservation {
 
   @@index([status, leaseUntil])
   @@index([ownerId, feature, status])
+  @@index([ownerId, feature, source, periodKey, status])
   @@index([feature, createdAt])
   @@map("usage_reservations")
 }

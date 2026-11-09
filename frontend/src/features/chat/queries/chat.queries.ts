@@ -5,11 +5,13 @@ import { BILLING_QUERY_KEYS } from '@/features/billing/queries/billing.queries';
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { getApiErrorCode } from '@/lib/api-error';
+import type { PaginationResult } from '@/types/api';
 import { useAuthStore } from '@/store/useAuthStore';
 import { chatApi } from '../api/chat.api';
 import { streamChatMessage } from '../api/chat-stream';
 import type { FeedbackValue } from '@/common/enums';
-import type { QuotaState } from '../types/chat.model';
+import type { ChatSession, QuotaState } from '../types/chat.model';
 import { newIdempotencyKey } from '@/features/meal-plan/utils/idempotency';
 
 export const CHAT_QUERY_KEYS = {
@@ -55,6 +57,54 @@ export function useCreateChatSessionMutation() {
     mutationFn: (title?: string) => chatApi.createSession(title),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.sessions() });
+    },
+  });
+}
+
+/** Xóa mềm phiên của tài khoản và dọn lịch sử tin nhắn đã cache. */
+export function useDeleteChatSessionMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => chatApi.deleteSession({ id }),
+    onSuccess: ({ id }) => {
+      queryClient.setQueryData<PaginationResult<ChatSession>>(
+        CHAT_QUERY_KEYS.sessions(),
+        (current) =>
+          current
+            ? {
+                ...current,
+                items: current.items.filter((session) => session.id !== id),
+                metadata: {
+                  ...current.metadata,
+                  totalItems: Math.max(0, current.metadata.totalItems - 1),
+                },
+              }
+            : current
+      );
+      queryClient.removeQueries({ queryKey: CHAT_QUERY_KEYS.messages(id), exact: true });
+      void queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.sessions() });
+      toast.success('Đã xóa cuộc trò chuyện khỏi lịch sử.');
+    },
+    onError: (error) => {
+      const code = getApiErrorCode(error);
+      if (code === 'CHAT_SESSION_BUSY') {
+        toast.error('Cuộc trò chuyện đang trả lời. Vui lòng chờ hoàn tất rồi thử lại.');
+      } else if (code === 'NOT_FOUND') {
+        toast.error('Cuộc trò chuyện không còn trong lịch sử hoặc không thuộc tài khoản này.');
+        void queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.sessions() });
+      } else if (
+        code === 'AUTH_REQUIRED' ||
+        code === 'INVALID_ACCESS_TOKEN' ||
+        code === 'TOKEN_EXPIRED'
+      ) {
+        toast.error('Vui lòng đăng nhập lại để xóa cuộc trò chuyện.');
+      } else if (code === 'ACCOUNT_BANNED') {
+        toast.error('Tài khoản hiện không thể thực hiện thao tác này.');
+      } else if (code === 'VALIDATION_ERROR') {
+        toast.error('Mã cuộc trò chuyện không hợp lệ.');
+      } else {
+        toast.error('Không thể xóa cuộc trò chuyện. Vui lòng thử lại.');
+      }
     },
   });
 }

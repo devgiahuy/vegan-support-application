@@ -180,7 +180,7 @@ function DurationPlans({
         <Text className="text-lg font-semibold text-foreground">{selected.name}</Text>
         <Text className="text-sm text-muted-foreground">{selected.description}</Text>
         <Text className="text-2xl font-bold text-primary">{selected.priceLabel}</Text>
-        <Text className="text-xs text-muted-foreground">≈ {selected.monthlyPriceLabel} / tháng</Text>
+        <Text className="text-xs text-muted-foreground">≈ {selected.monthlyPriceLabel} / 30 ngày</Text>
         {selected.periodBenefitLabels.map((label) => (
           <Text key={label} className="text-sm text-foreground">
             {label}
@@ -255,7 +255,7 @@ export default function BillingScreen() {
           <Text className="text-sm font-semibold text-primary">Gói tiện ích VeggieConnect</Text>
           <Text className="text-3xl font-bold text-foreground">Thêm lượt, chủ động hơn</Text>
           <Text className="text-sm leading-6 text-muted-foreground">
-            Gói lẻ mua một lần, cộng dồn vào tài khoản; combo tiện ích theo thời hạn cấp lượt mỗi
+            Mỗi ngày có 3 lượt chat, 1 lượt quét tủ lạnh và 1 lượt quét hóa đơn miễn phí. Gói lẻ mua một lần, cộng dồn vào tài khoản; combo tiện ích theo thời hạn cấp lượt mỗi
             chu kỳ. Không tự gia hạn, không tăng dung lượng ảnh lưu trữ.
           </Text>
         </View>

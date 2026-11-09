@@ -65,6 +65,13 @@ The optional `webhook` Compose profile adds an ngrok v3 container forwarding to
 The tunnel exposes the backend HTTP server, including the existing payOS webhook;
 backend authentication and payOS signature verification still apply.
 
+For the 2026-11-09 billing quota update, apply the reviewed Mongo schema/validators
+before starting the new backend, then run `npm run billing:catalog` against the intended
+database. It updates version-1 duration products to version 2 without rewriting existing
+orders or subscriptions, including when `RUN_SEED=false`. Set daily chat defaults to 3
+and `BILLING_PANTRY_BASE_LIMIT=10` in existing environment files; disable legacy one-time
+trial settings. Daily free scan reservations reset at midnight Asia/Ho_Chi_Minh.
+
 From `backend/`, configure the untracked `.env`:
 
 ```dotenv
@@ -106,10 +113,18 @@ on the payOS payment channel. Registration sends a signed sample; the backend ve
 and acknowledges it without granting benefits. See [billing setup](../docs/BILLING_DEMO.md).
 
 `NGROK_URL` is optional. If empty, use the HTTPS URL returned by ngrok, set
-`BILLING_PUBLIC_URL` to that origin and run `docker compose up -d --no-deps backend`
-to recreate the backend with the new checkout return origin. Update the payOS webhook
+`BILLING_PUBLIC_URL` to that origin and run `docker compose up -d --no-deps backend`.
+Update the payOS webhook
 registration whenever the public URL changes. Changes to `.env` require container
 recreation with `up -d`; `restart` does not reload Compose environment values.
+
+New payOS checkout links return the browser directly to `BILLING_RETURN_URL`, with the
+local order ID appended. Set it to the frontend billing page reachable from the paying
+device: `localhost` refers to that device, so use a reachable frontend URL for phones.
+The ngrok backend tunnel remains necessary for the webhook, but its free browser warning
+no longer interrupts new checkout returns. Previously created links retain their original
+return URL; click **Visit Site** if the warning appears, or open the billing page and check
+the order there. Return parameters never confirm payment; backend verification does.
 
 For an API running on the host, set `NGROK_UPSTREAM=http://host.docker.internal:4000`
 and start only the tunnel with `docker compose --profile webhook up -d --no-deps ngrok`.

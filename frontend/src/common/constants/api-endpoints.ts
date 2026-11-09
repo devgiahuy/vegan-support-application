@@ -119,6 +119,7 @@ export const API_ENDPOINTS = {
   },
   CHAT: {
     SESSIONS: '/chat/sessions',
+    SESSION: (id: string) => `/chat/sessions/${id}`,
     SESSION_MESSAGES: (id: string) => `/chat/sessions/${id}/messages`,
     MESSAGE_FEEDBACK: (id: string) => `/chat/messages/${id}/feedback`,
   },

@@ -52,7 +52,7 @@ Verify signed payOS notification and authoritative payment query; grant once
 ```
 
 ## GET `/api/v1/billing/payos/return/{id}`
-Display-only browser return/cancel redirect; never grant or trust query payment claims
+Legacy display-only browser return/cancel redirect for existing checkout links; never grant or trust query payment claim
 - Params: `path:id* (string)`
 - Request: —
 - Responses: `303` → Configured application billing URL with local orderId, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse
@@ -305,6 +305,8 @@ Display-only browser return/cancel redirect; never grant or trust query payment 
         "chatReserved",
         "fridgeReserved",
         "receiptReserved",
+        "fridgeDailyFreeRemaining",
+        "receiptDailyFreeRemaining",
         "pantryUsed",
         "pantryLimit",
         "fridgeMaxImages",
@@ -345,6 +347,12 @@ Display-only browser return/cancel redirect; never grant or trust query payment 
           "type": "integer"
         },
         "receiptReserved": {
+          "type": "integer"
+        },
+        "fridgeDailyFreeRemaining": {
+          "type": "integer"
+        },
+        "receiptDailyFreeRemaining": {
           "type": "integer"
         },
         "pantryUsed": {
@@ -402,14 +410,6 @@ Display-only browser return/cancel redirect; never grant or trust query payment 
               "_truncated": true
             },
             "periodDays": {
-              "type": "integer",
-              "_truncated": true
-            },
-            "chatCredits": {
-              "type": "integer",
-              "_truncated": true
-            },
-            "fridgeCredits": {
               "type": "integer",
               "_truncated": true
             },

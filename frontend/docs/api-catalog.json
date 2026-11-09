@@ -1,9 +1,9 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "../backend/openapi.json",
-  "generatedAt": "2026-10-28T10:19:43.513Z",
+  "source": "..\\backend\\openapi.json",
+  "generatedAt": "2026-11-09T04:45:29.633Z",
   "stats": {
-    "operations": 189,
+    "operations": 190,
     "groups": 42,
     "schemas": 166
   },
@@ -3009,6 +3009,31 @@
       }
     },
     {
+      "method": "DELETE",
+      "path": "/api/v1/chat/sessions/{id}",
+      "group": "AI Chat",
+      "summary": "Ẩn cuộc trò chuyện của tài khoản khỏi lịch sử",
+      "operationId": "deleteChatSession",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "object",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
       "method": "GET",
       "path": "/api/v1/chat/sessions/{id}/messages",
       "group": "AI Chat",
@@ -3361,7 +3386,7 @@
       "method": "GET",
       "path": "/api/v1/billing/payos/return/{id}",
       "group": "Billing",
-      "summary": "Display-only browser return/cancel redirect; never grant or trust query payment claims",
+      "summary": "Legacy display-only browser return/cancel redirect for existing checkout links; never grant or trust query payment claims",
       "operationId": "",
       "params": [
         {

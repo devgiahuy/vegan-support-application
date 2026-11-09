@@ -60,7 +60,7 @@ const durationMonths = (value: unknown): number | null => {
   return months > 0 ? months : null;
 };
 export const durationLabel = (months: number | null) =>
-  months === null ? 'Mua một lần' : months % 12 === 0 ? months / 12 + ' năm' : months + ' tháng';
+  months === null ? 'Mua một lần' : months * 30 + ' ngày';
 const provider = (value: unknown): BillingProvider =>
   value === 'payos' || value === 'sandbox' || value === 'vnpay' ? value : 'UNKNOWN';
 const providerLabel = (value: BillingProvider) =>
@@ -257,8 +257,12 @@ export class EntitlementMapper extends BaseMapper<EntitlementDto, Entitlements> 
     };
     const subscription = subscriptionModel(pickField(dto, ['subscription'], null));
     const chatAvailable = allowance.chatCredits + (subscription?.chatCredits ?? 0);
-    const fridgeAvailable = allowance.fridgeCredits + (subscription?.fridgeCredits ?? 0);
-    const receiptAvailable = allowance.receiptCredits + (subscription?.receiptCredits ?? 0);
+    const fridgeFree = count(pickField(dto, ['fridgeDailyFreeRemaining'], 0));
+    const receiptFree = count(pickField(dto, ['receiptDailyFreeRemaining'], 0));
+    const fridgeAvailable =
+      allowance.fridgeCredits + (subscription?.fridgeCredits ?? 0) + fridgeFree;
+    const receiptAvailable =
+      allowance.receiptCredits + (subscription?.receiptCredits ?? 0) + receiptFree;
     const periodNote = (credits: number | undefined) =>
       subscription ? ' · gồm ' + (credits ?? 0) + ' lượt chu kỳ gói' : '';
     return {
@@ -294,12 +298,22 @@ export class EntitlementMapper extends BaseMapper<EntitlementDto, Entitlements> 
         {
           label: 'Quét tủ lạnh',
           value: fridgeAvailable + ' lượt',
-          note: fridgeReserved + ' đang giữ chỗ' + periodNote(subscription?.fridgeCredits),
+          note:
+            fridgeFree +
+            ' lượt miễn phí hôm nay · ' +
+            fridgeReserved +
+            ' đang giữ chỗ' +
+            periodNote(subscription?.fridgeCredits),
         },
         {
           label: 'Phân tích hóa đơn',
           value: receiptAvailable + ' lượt',
-          note: receiptReserved + ' đang giữ chỗ' + periodNote(subscription?.receiptCredits),
+          note:
+            receiptFree +
+            ' lượt miễn phí hôm nay · ' +
+            receiptReserved +
+            ' đang giữ chỗ' +
+            periodNote(subscription?.receiptCredits),
         },
         { label: 'Tủ đồ ăn', value: pantryLabel, note: 'Xóa hoặc gộp item sẽ giải phóng ô' },
       ],

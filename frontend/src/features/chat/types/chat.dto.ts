@@ -45,6 +45,17 @@ export interface CreateChatSessionRequestDto {
   title?: string;
 }
 
+/** `DELETE /chat/sessions/:id` — id nằm trên path. */
+export interface DeleteChatSessionRequestDto {
+  id: string;
+}
+
+export interface DeleteChatSessionResponseDto {
+  success?: boolean;
+  data?: { id?: string } | null;
+  meta?: null;
+}
+
 /** `POST /chat/sessions/:id/messages` — `content` + `idempotencyKey` bắt buộc. */
 export interface SendChatMessageRequestDto {
   content: string;

@@ -103,6 +103,18 @@ export const entitlementSchema = z
     chatReserved: z.number().int().nonnegative(),
     fridgeReserved: z.number().int().nonnegative(),
     receiptReserved: z.number().int().nonnegative(),
+    fridgeDailyFreeRemaining: z
+      .number()
+      .int()
+      .min(0)
+      .max(1)
+      .describe('Daily free fridge jobs remaining; resets at midnight Asia/Ho_Chi_Minh.'),
+    receiptDailyFreeRemaining: z
+      .number()
+      .int()
+      .min(0)
+      .max(1)
+      .describe('Daily free receipt jobs remaining; resets at midnight Asia/Ho_Chi_Minh.'),
     pantryUsed: z.number().int().nonnegative(),
     pantryLimit: z.number().int().positive().nullable(),
     fridgeMaxImages: z.number().int().positive(),

@@ -1,9 +1,33 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-09] — Cập nhật biểu tượng đang suy nghĩ
+
+- **Thay đổi**: dùng biểu tượng Sparkles của hệ thống cho trạng thái chờ chat, xoay bằng transform và tôn trọng tùy chọn giảm chuyển động.
+- **Kiểm chứng**: lint và kiểm tra TypeScript của frontend.
+- **Kiểm tra lại**: frontend local chạy `next start` với bản build cũ. Đã build và khởi động lại; `/assistant` và JavaScript được phục vụ trả 200, trạng thái chờ sử dụng `Sparkles` với `motion-safe:animate-spin`.
+
+## [2026-11-09] — Sửa bản đồ biến mất khi mở cụm quán
+
+- **Thay đổi**: giới hạn quy tắc `overflow: clip` cho lúc hộp thoại cụm quán mở, tránh khóa cuộn của Radix tạo scroll container trên body và làm mất vị trí sticky của bản đồ.
+- **Kiểm chứng**: TypeScript, 738 tests, build và `git diff --check` pass. Tìm địa chỉ trên trình duyệt local không trả kết quả, nên chưa xác minh được chuỗi chọn quán rồi mở cụm bằng dữ liệu thực.
+
 ## [2026-11-09] — Làm rõ cảnh báo dị ứng trong thực đơn
 
 - **Thay đổi**: analysis v4 trả hardViolations theo món/bữa và lý do có bằng chứng; web/mobile nhóm món lặp, xuống dòng và hiển thị trạng thái cảnh báo. Giữ nguyên rule dị ứng, phân biệt cảnh báo snapshot khi chưa xác định được nguyên liệu.
 - **Kiểm chứng**: backend lint/typecheck/build/OpenAPI, acceptance meal-plan/analysis; frontend typecheck, 738 tests, build; mobile typecheck, 113 tests. Kiểm tra chỉ đọc thực đơn trong ảnh và mô phỏng snapshot-only/không dị ứng pass. Lint riêng trang web vẫn có 2 lỗi React Compiler và 1 cảnh báo có sẵn tại HEAD; lint các file logic sửa đổi khác pass.
+
+## [2026-11-09] — Điều chỉnh quota và gói tiện ích
+
+- **Mục tiêu**: 3 chat/ngày, 1 lượt/ngày mỗi loại quét, 10 ô miễn phí; gói mới cấp 300 chat và 30 lượt mỗi loại quét mỗi 30 ngày.
+- **Thay đổi**: backend giữ lượt miễn phí theo ngày, hoàn khi lỗi, giữ snapshot đơn cũ; web/mobile hiển thị số lượt còn lại và 30/90/360 ngày. Gói lẻ giữ giá và quyền lợi. Danh mục hiện hữu cần lệnh cập nhật riêng sau validator.
+- **Kiểm chứng**: backend lint/typecheck/build, OpenAPI và billing acceptance với transport giả lập pass; web typecheck, 736 tests, build và lint phần thay đổi pass; mobile typecheck, 112 tests và lint pass. Validator/index và danh mục đã áp dụng local; health 200. Seed cơ sở dữ liệu kiểm thử có lỗi Post mẫu đã tồn tại trước thay đổi; không xác nhận giao dịch payOS thật.
+
+## [2026-11-08] — Kiểm tra và sửa luồng chat AI
+
+- **Mục tiêu**: kiểm tra lỗi gửi câu hỏi và xác minh luồng chat.
+- **Thay đổi**: `chat-stream.ts` gửi bearer token như API client, refresh một lần khi nhận 401 với phiên đăng nhập, tiếp tục đọc event quota sau message_complete và báo lỗi khi stream kết thúc chưa hoàn tất. `chat-stream.test.ts` kiểm tra token, refresh, khách, quota và stream bị ngắt.
+- **Kiểm chứng**: Swagger được tạo từ backend và đồng bộ thành công; `npx tsc --noEmit`, lint các file sửa và `npm run build` pass; `npm test` 69 files / 735 tests pass. Backend và MongoDB local không chạy (MongoDB cổng 27018 không kết nối, Docker daemon không hoạt động), nên chưa kiểm thử trình duyệt hoặc OpenAI end-to-end. UC-07 giữ 95% → 95%.
+- **Kiểm tra lại sau khi chạy Docker**: health/database OK; guest và member seed tạo phiên, gửi SSE, nhận đủ message_start/content_delta/message_complete/quota; lịch sử member có hai tin nhắn. Cả hai nhận local fallback. Kiểm tra provider: Responses API hoạt động, Moderations API trả 503 `model_not_found` cho `omni-moderation-latest`; danh sách model khả dụng không có model moderation. Cần provider/credentials hỗ trợ moderation, không bỏ qua kiểm duyệt. Chưa kiểm tra trình duyệt và chưa xác nhận câu trả lời AI thực qua luồng chat.
 
 ## [2026-10-29] — Trang /admin/dashboard: Chuẩn hóa hiển thị lý do báo cáo & thêm 2 nút cuộn ngang thanh tabs
 
@@ -4761,3 +4785,8 @@
 - File sửa: `src/features/pantry/components/pantry-item-card.tsx`, `docs/PROGRESS.md`, `docs/WORK-LOG.md`.
 - Verify: `npx tsc --noEmit` pass. Chưa chạy production build hoặc kiểm tra viewport thực tế trong task này.
 - Tiến độ Pantry: giữ nguyên; chỉ sửa bố cục responsive.
+
+## [2026-11-09] — Xóa cuộc trò chuyện trong lịch sử
+
+- **Thay đổi**: thêm `DELETE /chat/sessions/:id` có xác thực, kiểm tra chủ sở hữu, khóa phiên và từ chối khi trợ lý đang trả lời. Web và mobile có nút xóa và xác nhận ghi rõ đây là xóa mềm; xóa phiên đang xem sẽ chuyển sang cuộc trò chuyện mới/bản nháp mới.
+- **Kiểm chứng**: backend lint/typecheck/build, OpenAPI và kiểm thử HTTP trên cơ sở dữ liệu riêng pass: 401 chưa đăng nhập, 404 tài khoản khác/đã xóa, 409 đang xử lý, 200 khi xóa; nội dung giữ lại nhưng lịch sử không thể mở. Web typecheck, lint phần sửa, mapper tests và production build pass. Mobile typecheck, lint phần sửa và mapper test pass.

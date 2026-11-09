@@ -100,6 +100,9 @@ const itemResponse = <T extends z.ZodType>(data: T) =>
   z.object({ success: z.literal(true), data, meta: z.null() }).strict();
 
 export const chatSessionResponseSchema = itemResponse(chatSessionSchema);
+export const deleteChatSessionResponseSchema = itemResponse(
+  z.object({ id: z.string().uuid() }).strict(),
+);
 export const chatSessionListResponseSchema = z
   .object({
     success: z.literal(true),

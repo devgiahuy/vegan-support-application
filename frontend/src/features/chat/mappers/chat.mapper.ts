@@ -16,11 +16,13 @@ import type {
   ChatSessionDto,
   ChatSessionListResponseDto,
   ChatSessionResponseDto,
+  DeleteChatSessionResponseDto,
   SendChatMessageRequestDto,
 } from '../types/chat.dto';
 import type {
   ChatMessage,
   ChatSession,
+  DeletedChatSession,
   MessageFeedback,
   QuotaState,
   SendChatMessageInput,
@@ -123,6 +125,11 @@ export class ChatMapper extends BaseMapper<ChatSessionDto, ChatSession> {
   toSingleSession(dto: ChatSessionResponseDto | null | undefined): ChatSession {
     const data = pickField(dto, ['data'], null) as ChatSessionDto | null;
     return this.toModel(data);
+  }
+
+  toDeletedSession(dto: DeleteChatSessionResponseDto | null | undefined): DeletedChatSession {
+    const data = pickField(dto, ['data'], null) as DeleteChatSessionResponseDto['data'];
+    return { id: safeString(pickField(data, ['id'], '')) };
   }
 
   /** `GET /chat/sessions` → mảng phiên + meta. */

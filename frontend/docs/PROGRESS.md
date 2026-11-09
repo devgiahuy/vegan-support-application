@@ -1,8 +1,28 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Xóa cuộc trò chuyện — Updated 2026-11-09
+
+Tài khoản đã đăng nhập có thể xóa cuộc trò chuyện của mình khỏi lịch sử trên web và mobile sau khi xác nhận. Backend xóa mềm, giữ nội dung theo chính sách lưu trữ; phiên đang nhận câu trả lời phải chờ hoàn tất. Đã kiểm tra quyền sở hữu, trạng thái xử lý và khả năng truy cập sau xóa bằng cơ sở dữ liệu riêng.
+
+## Biểu tượng trạng thái chat — Updated 2026-11-09
+
+Thay icon robot trước “Đang suy nghĩ...” bằng biểu tượng ngôi sao AI xoay; tắt chuyển động khi người dùng chọn giảm chuyển động.
+
+## Bản đồ tìm quán — Updated 2026-11-09
+
+Điều chỉnh khóa cuộn khi mở danh sách cụm quán để bản đồ sticky giữ vị trí sau khi chọn quán và cuộn danh sách. Chưa xác minh được kịch bản trên trình duyệt do tìm địa chỉ local không trả kết quả; chi tiết kiểm chứng ở WORK-LOG.
+
 ## Chi tiết cảnh báo ràng buộc thực đơn — Updated 2026-11-09
 
 Backend analysis v4 trả lý do theo từng món/bữa, nêu nguyên liệu dị ứng có bằng chứng và phân biệt cảnh báo chỉ có ở cấp công thức; web/mobile nhóm món lặp kèm ngày/bữa và đổi màu cảnh báo. Kiểm tra chỉ đọc thực đơn người dùng và tình huống snapshot/no-allergy pass; kiểm thử web/mobile và backend ghi ở WORK-LOG. Không thay đổi ràng buộc an toàn.
+
+## Quota miễn phí hằng ngày và gói tiện ích — Updated 2026-11-09
+
+Đã cập nhật web/mobile hiển thị lượt quét miễn phí còn lại và thời hạn 30/90/360 ngày; backend bổ sung quota quét mỗi ngày, danh mục version 2 và giữ quyền lợi đơn cũ. Validator/index và danh mục đã áp dụng local. Backend lint/typecheck/build và billing acceptance pass; web typecheck, 736 tests, build pass; mobile typecheck, 112 tests, lint pass. Kiểm thử payOS dùng transport giả lập, không phát sinh giao dịch thật.
+
+## Sửa luồng chat AI — Updated 2026-11-08
+
+UC-07 giữ 95% → 95%: yêu cầu SSE gửi access token, refresh một lần khi phiên hết hạn, nhận quota sau message_complete và báo lỗi khi stream đóng sớm. Backend/MongoDB đã kiểm thử với khách và tài khoản seed; cả hai trả fallback vì provider cấu hình không có model moderation. Chưa xác nhận câu trả lời AI thực qua toàn luồng.
 
 ## Dinh dưỡng công thức tính khi gửi duyệt, người duyệt xác nhận — Updated 2026-10-28
 
@@ -335,6 +355,7 @@ Roadmap Phase 2 features are tracked only in `/docs/ROADMAP_PHASE_2.md`; they mu
 ## Lịch sử cập nhật (mỗi dòng = 1 lần agent sửa %)
 
 | Ngày (UTC) | Task | % cũ → % mới | Lý do |
+| 2026-11-08 | Sửa luồng chat AI | UC-07 95% → 95% | Sửa xác thực SSE, refresh và quota; kiểm thử end-to-end còn chờ MongoDB. |
 | 2026-10-25 | Kiểm chứng và bàn giao nhánh sửa 3 luồng | Phase 17/19 100% → 100% | 12 runtime/API checks, 42 món qua mapper; sửa zero/clear/manual macro UI và tổng macro tuần; browser QA custom meal. |
 | 2026-10-25 | Sửa popup kết quả nhập receipt trên `/receipts/scan` | Phase 22 FE scaffold 100% → 100% | Giới hạn chiều cao modal theo viewport, cuộn danh sách bên trong; thẻ thống kê xếp dọc ở viewport hẹp và dùng cột co giãn trên desktop để không tràn ngang. |
 | 2026-10-25 | Receipt purchase identity and review | Phase 22 FE scaffold 100% → 100% | Đồng bộ consumer dev với contract receipt mới; mua cùng món vào ngày khác được giữ là lần mua riêng, lựa chọn xử lý ảnh trùng/ảnh một phần, và UI xử lý dòng phi thực phẩm bị loại. Production vẫn chờ BE READY và kiểm tra hóa đơn thực. |

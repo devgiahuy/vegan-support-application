@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.14
+**Version:** 4.15
 
-**Updated:** 2026-10-28
+**Updated:** 2026-11-09
 
 **Status:** Approved implementation baseline
 
@@ -348,6 +348,7 @@ Maintenance clarification 2026-10-26: titles and bodies need not be unique. Auto
 
 ### BL-14 — Chatbot and AI artifacts
 
+- Authenticated users may hide their own chat sessions from history by soft deletion. Deleted sessions and their messages remain stored for existing retention/audit needs but are excluded from history and cannot be opened. An active answer blocks deletion until processing finishes. Guests cannot delete sessions through this endpoint.
 - Guest quota is smaller than authenticated quota and protected from trivial bypass.
 - AI provider/model is configuration and logged per request.
 - Health/profile context is used only for the requested purpose.
@@ -406,6 +407,8 @@ Maintenance clarification 2026-10-26: titles and bodies need not be unique. Auto
 - Clients share account balances/history and use typed business errors. Mongo validators/indexes, additive queued timestamp backfill, idempotent seed, OpenAPI and consumer documentation are required release gates.
 
 ### BL-20.1 — Duration combo and Admin insights (user-approved 2026-10-27)
+
+**Superseding quota/catalog update approved 2026-11-09:** Daily free quota defaults to 3 chat messages and one job each for fridge and receipt, resetting at 00:00 Asia/Ho_Chi_Minh. Daily free scans are reserved atomically and released on failure; a successful scan consumes the day in which it was reserved. Scan order is daily free, current subscription period, permanent credits. Existing trial balances remain usable, but new accounts receive no one-time trial grants. Free Pantry base is 10; existing items are not deleted. A version-1 duration order retains its prior 20-slot base while that subscription is active. Version-2 duration products cost 69,000/176,000/580,000 VND for 30/90/360 days and grant 300 chat plus 30 jobs of each scan type per 30-day period, plus 50 temporary Pantry slots. Single packs and prices remain unchanged. Existing orders and subscriptions retain their snapshotted benefits. Apply reviewed Mongo validators before enabling daily reservations and run `npm run billing:catalog` to update only version-1 catalog entries without altering existing orders.
 
 - Only the combo has durations; the four single packs remain one-time and permanent. Catalog: `combo-1m` 69.000đ, `combo-3m` 176.000đ (−15%, rounded from 175.950), `combo-12m` 580.000đ (−30%, rounded from 579.600). The former one-time `combo` is deactivated; historical/pending orders keep their snapshot (demo data, no migration).
 - A paid duration order creates one subscription of N periods × 30 days from activation (1 year = 12 periods = 360 days). Each period grants 100 chat, 10 fridge and 10 receipt credits once; unused period credits expire at the boundary (ledger `SUBSCRIPTION_PERIOD_EXPIRED`). +50 Pantry slots apply while active, not multiplied; after expiry existing items remain and only new additions are blocked.

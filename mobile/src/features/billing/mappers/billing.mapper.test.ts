@@ -93,7 +93,7 @@ test('catalog splits one-time packs from duration plans and computes savings aga
   assert.deepEqual(catalog.oneTimeProducts.map((item) => item.id), ['chat-pack']);
   assert.deepEqual(catalog.durationPlans.map((item) => item.id), ['combo-1m', 'combo-12m']);
   assert.equal(catalog.durationPlans[0]!.savingsPercent, 0);
-  assert.equal(catalog.durationPlans[1]!.durationLabel, '1 năm');
+  assert.equal(catalog.durationPlans[1]!.durationLabel, '360 ngày');
   assert.equal(catalog.durationPlans[1]!.savingsPercent, 30);
   assert.match(catalog.durationPlans[0]!.periodBenefitLabels[0]!, /100 lượt chat AI mỗi 30 ngày/);
   assert.equal(catalog.durationPlans[0]!.periodBenefitLabels.at(-1), '+50 ô tủ đồ ăn khi còn hạn');
@@ -102,6 +102,12 @@ test('entitlements without subscription keep permanent balances and null subscri
   const model = entitlementMapper.toModel({ chatCredits: 5, subscription: null });
   assert.equal(model.subscription, null);
   assert.equal(model.chatAvailable, 5);
+});
+test('remaining daily free scans are included in the available total', () => {
+  const model = entitlementMapper.toModel({ fridgeCredits: 2, receiptCredits: 3, fridgeDailyFreeRemaining: 1, receiptDailyFreeRemaining: 0 });
+  assert.equal(model.fridgeAvailable, 3);
+  assert.equal(model.receiptAvailable, 3);
+  assert.match(model.usageRows[1]!.note, /1 lượt miễn phí hôm nay/);
 });
 test('entitlements add period credits on top of permanent balances and label new ledger reasons', () => {
   const model = entitlementMapper.toModel({
@@ -133,7 +139,7 @@ test('entitlements add period credits on top of permanent balances and label new
 });
 test('subscription without an end date is ignored and orders expose their duration', () => {
   assert.equal(entitlementMapper.toModel({ subscription: { chatCredits: 3 } }).subscription, null);
-  assert.equal(orderMapper.toModel({ durationMonths: 3 }).durationLabel, '3 tháng');
+  assert.equal(orderMapper.toModel({ durationMonths: 3 }).durationLabel, '90 ngày');
   assert.equal(orderMapper.toModel({}).durationLabel, 'Mua một lần');
 });
 test('ledger keeps the numeric delta so positive and negative changes can be coloured', () => {

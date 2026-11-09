@@ -14,6 +14,10 @@ export interface ChatSession {
   previewText: string;
 }
 
+export interface DeletedChatSession {
+  id: string;
+}
+
 /** Tin nhắn trong phiên. `STREAMING`/`FAILED` chỉ tồn tại ở local state. */
 export interface ChatMessage {
   id: string;

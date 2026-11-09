@@ -11,6 +11,7 @@ import {
   chatSessionListResponseSchema,
   chatSessionParamsSchema,
   chatSessionResponseSchema,
+  deleteChatSessionResponseSchema,
   createChatSessionRequestSchema,
   sendChatMessageRequestSchema,
 } from './chat.schemas.js';
@@ -130,6 +131,33 @@ export function registerChatOpenApi(registry: OpenAPIRegistry, errorSchema: ZodT
         'TOKEN_EXPIRED',
       ]),
       403: errorResponse(errorSchema, 'Tài khoản bị cấm', ['ACCOUNT_BANNED']),
+    },
+  });
+
+  registry.registerPath({
+    method: 'delete',
+    path: '/api/v1/chat/sessions/{id}',
+    tags: ['AI Chat'],
+    summary: 'Ẩn cuộc trò chuyện của tài khoản khỏi lịch sử',
+    description:
+      'Xóa mềm theo quyền sở hữu; nội dung vẫn được lưu. Không xóa khi câu trả lời đang xử lý; trả 404 với session không tồn tại, đã xóa hoặc không thuộc tài khoản.',
+    operationId: 'deleteChatSession',
+    security: authenticated,
+    request: { params: chatSessionParamsSchema },
+    responses: {
+      200: {
+        description: 'Đã ẩn session',
+        content: { 'application/json': { schema: deleteChatSessionResponseSchema } },
+      },
+      400: errorResponse(errorSchema, 'ID không hợp lệ', ['VALIDATION_ERROR']),
+      401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', [
+        'AUTH_REQUIRED',
+        'INVALID_ACCESS_TOKEN',
+        'TOKEN_EXPIRED',
+      ]),
+      403: errorResponse(errorSchema, 'Tài khoản bị cấm', ['ACCOUNT_BANNED']),
+      404: errorResponse(errorSchema, 'Không tìm thấy cuộc trò chuyện', ['NOT_FOUND']),
+      409: errorResponse(errorSchema, 'Cuộc trò chuyện đang xử lý', ['CHAT_SESSION_BUSY']),
     },
   });
 

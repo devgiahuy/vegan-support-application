@@ -15,6 +15,12 @@ export function paymentError(code: string, message: string, statusCode = 400): A
   return new AppError({ code, message, statusCode });
 }
 
+export function billingReturnUrl(config: AppConfig, orderId: string): string {
+  const url = new URL(config.billing.returnUrl);
+  url.searchParams.set('orderId', orderId);
+  return url.toString();
+}
+
 export class BillingProviders {
   private readonly client: PayOS | null;
   constructor(private readonly config: AppConfig) {
@@ -41,7 +47,7 @@ export class BillingProviders {
   async checkout(order: PaymentOrder): Promise<{ linkId: string; url: string }> {
     const client = this.ensurePayos();
     const orderCode = this.orderCode(order);
-    const returnUrl = this.config.billing.publicUrl + '/api/v1/billing/payos/return/' + order.id;
+    const returnUrl = billingReturnUrl(this.config, order.id);
     let result;
     try {
       result = await client.paymentRequests.create({

@@ -19745,6 +19745,18 @@
                 "type": "integer",
                 "minimum": 0
               },
+              "fridgeDailyFreeRemaining": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Daily free fridge jobs remaining; resets at midnight Asia/Ho_Chi_Minh."
+              },
+              "receiptDailyFreeRemaining": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Daily free receipt jobs remaining; resets at midnight Asia/Ho_Chi_Minh."
+              },
               "pantryUsed": {
                 "type": "integer",
                 "minimum": 0
@@ -19890,6 +19902,8 @@
               "chatReserved",
               "fridgeReserved",
               "receiptReserved",
+              "fridgeDailyFreeRemaining",
+              "receiptDailyFreeRemaining",
               "pantryUsed",
               "pantryLimit",
               "fridgeMaxImages",
@@ -49007,6 +49021,225 @@
         }
       }
     },
+    "/api/v1/chat/sessions/{id}": {
+      "delete": {
+        "tags": [
+          "AI Chat"
+        ],
+        "summary": "Ẩn cuộc trò chuyện của tài khoản khỏi lịch sử",
+        "description": "Xóa mềm theo quyền sở hữu; nội dung vẫn được lưu. Không xóa khi câu trả lời đang xử lý; trả 404 với session không tồn tại, đã xóa hoặc không thuộc tài khoản.",
+        "operationId": "deleteChatSession",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Đã ẩn session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      },
+                      "required": [
+                        "id"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "ID không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu đăng nhập",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu đăng nhập",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy cuộc trò chuyện",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy cuộc trò chuyện",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Cuộc trò chuyện đang xử lý",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_SESSION_BUSY": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SESSION_BUSY",
+                        "message": "Cuộc trò chuyện đang xử lý",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/chat/sessions/{id}/messages": {
       "get": {
         "tags": [
@@ -50531,7 +50764,7 @@
         "tags": [
           "Billing"
         ],
-        "summary": "Display-only browser return/cancel redirect; never grant or trust query payment claims",
+        "summary": "Legacy display-only browser return/cancel redirect for existing checkout links; never grant or trust query payment claims",
         "security": [],
         "parameters": [
           {

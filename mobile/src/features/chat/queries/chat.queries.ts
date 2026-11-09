@@ -1,27 +1,32 @@
-import { BILLING_QUERY_KEYS } from '@/features/billing/queries/billing.queries';
-import * as React from 'react';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { BILLING_QUERY_KEYS } from "@/features/billing/queries/billing.queries";
+import * as React from "react";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 
-import type { FeedbackValue } from '@/common/enums';
-import { useAuthStore } from '@/store/useAuthStore';
-import { getNextPageNumber } from '@/lib/pagination';
-import { chatApi } from '../api/chat.api';
-import { streamChatMessage } from '../api/chat-stream';
-import type { QuotaState } from '../types/chat.model';
-import { createChatIdempotencyKey } from '../utils/idempotency';
+import type { FeedbackValue } from "@/common/enums";
+import { useAuthStore } from "@/store/useAuthStore";
+import { getNextPageNumber } from "@/lib/pagination";
+import { chatApi } from "../api/chat.api";
+import { streamChatMessage } from "../api/chat-stream";
+import type { QuotaState } from "../types/chat.model";
+import { createChatIdempotencyKey } from "../utils/idempotency";
 
 export const CHAT_QUERY_KEYS = {
-  all: ['chat'] as const,
-  sessions: () => [...CHAT_QUERY_KEYS.all, 'sessions'] as const,
-  messages: (sessionId: string) => [...CHAT_QUERY_KEYS.all, 'messages', sessionId] as const,
+  all: ["chat"] as const,
+  sessions: () => [...CHAT_QUERY_KEYS.all, "sessions"] as const,
+  messages: (sessionId: string) =>
+    [...CHAT_QUERY_KEYS.all, "messages", sessionId] as const,
 };
 
 function getStreamErrorCode(error: unknown): string | undefined {
-  if (typeof error !== 'object' || error === null) return undefined;
+  if (typeof error !== "object" || error === null) return undefined;
   const body = (error as { responseBody?: unknown }).responseBody;
-  if (typeof body !== 'object' || body === null) return undefined;
+  if (typeof body !== "object" || body === null) return undefined;
   const nested = (body as { error?: { code?: unknown } }).error?.code;
-  return typeof nested === 'string' && nested.length > 0 ? nested : undefined;
+  return typeof nested === "string" && nested.length > 0 ? nested : undefined;
 }
 
 /** Danh sách phiên chat phân trang kiểu "Tải thêm"; phiên gần nhất nằm ở trang đầu. */
@@ -29,7 +34,8 @@ export function useChatSessionsQuery() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   return useInfiniteQuery({
     queryKey: CHAT_QUERY_KEYS.sessions(),
-    queryFn: ({ pageParam }) => chatApi.getSessions({ page: pageParam, limit: 20 }),
+    queryFn: ({ pageParam }) =>
+      chatApi.getSessions({ page: pageParam, limit: 20 }),
     initialPageParam: 1,
     getNextPageParam: getNextPageNumber,
     staleTime: 30 * 1000,
@@ -44,7 +50,8 @@ export function useChatSessionsQuery() {
 export function useChatMessagesQuery(sessionId: string, enabled = true) {
   const query = useInfiniteQuery({
     queryKey: CHAT_QUERY_KEYS.messages(sessionId),
-    queryFn: ({ pageParam }) => chatApi.getMessages(sessionId, { page: pageParam, limit: 100 }),
+    queryFn: ({ pageParam }) =>
+      chatApi.getMessages(sessionId, { page: pageParam, limit: 100 }),
     initialPageParam: 1,
     getNextPageParam: getNextPageNumber,
     select: (data) => ({ items: data.pages.flatMap((page) => page.items) }),
@@ -52,9 +59,15 @@ export function useChatMessagesQuery(sessionId: string, enabled = true) {
     enabled: enabled && sessionId.length > 0,
   });
 
-  const { hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage } = query;
+  const {
+    hasNextPage,
+    isFetchingNextPage,
+    isFetchNextPageError,
+    fetchNextPage,
+  } = query;
   React.useEffect(() => {
-    if (hasNextPage && !isFetchingNextPage && !isFetchNextPageError) void fetchNextPage();
+    if (hasNextPage && !isFetchingNextPage && !isFetchNextPageError)
+      void fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
 
   return query;
@@ -66,6 +79,22 @@ export function useCreateChatSessionMutation() {
     mutationFn: (title?: string) => chatApi.createSession(title),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.sessions() });
+    },
+  });
+}
+
+export function useDeleteChatSessionMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => chatApi.deleteSession({ id }),
+    onSuccess: ({ id }) => {
+      queryClient.removeQueries({
+        queryKey: CHAT_QUERY_KEYS.messages(id),
+        exact: true,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: CHAT_QUERY_KEYS.sessions(),
+      });
     },
   });
 }
@@ -101,7 +130,7 @@ export function useSendChatMessage(sessionId: string) {
   const controllerRef = React.useRef<AbortController | null>(null);
   const [state, setState] = React.useState<SendChatState>({
     isStreaming: false,
-    streamingContent: '',
+    streamingContent: "",
     streamError: null,
     quota: null,
     maintenance: false,
@@ -119,7 +148,7 @@ export function useSendChatMessage(sessionId: string) {
     setState((prev) => ({
       ...prev,
       isStreaming: false,
-      streamingContent: '',
+      streamingContent: "",
       pendingUserContent: null,
     }));
   }, []);
@@ -127,14 +156,19 @@ export function useSendChatMessage(sessionId: string) {
   const send = React.useCallback(
     async (content: string, targetSessionId = sessionId): Promise<void> => {
       const trimmed = content.trim();
-      if (state.isStreaming || trimmed.length === 0 || targetSessionId.length === 0) return;
+      if (
+        state.isStreaming ||
+        trimmed.length === 0 ||
+        targetSessionId.length === 0
+      )
+        return;
 
       const controller = new AbortController();
       controllerRef.current = controller;
       setState((prev) => ({
         ...prev,
         isStreaming: true,
-        streamingContent: '',
+        streamingContent: "",
         pendingUserContent: trimmed,
         streamError: null,
       }));
@@ -157,22 +191,24 @@ export function useSendChatMessage(sessionId: string) {
             onErrorEvent: (code, message) =>
               setState((prev) => ({
                 ...prev,
-                maintenance: code === 'AI_FEATURE_DISABLED' ? true : prev.maintenance,
+                maintenance:
+                  code === "AI_FEATURE_DISABLED" ? true : prev.maintenance,
                 streamError:
-                  code === 'AI_QUOTA_EXCEEDED' || code === 'ENTITLEMENT_QUOTA_EXCEEDED'
-                    ? 'Bạn đã hết lượt hôm nay.'
-                    : code === 'AI_FEATURE_DISABLED'
-                      ? 'Trợ lý đang bảo trì. Vui lòng quay lại sau.'
+                  code === "AI_QUOTA_EXCEEDED" ||
+                  code === "ENTITLEMENT_QUOTA_EXCEEDED"
+                    ? "Bạn đã hết lượt hôm nay."
+                    : code === "AI_FEATURE_DISABLED"
+                      ? "Trợ lý đang bảo trì. Vui lòng quay lại sau."
                       : message,
               })),
-          }
+          },
         );
 
         if (result.aborted) {
           setState((prev) => ({
             ...prev,
             isStreaming: false,
-            streamingContent: '',
+            streamingContent: "",
             pendingUserContent: null,
           }));
           return;
@@ -187,32 +223,33 @@ export function useSendChatMessage(sessionId: string) {
         setState((prev) => ({
           ...prev,
           isStreaming: false,
-          streamingContent: '',
+          streamingContent: "",
           pendingUserContent: null,
         }));
       } catch (error) {
         const code = getStreamErrorCode(error);
         const streamError =
-          code === 'AI_FEATURE_DISABLED'
-            ? 'Trợ lý đang bảo trì. Lịch sử trò chuyện vẫn xem được.'
-            : code === 'AI_QUOTA_EXCEEDED' || code === 'ENTITLEMENT_QUOTA_EXCEEDED'
-              ? 'Bạn đã hết lượt hiện có. Lượt miễn phí cấp lại lúc nửa đêm; có thể mua thêm gói tiện ích.'
-              : code === 'AI_RATE_LIMITED'
-                ? 'Bạn thao tác quá nhanh. Vui lòng chờ giây lát rồi thử lại.'
-                : code === 'CHAT_REQUEST_IN_PROGRESS'
-                  ? 'Câu hỏi trước vẫn đang xử lý. Vui lòng chờ hoàn tất.'
-                  : 'Không thể gửi câu hỏi. Vui lòng thử lại.';
+          code === "AI_FEATURE_DISABLED"
+            ? "Trợ lý đang bảo trì. Lịch sử trò chuyện vẫn xem được."
+            : code === "AI_QUOTA_EXCEEDED" ||
+                code === "ENTITLEMENT_QUOTA_EXCEEDED"
+              ? "Bạn đã hết lượt hiện có. Lượt miễn phí cấp lại lúc nửa đêm; có thể mua thêm gói tiện ích."
+              : code === "AI_RATE_LIMITED"
+                ? "Bạn thao tác quá nhanh. Vui lòng chờ giây lát rồi thử lại."
+                : code === "CHAT_REQUEST_IN_PROGRESS"
+                  ? "Câu hỏi trước vẫn đang xử lý. Vui lòng chờ hoàn tất."
+                  : "Không thể gửi câu hỏi. Vui lòng thử lại.";
 
         setState((prev) => ({
           ...prev,
           isStreaming: false,
           pendingUserContent: null,
-          maintenance: code === 'AI_FEATURE_DISABLED' ? true : prev.maintenance,
+          maintenance: code === "AI_FEATURE_DISABLED" ? true : prev.maintenance,
           streamError,
         }));
       }
     },
-    [queryClient, sessionId, state.isStreaming]
+    [queryClient, sessionId, state.isStreaming],
   );
 
   return { ...state, send, abort };

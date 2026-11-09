@@ -25,7 +25,11 @@ export interface ChatMessageDto {
   topicCodes?: (string | null)[] | null;
   topic_codes?: (string | null)[] | null;
   disclaimer?: string | null;
-  feedback?: { value?: string; reason?: string | null; updatedAt?: string } | null;
+  feedback?: {
+    value?: string;
+    reason?: string | null;
+    updatedAt?: string;
+  } | null;
   completedAt?: string | null;
   completed_at?: string | null;
   createdAt?: string;
@@ -34,6 +38,16 @@ export interface ChatMessageDto {
 
 export interface CreateChatSessionRequestDto {
   title?: string;
+}
+
+export interface DeleteChatSessionRequestDto {
+  id: string;
+}
+
+export interface DeleteChatSessionResponseDto {
+  success?: boolean;
+  data?: { id?: string } | null;
+  meta?: null;
 }
 
 export interface SendChatMessageRequestDto {
@@ -78,6 +92,11 @@ export interface ChatMessageListResponseDto {
 
 export interface ChatFeedbackResponseDto {
   success?: boolean;
-  data?: { messageId?: string; value?: string; reason?: string | null; updatedAt?: string } | null;
+  data?: {
+    messageId?: string;
+    value?: string;
+    reason?: string | null;
+    updatedAt?: string;
+  } | null;
   meta?: null;
 }

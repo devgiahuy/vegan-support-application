@@ -11,6 +11,7 @@ import {
   chatSessionListResponseSchema,
   chatSessionResponseSchema,
   chatSseEventSchema,
+  deleteChatSessionResponseSchema,
   type ChatFeedbackInput,
   type ChatListQuery,
   type ChatMessageListQuery,
@@ -49,6 +50,17 @@ export class ChatController {
         meta: result.meta,
       }),
     );
+  };
+
+  deleteSession = async (request: Request, response: Response): Promise<void> => {
+    const identity = await this.identityService.resolve(request, response);
+    const data = await this.service.deleteSession(
+      identity,
+      getValidatedParams<ChatSessionParams>(request).id,
+    );
+    response
+      .status(200)
+      .json(deleteChatSessionResponseSchema.parse({ success: true, data, meta: null }));
   };
 
   listMessages = async (request: Request, response: Response): Promise<void> => {

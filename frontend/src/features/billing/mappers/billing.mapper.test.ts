@@ -174,16 +174,16 @@ describe('billing mapper', () => {
     });
     expect(catalog.oneTimeProducts.map((p) => p.id)).toEqual(['chat-100']);
     expect(catalog.durationPlans.map((p) => [p.id, p.durationLabel, p.savingsPercent])).toEqual([
-      ['combo-1m', '1 tháng', 0],
-      ['combo-3m', '3 tháng', 15],
-      ['combo-12m', '1 năm', 30],
+      ['combo-1m', '30 ngày', 0],
+      ['combo-3m', '90 ngày', 15],
+      ['combo-12m', '360 ngày', 30],
     ]);
     expect(catalog.durationPlans[0]?.periodBenefitLabels).toEqual([
       '100 lượt chat AI mỗi 30 ngày',
       '+50 ô tủ đồ ăn khi còn hạn',
     ]);
     expect(catalog.oneTimeProducts[0]?.periodBenefitLabels).toEqual([]);
-    expect(orderMapper.toModel({ durationMonths: 3 }).durationLabel).toBe('3 tháng');
+    expect(orderMapper.toModel({ durationMonths: 3 }).durationLabel).toBe('90 ngày');
   });
   it('adds active subscription period credits to available allowances', () => {
     const model = entitlementMapper.toModel({
@@ -211,5 +211,16 @@ describe('billing mapper', () => {
     expect(model.subscription?.periodRows[0]).toEqual({ label: 'Chat AI', value: '90 / 100' });
     expect(model.usageRows[0]?.value).toBe('95 lượt');
     expect(entitlementMapper.toModel({ subscription: null }).subscription).toBeNull();
+  });
+  it('includes remaining daily free scans in available balances', () => {
+    const model = entitlementMapper.toModel({
+      fridgeCredits: 2,
+      receiptCredits: 3,
+      fridgeDailyFreeRemaining: 1,
+      receiptDailyFreeRemaining: 0,
+    });
+    expect(model.fridgeAvailable).toBe(3);
+    expect(model.receiptAvailable).toBe(3);
+    expect(model.usageRows[1]?.note).toContain('1 lượt miễn phí hôm nay');
   });
 });

@@ -107,7 +107,7 @@ export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z
     path: '/api/v1/billing/payos/return/{id}',
     tags: ['Billing'],
     summary:
-      'Display-only browser return/cancel redirect; never grant or trust query payment claims',
+      'Legacy display-only browser return/cancel redirect for existing checkout links; never grant or trust query payment claims',
     security: [],
     request: { params: billingIdSchema },
     responses: {

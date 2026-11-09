@@ -167,6 +167,15 @@ function AssistantContent() {
     });
   };
 
+  const handleSessionDeleted = (id: string) => {
+    if (id !== sessionId) return;
+    abort();
+    creatingRef.current = false;
+    setCreateFailed(false);
+    setSessionId('');
+    router.replace('/assistant');
+  };
+
   return (
     <div className="fixed inset-x-0 bottom-0 top-16 z-10 flex overflow-hidden bg-background">
       {/* 1. Mobile Sidebar Sheet */}
@@ -181,6 +190,11 @@ function AssistantContent() {
           <div className="overflow-y-auto">
             <SessionList
               activeId={sessionId}
+              isStreaming={isStreaming}
+              onDelete={(id) => {
+                handleSessionDeleted(id);
+                setMobileSidebarOpen(false);
+              }}
               onSelect={(id) => {
                 handleSelectSession(id);
                 setMobileSidebarOpen(false);
@@ -221,6 +235,8 @@ function AssistantContent() {
             </div>
             <SessionList
               activeId={sessionId}
+              isStreaming={isStreaming}
+              onDelete={handleSessionDeleted}
               onSelect={handleSelectSession}
               onNewChat={handleNewChat}
             />

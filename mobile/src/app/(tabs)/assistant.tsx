@@ -1,5 +1,5 @@
-import { AllowanceNotice } from '@/features/billing/components/allowance-notice';
-import * as React from 'react';
+import { AllowanceNotice } from "@/features/billing/components/allowance-notice";
+import * as React from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -8,36 +8,42 @@ import {
   ScrollView,
   Text,
   View,
-} from 'react-native';
-import { Link, type Href } from 'expo-router';
-import { Compass, History, Plus, Sparkles } from 'lucide-react-native';
+} from "react-native";
+import { Link, type Href } from "expo-router";
+import { Compass, History, Plus, Sparkles } from "lucide-react-native";
 
-import { useKeyboardVisible } from '@/components/layout/bottom-tab-bar';
-import { SiteHeader } from '@/components/layout/site-header';
-import { ErrorState, LoadingState } from '@/components/shared/state-views';
-import { ChatWelcome } from '@/features/chat/components/chat-welcome';
-import { Composer } from '@/features/chat/components/composer';
-import { Disclaimer, FallbackNotice } from '@/features/chat/components/fallback-notice';
+import { useKeyboardVisible } from "@/components/layout/bottom-tab-bar";
+import { SiteHeader } from "@/components/layout/site-header";
+import { ErrorState, LoadingState } from "@/components/shared/state-views";
+import { ChatWelcome } from "@/features/chat/components/chat-welcome";
+import { Composer } from "@/features/chat/components/composer";
+import {
+  Disclaimer,
+  FallbackNotice,
+} from "@/features/chat/components/fallback-notice";
 import {
   MessageBubble,
   PendingUserBubble,
   StreamingBubble,
-} from '@/features/chat/components/message-bubble';
-import { QuotaExhaustedBanner, QuotaPill } from '@/features/chat/components/quota-banner';
-import { SessionListSheet } from '@/features/chat/components/session-list-sheet';
+} from "@/features/chat/components/message-bubble";
+import {
+  QuotaExhaustedBanner,
+  QuotaPill,
+} from "@/features/chat/components/quota-banner";
+import { SessionListSheet } from "@/features/chat/components/session-list-sheet";
 import {
   useChatMessagesQuery,
   useChatSessionsQuery,
   useCreateChatSessionMutation,
   useSendChatMessage,
-} from '@/features/chat/queries/chat.queries';
-import { useIconColors } from '@/lib/theme-colors';
-import { useAuthStore } from '@/store/useAuthStore';
+} from "@/features/chat/queries/chat.queries";
+import { useIconColors } from "@/lib/theme-colors";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const SESSION_TITLE_MAX = 60;
 
 function titleFromPrompt(prompt: string): string {
-  const oneLine = prompt.replace(/\s+/g, ' ').trim();
+  const oneLine = prompt.replace(/\s+/g, " ").trim();
   return oneLine.length > SESSION_TITLE_MAX
     ? `${oneLine.slice(0, SESSION_TITLE_MAX - 1)}…`
     : oneLine;
@@ -53,18 +59,26 @@ export default function AssistantScreen() {
   const scrollRef = React.useRef<ScrollView>(null);
 
   // `null` = tự chọn phiên gần nhất; `''` = đang soạn đoạn chat mới (phiên chỉ tạo khi gửi câu đầu tiên).
-  const [selectedSessionId, setSelectedSessionId] = React.useState<string | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = React.useState<
+    string | null
+  >(null);
   const [sessionsOpen, setSessionsOpen] = React.useState(false);
   const createSessionMutation = useCreateChatSessionMutation();
   const sessionsQuery = useChatSessionsQuery();
 
-  const activeSessionId = selectedSessionId ?? sessionsQuery.data?.pages[0]?.items[0]?.id ?? '';
-  const messagesQuery = useChatMessagesQuery(activeSessionId, activeSessionId.length > 0);
+  const activeSessionId =
+    selectedSessionId ?? sessionsQuery.data?.pages[0]?.items[0]?.id ?? "";
+  const messagesQuery = useChatMessagesQuery(
+    activeSessionId,
+    activeSessionId.length > 0,
+  );
   const sendState = useSendChatMessage(activeSessionId);
 
   const messages = messagesQuery.data?.items ?? [];
   const hasConversation =
-    messages.length > 0 || !!sendState.pendingUserContent || !!sendState.streamingContent;
+    messages.length > 0 ||
+    !!sendState.pendingUserContent ||
+    !!sendState.streamingContent;
   const showWelcome = !hasConversation && !messagesQuery.isLoading;
 
   const scrollToEnd = React.useCallback(() => {
@@ -74,20 +88,20 @@ export default function AssistantScreen() {
   const startNewChat = () => {
     if (sendState.isStreaming) {
       Alert.alert(
-        'Đang trả lời',
-        'Hãy chờ trợ lý trả lời xong hoặc bấm Dừng trước khi tạo đoạn chat mới.'
+        "Đang trả lời",
+        "Hãy chờ trợ lý trả lời xong hoặc bấm Dừng trước khi tạo đoạn chat mới.",
       );
       return;
     }
-    setSelectedSessionId('');
+    setSelectedSessionId("");
     setSessionsOpen(false);
   };
 
   const selectSession = (id: string) => {
     if (sendState.isStreaming) {
       Alert.alert(
-        'Đang trả lời',
-        'Hãy chờ trợ lý trả lời xong hoặc bấm Dừng trước khi đổi đoạn chat.'
+        "Đang trả lời",
+        "Hãy chờ trợ lý trả lời xong hoặc bấm Dừng trước khi đổi đoạn chat.",
       );
       return;
     }
@@ -97,7 +111,9 @@ export default function AssistantScreen() {
 
   const ensureSession = async (firstPrompt: string): Promise<string> => {
     if (activeSessionId.length > 0) return activeSessionId;
-    const session = await createSessionMutation.mutateAsync(titleFromPrompt(firstPrompt));
+    const session = await createSessionMutation.mutateAsync(
+      titleFromPrompt(firstPrompt),
+    );
     setSelectedSessionId(session.id);
     return session.id;
   };
@@ -109,7 +125,10 @@ export default function AssistantScreen() {
       const sessionId = await ensureSession(trimmed);
       await sendState.send(trimmed, sessionId);
     } catch {
-      Alert.alert('Không gửi được câu hỏi', 'Vui lòng kiểm tra kết nối và thử lại.');
+      Alert.alert(
+        "Không gửi được câu hỏi",
+        "Vui lòng kiểm tra kết nối và thử lại.",
+      );
     }
   };
 
@@ -128,13 +147,19 @@ export default function AssistantScreen() {
             <Sparkles size={17} color={colors.primary} />
           </View>
           <View className="flex-1">
-            <Text numberOfLines={1} className="text-base font-bold text-foreground">
+            <Text
+              numberOfLines={1}
+              className="text-base font-bold text-foreground"
+            >
               Trợ lý dinh dưỡng
             </Text>
-            <Text numberOfLines={1} className="text-[11px] text-muted-foreground">
+            <Text
+              numberOfLines={1}
+              className="text-[11px] text-muted-foreground"
+            >
               {isAuthenticated
-                ? 'Tư vấn chay mang tính tham khảo'
-                : 'Chế độ khách · hạn mức thấp hơn tài khoản'}
+                ? "Tư vấn chay mang tính tham khảo"
+                : "Chế độ khách · hạn mức thấp hơn tài khoản"}
             </Text>
           </View>
           <Pressable
@@ -155,17 +180,19 @@ export default function AssistantScreen() {
 
         <View className="flex-row items-center justify-between gap-2">
           <QuotaPill quota={sendState.quota} />
-          <Link href={'/ai-knowledge' as Href} asChild>
+          <Link href={"/ai-knowledge" as Href} asChild>
             <Pressable className="ml-auto flex-row items-center gap-1.5 rounded-full border border-border px-3 py-1.5">
               <Compass size={12} color={colors.primary} />
-              <Text className="text-xs font-semibold text-primary">Khám phá tri thức AI</Text>
+              <Text className="text-xs font-semibold text-primary">
+                Khám phá tri thức AI
+              </Text>
             </Pressable>
           </Link>
         </View>
       </View>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="flex-1"
       >
         <ScrollView
@@ -193,12 +220,18 @@ export default function AssistantScreen() {
           ) : (
             <>
               {messages.map((message) => (
-                <MessageBubble key={message.id} message={message} sessionId={activeSessionId} />
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  sessionId={activeSessionId}
+                />
               ))}
               {sendState.pendingUserContent ? (
                 <PendingUserBubble text={sendState.pendingUserContent} />
               ) : null}
-              {sendState.isStreaming ? <StreamingBubble text={sendState.streamingContent} /> : null}
+              {sendState.isStreaming ? (
+                <StreamingBubble text={sendState.streamingContent} />
+              ) : null}
             </>
           )}
 
@@ -212,7 +245,9 @@ export default function AssistantScreen() {
         </ScrollView>
 
         {/* Nút "Thêm" của thanh tab nổi lên 24dp phía trên thanh nên chừa chỗ để không che lời nhắc; khi bàn phím mở thì thanh tab ẩn. */}
-        <View className={`gap-2 border-t border-border bg-background px-4 pt-2.5 ${keyboardVisible ? 'pb-3' : 'pb-9'}`}>
+        <View
+          className={`gap-2 border-t border-border bg-background px-4 pt-2.5 ${keyboardVisible ? "pb-3" : "pb-9"}`}
+        >
           <Composer
             isStreaming={sendState.isStreaming}
             disabled={composerDisabled}
@@ -226,6 +261,11 @@ export default function AssistantScreen() {
       <SessionListSheet
         visible={sessionsOpen}
         activeId={activeSessionId}
+        isStreaming={sendState.isStreaming}
+        onDelete={(id) => {
+          if (id === activeSessionId) setSelectedSessionId("");
+          setSessionsOpen(false);
+        }}
         creating={createSessionMutation.isPending}
         onSelect={selectSession}
         onNewChat={startNewChat}

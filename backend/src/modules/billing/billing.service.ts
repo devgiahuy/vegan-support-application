@@ -4,7 +4,12 @@ import type { AppConfig } from '../../config/env.js';
 import { lockDocument } from '../../database/locking.js';
 import type { EntitlementService } from '../entitlements/entitlement.service.js';
 import { subscriptionPeriodDays } from './billing.catalog.js';
-import { BillingProviders, paymentError, type VerifiedPayment } from './billing.providers.js';
+import {
+  BillingProviders,
+  billingReturnUrl,
+  paymentError,
+  type VerifiedPayment,
+} from './billing.providers.js';
 
 export class BillingService {
   readonly providers: BillingProviders;
@@ -228,9 +233,7 @@ export class BillingService {
   }
 
   returnUrl(id: string): string {
-    const url = new URL(this.config.billing.returnUrl);
-    url.searchParams.set('orderId', id);
-    return url.toString();
+    return billingReturnUrl(this.config, id);
   }
 
   serialize(order: PaymentOrder, _ip = '127.0.0.1') {
