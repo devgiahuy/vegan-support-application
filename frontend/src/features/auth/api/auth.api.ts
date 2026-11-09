@@ -1,6 +1,7 @@
 import api from '@/lib/axios';
 import axios from 'axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { USERS_ENDPOINTS } from '@/common/constants/endpoints/users.endpoints';
+import { AUTH_ENDPOINTS } from '@/features/auth/constants/auth.endpoints';
 import {
   AuthSessionResponseDto,
   LoginRequestDto,
@@ -35,7 +36,7 @@ export const authApi = {
       baseURL: '',
       showErrorToast: true,
     });
-    return authMapper.toSessionModel(res.data);
+    return authMapper.toSessionModel(res.data?.data);
   },
 
   login: async (payload: LoginPayload): Promise<AuthSession> => {
@@ -44,13 +45,13 @@ export const authApi = {
       baseURL: '',
       showErrorToast: true,
     });
-    return authMapper.toSessionModel(res.data);
+    return authMapper.toSessionModel(res.data?.data);
   },
 
   getMe: async (): Promise<User> => {
     // `ProfileResponseDto` đã là envelope — đọc `res.data` trực tiếp.
-    const res = await api.get<ProfileResponseDto>(API_ENDPOINTS.USERS.ME);
-    return authMapper.toProfileModel(res.data);
+    const res = await api.get<ProfileResponseDto>(USERS_ENDPOINTS.ME);
+    return authMapper.toProfileModel(res.data?.data);
   },
 
   refreshToken: async (): Promise<string> => {
@@ -66,7 +67,7 @@ export const authApi = {
       raw && typeof raw === 'object' && 'accessToken' in raw && !('data' in raw)
         ? { data: raw as RefreshResponseDto['data'] }
         : raw;
-    return authMapper.toRefreshedTokenModel(envelope).accessToken;
+    return authMapper.toRefreshedTokenModel(envelope?.data).accessToken;
   },
 
   logout: async (opts?: { allDevices?: boolean }): Promise<LogoutResult> => {
@@ -75,14 +76,14 @@ export const authApi = {
     const body: LogoutRequestDto = { allDevices: opts?.allDevices ?? false };
     try {
       const res = await axios.post<LogoutResponseDto>('/api/auth/logout', body, { baseURL: '' });
-      return authMapper.toLogoutResultModel(res.data);
+      return authMapper.toLogoutResultModel(res.data?.data);
     } catch {
       // BE down vẫn cho logout client, interceptor đã silent
       try {
-        const res = await api.post<LogoutResponseDto>(API_ENDPOINTS.AUTH.LOGOUT, body, {
+        const res = await api.post<LogoutResponseDto>(AUTH_ENDPOINTS.LOGOUT, body, {
           silent: true,
         });
-        return authMapper.toLogoutResultModel(res.data);
+        return authMapper.toLogoutResultModel(res.data?.data);
       } catch {
         return {
           loggedOut: true,

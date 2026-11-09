@@ -2,13 +2,13 @@
 
 import * as React from 'react';
 import { SafeImage } from '@/components/shared/safe-image';
-import { UploadCloud, X, Loader2, ImagePlus, AlertCircle } from 'lucide-react';
+import { UploadCloud, X, Loader2, ImagePlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { validateImageFile } from '../utils/media-validator';
-import type { UploadedMediaMeta } from '../api/upload.api';
+import type { UploadedMediaMeta } from '@/features/storage/types/storage.model';
 import { uploadWithReservation } from '@/features/storage/api/storage-upload';
 import { StorageQuotaWidget } from '@/features/storage/components/storage-quota-widget';
 

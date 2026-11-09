@@ -33,7 +33,7 @@ const PREVIEW = {
 
 describe('DietMapper.toPreviewModel', () => {
   it('giữ ruleSetVersion, lọc rule rỗng ID/null', () => {
-    const p = dietMapper.toPreviewModel(PREVIEW);
+    const p = dietMapper.toPreviewModel(PREVIEW.data);
 
     expect(p.ruleSetVersion).toBe(1);
     expect(p.selection.dietPattern).toBe(DietPattern.VEGAN);
@@ -51,26 +51,28 @@ describe('DietMapper.toPreviewModel', () => {
   });
 
   it('đọc đúng shape thật của BE (id/label/defaultEnabled/hardConstraint)', () => {
-    const p = dietMapper.toPreviewModel({
-      success: true,
-      data: {
-        ruleSetVersion: 1,
-        selection: { dietPattern: 'VEGAN', practiceSchedule: 'PERIODIC', tradition: 'BUDDHIST' },
-        rules: [
-          {
-            id: 'f8e7a60a-56d4-467a-99b6-93ed878c02be',
-            code: 'DIET_VEGAN_EXCLUDE_ANIMAL_PRODUCTS',
-            label: 'Loại trừ sản phẩm có nguồn gốc động vật',
-            description: 'Quy tắc bắt buộc.',
-            defaultEnabled: true,
-            hardConstraint: true,
-            source: 'DIET_PATTERN',
-            version: 1,
-          },
-        ],
-      },
-      meta: null,
-    });
+    const p = dietMapper.toPreviewModel(
+      {
+        success: true,
+        data: {
+          ruleSetVersion: 1,
+          selection: { dietPattern: 'VEGAN', practiceSchedule: 'PERIODIC', tradition: 'BUDDHIST' },
+          rules: [
+            {
+              id: 'f8e7a60a-56d4-467a-99b6-93ed878c02be',
+              code: 'DIET_VEGAN_EXCLUDE_ANIMAL_PRODUCTS',
+              label: 'Loại trừ sản phẩm có nguồn gốc động vật',
+              description: 'Quy tắc bắt buộc.',
+              defaultEnabled: true,
+              hardConstraint: true,
+              source: 'DIET_PATTERN',
+              version: 1,
+            },
+          ],
+        },
+        meta: null,
+      }.data
+    );
 
     expect(p.rules).toHaveLength(1);
     expect(p.rules[0].ruleDefinitionId).toBe('f8e7a60a-56d4-467a-99b6-93ed878c02be');
@@ -83,35 +85,37 @@ describe('DietMapper.toPreviewModel', () => {
 
 describe('DietMapper.toPreferenceModel', () => {
   it('map đủ preference + constraints + lọc ngày sai', () => {
-    const pref = dietMapper.toPreferenceModel({
-      success: true,
-      data: {
-        dietPattern: 'LACTO_OVO',
-        practiceSchedule: 'PERIODIC',
-        tradition: 'NONE',
-        ruleSetVersion: 1,
-        confirmedAt: '2026-09-12T08:00:00.000Z',
-        requiresRuleReview: false,
-        rules: [{ ruleDefinitionId: 'r-1', enabled: true }],
-        schedule: { timezone: 'Asia/Ho_Chi_Minh', dates: ['2026-09-15', 'not-a-date', null] },
-        allergies: [{ allergenCode: 'PEANUT', label: 'Đậu phộng', severity: 'HIGH' }],
-        ingredientExclusions: [
-          { ingredientId: null, ingredientName: 'Mắm tôm', reason: '' },
-          { ingredientName: '' },
-        ],
-        ingredientAllergies: [
-          {
-            ingredientId: 'ing-1',
-            ingredientName: 'Nấm hương',
-            severity: 'SEVERE',
-            ingredientActive: true,
-          },
-          { ingredientName: 'Thiếu ID' },
-        ],
-        effectiveConstraints: { always: ['no-meat', ''], scheduledTradition: null },
-      },
-      meta: null,
-    });
+    const pref = dietMapper.toPreferenceModel(
+      {
+        success: true,
+        data: {
+          dietPattern: 'LACTO_OVO',
+          practiceSchedule: 'PERIODIC',
+          tradition: 'NONE',
+          ruleSetVersion: 1,
+          confirmedAt: '2026-09-12T08:00:00.000Z',
+          requiresRuleReview: false,
+          rules: [{ ruleDefinitionId: 'r-1', enabled: true }],
+          schedule: { timezone: 'Asia/Ho_Chi_Minh', dates: ['2026-09-15', 'not-a-date', null] },
+          allergies: [{ allergenCode: 'PEANUT', label: 'Đậu phộng', severity: 'HIGH' }],
+          ingredientExclusions: [
+            { ingredientId: null, ingredientName: 'Mắm tôm', reason: '' },
+            { ingredientName: '' },
+          ],
+          ingredientAllergies: [
+            {
+              ingredientId: 'ing-1',
+              ingredientName: 'Nấm hương',
+              severity: 'SEVERE',
+              ingredientActive: true,
+            },
+            { ingredientName: 'Thiếu ID' },
+          ],
+          effectiveConstraints: { always: ['no-meat', ''], scheduledTradition: null },
+        },
+        meta: null,
+      }.data
+    );
 
     expect(pref.dietPatternLabel).toBe('Có trứng sữa');
     expect(pref.schedule?.dates).toEqual(['2026-09-15']);
@@ -132,15 +136,17 @@ describe('DietMapper.toPreferenceModel', () => {
 
 describe('DietMapper.toScheduleModel', () => {
   it('lọc ngày sai định dạng', () => {
-    const s = dietMapper.toScheduleModel({
-      success: true,
-      data: {
-        practiceSchedule: 'PERIODIC',
-        timezone: 'Asia/Ho_Chi_Minh',
-        dates: ['2026-09-15', '15/09/2026'],
-      },
-      meta: null,
-    });
+    const s = dietMapper.toScheduleModel(
+      {
+        success: true,
+        data: {
+          practiceSchedule: 'PERIODIC',
+          timezone: 'Asia/Ho_Chi_Minh',
+          dates: ['2026-09-15', '15/09/2026'],
+        },
+        meta: null,
+      }.data
+    );
     expect(s.dates).toEqual(['2026-09-15']);
     expect(s.timezone).toBe('Asia/Ho_Chi_Minh');
   });

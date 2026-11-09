@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.63
+**Version:** 4.66
 
 **Cập nhật:** 09/11/2026
 
@@ -8,7 +8,17 @@
 
 **Contract target:** `/api/v1`
 
+Changelog 2026-11-07 (4.65): AI recipe draft accepts an optional title and suggests missing basic text and times while preserving supplied values. Backend lint, typecheck, build, OpenAPI and live OpenAI previews passed; Docker backend updated and frontend consumer synchronized. At least one ingredient remains required; no image generation or publication is performed.
+
 > Tài liệu này là registry sống cho capability backend thực tế. Phases 00–26 đã có source/migrations/OpenAPI; Phase 27 release gate đang kiểm tra. Contributor approval basis chỉ dùng cho audit/presentation; client dùng contract thống nhất từ 2026-09-27.
+
+Changelog 2026-11-05 (4.62): bỏ fallback fixture trên các consumer `/posts` READY (bài viết, công thức, video và nội dung liên quan), để lỗi mạng/server/ghi dữ liệu tới Query/UI; GET meal analysis chỉ trả `null` cho `MEAL_ANALYSIS_NOT_FOUND`, giữ lỗi `MEAL_ANALYSIS_STALE` và payload sai ở trạng thái lỗi; meal program detail/create/update kiểm tra envelope trước mapper. Xóa client `/uploads/signature` đã REMOVED và kiểu DTO chết, giữ luồng upload reservation đang dùng. Không đổi backend contract, route hoặc trạng thái READY.
+
+Changelog 2026-11-05 (4.61): consumer danh sách meal program đọc `data[]` và `meta` trực tiếp từ envelope theo OpenAPI; custom meal dùng envelope chuẩn, storage admin dùng mảng phân trang và metadata chuẩn, tham số upload được map sang model nội bộ. Không đổi route, backend contract hoặc trạng thái READY.
+
+Changelog 2026-11-05 (4.60): consumer chi tiết nội dung quản trị map `GET /posts/{idOrSlug}` sang `AdminContentDetail`; không đổi backend contract hoặc trạng thái tích hợp.
+
+Changelog 2026-11-05 (4.59): cập nhật quy ước vị trí endpoint theo feature/domain dùng chung; không đổi backend contract hoặc trạng thái tích hợp.
 
 ---
 
@@ -190,9 +200,11 @@ The configured real OpenAI API successfully extracted a synthetic Vietnamese rec
 
 ### Receipt identity and AI recipe draft preview — 2026-10-24
 
+2026-11-07 (4.64): Recipe draft endpoint `READY`: the request accepts optional description and optional author-provided servings and preparation/cooking times. Supplied values are passed to the provider and retained in the response. Existing clients remain compatible. Backend lint, typecheck, build and OpenAPI generation passed; live OpenAI preview without description returned 200 with supplied values preserved; anonymous request returned 401. No persistence, authorization, error-code or publication changes. Frontend sends the author values, permits an empty description and preserves those values when applying suggestions. Image remains outside the text-only AI request.
+
 | Method        | Endpoint                                                                                 | Status        | FE integrated                                                    | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | ------------- | ---------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST          | `/api/v1/recipe-drafts/generate`                                                         | `IN_PROGRESS` | Yes (2026-10-24)                                                 | Authenticated text-only AI preview from `title`, `description`, `ingredientNames[]`; returns an editable `draft` shaped for `POST /posts`, subjective confidence/assumptions and provider provenance. Does not save or publish content. Live provider validation remains. FE: `features/recipe`                                                                                                                                                                  |
+| POST          | `/api/v1/recipe-drafts/generate`                                                         | `READY` | Yes, 2026-11-07 | Authenticated text-only AI preview from ingredient names and optional title, description, servings and times. Supplies missing values, preserves supplied values, and does not save or publish content. |
 | POST/GET/POST | `/api/v1/receipt-jobs`, `/api/v1/receipt-jobs/{id}`, `/api/v1/receipt-jobs/{id}/confirm` | `IN_PROGRESS` | Yes (2026-10-25, current review fields; live validation pending) | Provider template `receipt-v3`; per-image `receiptNumber`, merchant/date/currency/total; `reviewRequired` and `identityDecisionRequired` on job; `duplicateOfJobId` on candidate; `notices[]` and `excludedItems[]` report non-food exclusions; confirmation adds `duplicateCandidates[]`. Same product names on another purchase date remain a new purchase; ambiguous partial overlaps require user decision. Exact repeated receipts do not increment Pantry. |
 
 Frontend migration (2026-10-25): receipt consumer mapping and review UI are complete. For recipe generation, add the endpoint constant, separate request/response DTOs, UI Model, Mapper/API/query and mapper tests; let the author edit all generated fields before calling existing `POST /posts`. Never render AI quantities as verified nutrition values. No image is sent to AI.
@@ -482,7 +494,7 @@ npm run sync:swagger
 ```
 
 3. Đọc `docs/API-CATALOG.md`, sau đó chỉ đọc file tag liên quan trong `docs/api/`.
-4. Thêm endpoint vào `src/common/constants/api-endpoints.ts`.
+4. Khai báo endpoint trong `src/features/<domain>/constants/*.endpoints.ts`; nếu nhiều feature dùng, đặt tại `src/common/constants/endpoints/`.
 5. Tạo DTO request/response.
 6. Tạo UI Model riêng.
 7. Tạo Mapper DTO ↔ Model.

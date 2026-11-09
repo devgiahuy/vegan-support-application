@@ -23,6 +23,71 @@ Backend analysis v4 trả lý do theo từng món/bữa, nêu nguyên liệu d�
 ## Sửa luồng chat AI — Updated 2026-11-08
 
 UC-07 giữ 95% → 95%: yêu cầu SSE gửi access token, refresh một lần khi phiên hết hạn, nhận quota sau message_complete và báo lỗi khi stream đóng sớm. Backend/MongoDB đã kiểm thử với khách và tài khoản seed; cả hai trả fallback vì provider cấu hình không có model moderation. Chưa xác nhận câu trả lời AI thực qua toàn luồng.
+## AI điền thông tin cơ bản còn thiếu — 2026-11-07
+
+AI recipe giữ 100% → 100% scaffold. Form cho qua bước cơ bản khi chưa nhập; AI điền trường trống và giữ giá trị đã nhập; gửi cuối vẫn kiểm tra trường bắt buộc. Backend và OpenAPI đã cập nhật; provider thật đã được kiểm tra. Ảnh bìa vẫn tải riêng, chưa được AI tạo. Chưa kiểm thử giao diện trình duyệt.
+
+## Định dạng cảnh báo thực đơn và popup bản đồ — 2026-11-07
+
+Tiến độ Meal Plan và Restaurants giữ nguyên: tóm tắt thực đơn tách các mục bằng dấu chấm phẩy thành danh sách; popup cụm quán trên sơ đồ không còn khóa và phủ tối toàn trang. Typecheck, 785 test và build 47 trang pass; chưa kiểm tra trực tiếp trên trình duyệt.
+
+## Cập nhật AI recipe — 2026-11-07
+
+Scaffold AI recipe giữ 100% → 100%. Endpoint được xác minh `READY` với provider thật; frontend gửi khẩu phần/thời gian, cho phép mô tả trống và giữ thông số tác giả khi áp dụng. Cần kiểm thử thao tác trên trình duyệt, đặc biệt bước nhập tên nguyên liệu và xem trước.
+
+## Sửa khám phá, phiên và giao diện thực đơn — 2026-11-06
+
+Kiểm tra live bổ sung: công thức “đậu hủ xào xã” có nguyên liệu “XÃ” chưa được nhận diện; API member trả `UNRESOLVED_INGREDIENT` và `DIET_PATTERN`. Thêm cảnh báo tại bước xem lại để tác giả quay lại liên kết danh mục. Provider AI live trả bản nháp thành công với hợp đồng cũ; server đang chạy chưa nạp hợp đồng mới. Tỷ lệ tính năng không đổi.
+
+Giữ nguyên tỷ lệ scaffold các tính năng. Đã thêm phân trang và tải lại khi quay lại cửa sổ cho khám phá công thức; cho phép khôi phục phiên trước khi chặn route; thêm popup kiểm tra nguyên liệu theo từng món và ghim đánh giá trên Google Maps. Luồng AI mới chưa hoàn tất: endpoint còn `IN_PROGRESS`, chưa kiểm chứng provider thật và frontend chưa áp dụng hợp đồng mới. Danh sách từng món so sánh riêng với tủ bếp, chưa phân bổ tồn kho giữa các món. Chưa xác nhận trực tiếp công thức bị thiếu trong dữ liệu thực.
+
+## Kiểm tra lại response và lỗi API — Updated 2026-11-05
+
+Đợt rà soát bổ sung tìm thấy fallback fixture còn chạy trên `/posts` READY, nhánh GET meal analysis nuốt lỗi `409 MEAL_ANALYSIS_STALE`, và meal program detail/create/update có thể map payload thiếu thành Model rỗng. Đã sửa các luồng này và bỏ client upload signature không còn endpoint. Các feature liên quan giữ nguyên % vì không thêm capability. Typecheck, 783 tests và build 47 routes pass; lint phạm vi sửa 0 lỗi.
+
+## Rà soát hoàn tất luồng response — Updated 2026-11-05
+
+Sửa danh sách meal program theo `data[]`/`meta` của OpenAPI (trước đó có thể hiện rỗng dù server trả dữ liệu); custom meal bỏ fallback body phẳng; storage admin dùng phân trang chuẩn và mapper cho tham số upload. Phase 15/17/19 giữ 100% → 100% vì đây là sửa consumer, không thêm capability. Typecheck, scoped lint, 787 tests và build 47 routes pass. Các API đang hoạt động đều trả Model qua mapper; SSE chat và phản hồi trực tiếp của nhà cung cấp upload là luồng vận chuyển riêng.
+
+## Chi tiết nội dung quản trị — Updated 2026-11-05
+
+Consumer `GET /posts/{idOrSlug}` cho quản trị trả `AdminContentDetail` phân biệt recipe, bài viết và video thay vì trả DTO thô. Query nhận Model; loại không hỗ trợ trả lỗi rõ ràng. Typecheck, scoped lint, 780 tests và build 47 routes pass.
+
+## Chuẩn hóa response frontend — Updated 2026-11-05
+
+Chuyển tiếp AI governance, duyệt nội dung, nội dung quản trị, AI artifacts, fixture chia sẻ chat, danh sách chương trình thực đơn và tủ bếp. Rà soát mapper trong `src/features`: trường `data` còn ở food-data là nội dung của bản ghi, không phải envelope; SSE xử lý riêng. Typecheck, 774 tests và build 47 routes pass; scoped lint không có lỗi, còn 11 cảnh báo unused tại các file đã kiểm tra.
+
+## Response cộng đồng, Contributor, kiểm duyệt và nhà hàng — Updated 2026-11-05
+
+API tách data và metadata trước mapper cho các luồng cộng đồng, Contributor, kiểm duyệt và nhà hàng; giữ fixture cộng đồng, metadata nhà cung cấp và kết quả geocode không có tọa độ. Typecheck, scoped lint, 764 tests và build 47 routes pass. Các domain khác vẫn cần rà soát.
+
+## Tiếp tục response xác thực, chế độ ăn và dinh dưỡng — Updated 2026-11-05
+
+Chuyển xác thực/refresh, chế độ ăn, phân tích thực đơn và panel dinh dưỡng duyệt sang tách envelope tại API; giữ hỗ trợ refresh và phân tích dạng phẳng cũ. Các domain khác vẫn chờ chuyển đổi.
+
+## Tiếp tục chuẩn hóa response — Updated 2026-11-05
+
+Chuyển meal plan, nguyên liệu công khai/quản trị, recommendation, chat riêng tư và thống kê sử dụng AI sang truyền data và metadata cần thiết từ API function vào mapper. Các domain khác vẫn cần kiểm tra và chuyển đổi.
+
+## Response hồ sơ, dị ứng, báo cáo và gợi ý công thức — Updated 2026-11-05
+
+API hồ sơ cơ bản, danh mục dị ứng, báo cáo an toàn và gợi ý bản nháp công thức tách data từ envelope trước khi gọi mapper. Các luồng khác vẫn đang chờ chuyển đổi.
+
+## Response thông báo — Updated 2026-11-05
+
+API thông báo tách data và metadata trước khi mapper xử lý danh sách, số chưa đọc và các thao tác đánh dấu đã đọc. Typecheck, scoped lint, 738 tests và build 47 routes pass; các domain khác tiếp tục chờ chuyển đổi.
+
+## Response danh mục quản trị — Updated 2026-11-05
+
+API danh mục quản trị tách data và metadata trước khi gọi mapper cho danh sách, tạo, sửa và lưu trữ. Các domain khác vẫn cần chuyển đổi. Typecheck, scoped lint, 736 tests và build 47 routes pass.
+
+## Tổ chức endpoint theo feature — Updated 2026-11-05
+
+Tách 43 nhóm endpoint theo feature hoặc domain dùng chung, chuyển consumer sang import trực tiếp và cập nhật hướng dẫn kiến trúc. Luồng category API đọc response envelope trước khi mapper chuyển dữ liệu sang Model. Không đổi đường dẫn hoặc readiness backend.
+
+## Refactor chọn ảnh cho luồng quét tủ lạnh và hóa đơn — Updated 2026-11-05
+
+Tách logic chọn, kiểm tra, sắp xếp, xóa và dọn URL ảnh trùng lặp sang hook chung trong `features/storage/hooks`. Hai màn quét giữ nguyên giao diện, giới hạn 6/4 ảnh và luồng tạo job riêng. Không đổi API hoặc trạng thái tích hợp. Typecheck, lint các file sửa, 732 tests và build 47 routes đều pass. Lint toàn frontend còn 82 lỗi và 318 cảnh báo ở các file ngoài phạm vi refactor.
 
 ## Dinh dưỡng công thức tính khi gửi duyệt, người duyệt xác nhận — Updated 2026-10-28
 
@@ -356,6 +421,8 @@ Roadmap Phase 2 features are tracked only in `/docs/ROADMAP_PHASE_2.md`; they mu
 
 | Ngày (UTC) | Task | % cũ → % mới | Lý do |
 | 2026-11-08 | Sửa luồng chat AI | UC-07 95% → 95% | Sửa xác thực SSE, refresh và quota; kiểm thử end-to-end còn chờ MongoDB. |
+| 2026-11-05 | Kiểm tra lại response và lỗi API | % các feature giữ nguyên | Bỏ fixture fallback trên `/posts` READY, phân biệt 404 chưa phân tích với 409 stale, kiểm tra envelope meal program và bỏ upload signature cũ; 783 tests, typecheck, build pass. |
+| 2026-11-05 | Rà soát cuối response frontend | Phase 15/17/19 100% → 100% | Sửa `data[]`/`meta` meal program; loại fallback sai ở custom meal và storage; 787 tests, typecheck, scoped lint, build 47 routes pass. |
 | 2026-10-25 | Kiểm chứng và bàn giao nhánh sửa 3 luồng | Phase 17/19 100% → 100% | 12 runtime/API checks, 42 món qua mapper; sửa zero/clear/manual macro UI và tổng macro tuần; browser QA custom meal. |
 | 2026-10-25 | Sửa popup kết quả nhập receipt trên `/receipts/scan` | Phase 22 FE scaffold 100% → 100% | Giới hạn chiều cao modal theo viewport, cuộn danh sách bên trong; thẻ thống kê xếp dọc ở viewport hẹp và dùng cột co giãn trên desktop để không tràn ngang. |
 | 2026-10-25 | Receipt purchase identity and review | Phase 22 FE scaffold 100% → 100% | Đồng bộ consumer dev với contract receipt mới; mua cùng món vào ngày khác được giữ là lần mua riêng, lựa chọn xử lý ảnh trùng/ảnh một phần, và UI xử lý dòng phi thực phẩm bị loại. Production vẫn chờ BE READY và kiểm tra hóa đơn thực. |

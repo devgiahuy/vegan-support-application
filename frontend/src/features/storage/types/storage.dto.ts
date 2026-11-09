@@ -73,6 +73,12 @@ export interface UploadProviderParamsDto {
   fields?: Record<string, string>;
 }
 
+export interface StoragePageResponseDto<T> {
+  success: true;
+  data: T[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
+}
+
 export interface CreateUploadReservationRequestDto {
   kind: 'COVER_IMAGE' | 'VIDEO' | 'FRIDGE_IMAGE' | 'RECEIPT_IMAGE';
   mimeType: string;

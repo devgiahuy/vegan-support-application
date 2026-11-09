@@ -1,5 +1,6 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { DIET_RULES_ENDPOINTS } from '@/features/diet-preferences/constants/diet-rules.endpoints';
+import { USERS_ENDPOINTS } from '@/common/constants/endpoints/users.endpoints';
 import type {
   DietPreferenceResponseDto,
   DietRulePreviewRequestDto,
@@ -13,28 +14,26 @@ import { dietMapper } from '../mappers/diet.mapper';
 
 export const dietApi = {
   previewDietRules: async (payload: DietRulePreviewRequestDto): Promise<DietPreview> => {
-    // Các DTO `*ResponseDto` đã là envelope — đọc `res.data` trực tiếp, không bọc `APIResponse<>`.
-    const res = await api.post<DietRulePreviewResponseDto>(
-      API_ENDPOINTS.DIET_RULES.PREVIEW,
-      payload,
-      { silent: true }
-    );
-    return dietMapper.toPreviewModel(res.data);
+    // Đọc data từ envelope trước khi chuyển sang UI model.
+    const res = await api.post<DietRulePreviewResponseDto>(DIET_RULES_ENDPOINTS.PREVIEW, payload, {
+      silent: true,
+    });
+    return dietMapper.toPreviewModel(res.data?.data);
   },
 
   saveDietPreferences: async (payload: SaveDietPreferencesRequestDto): Promise<DietPreference> => {
     const res = await api.put<DietPreferenceResponseDto>(
-      API_ENDPOINTS.USERS.DIET_PREFERENCES,
+      USERS_ENDPOINTS.DIET_PREFERENCES,
       payload,
       { showErrorToast: true }
     );
-    return dietMapper.toPreferenceModel(res.data);
+    return dietMapper.toPreferenceModel(res.data?.data);
   },
 
   saveDietSchedule: async (payload: UpdateDietScheduleRequestDto): Promise<DietSchedule> => {
-    const res = await api.put<DietScheduleResponseDto>(API_ENDPOINTS.USERS.DIET_SCHEDULE, payload, {
+    const res = await api.put<DietScheduleResponseDto>(USERS_ENDPOINTS.DIET_SCHEDULE, payload, {
       showErrorToast: true,
     });
-    return dietMapper.toScheduleModel(res.data);
+    return dietMapper.toScheduleModel(res.data?.data);
   },
 };

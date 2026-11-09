@@ -13,9 +13,8 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  * ProfileMapper: `GET /users/me` → `DetailedProfile`.
  * Phần user dùng lại `authMapper.toModel`; health/diet map tại đây.
  */
-export class ProfileMapper extends BaseMapper<ProfileResponseDto, DetailedProfile> {
-  toModel(dto: ProfileResponseDto | null | undefined): DetailedProfile {
-    const data = pickField(dto, ['data'], null) as ProfileResponseDto['data'];
+export class ProfileMapper extends BaseMapper<ProfileResponseDto['data'], DetailedProfile> {
+  toModel(data: ProfileResponseDto['data']): DetailedProfile {
     const user = authMapper.toModel((data ?? null) as UserDto | null);
 
     const rawHealth = pickField<Record<string, unknown> | null>(
@@ -61,7 +60,7 @@ function toDietSummary(
   raw: Record<string, unknown> | null | undefined
 ): DietPreferenceSummary | null {
   if (!raw || typeof raw !== 'object') return null;
-  const pref = dietMapper.toPreferenceModel({ data: raw });
+  const pref = dietMapper.toPreferenceModel(raw);
   const rawSchedule = pickField<Record<string, unknown> | null>(raw, ['schedule'], null);
   const scheduleDates = safeArray<unknown, string>(pickField(rawSchedule, ['dates'], null), (d) =>
     typeof d === 'string' && DATE_RE.test(d) ? d : ''

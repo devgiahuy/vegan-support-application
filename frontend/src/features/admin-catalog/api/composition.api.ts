@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { INGREDIENT_COMPOSITION_ENDPOINTS } from '@/features/admin-catalog/constants/ingredient-composition.endpoints';
 import { compositionMapper } from '../mappers/composition.mapper';
 import type {
   CompositionResponseDto,
@@ -10,7 +10,7 @@ import type { CompositionDraft } from '../types/composition.model';
 export const compositionApi = {
   async get(id: string) {
     const { data } = await api.get<CompositionResponseDto>(
-      API_ENDPOINTS.INGREDIENT_COMPOSITION.DETAIL(id),
+      INGREDIENT_COMPOSITION_ENDPOINTS.DETAIL(id),
       { silent: true }
     );
     if (!data.success || !data.data) throw new Error('Không đọc được cấu tạo nguyên liệu.');
@@ -18,7 +18,7 @@ export const compositionApi = {
   },
   async sources() {
     const { data } = await api.get<CompositionSourcesResponseDto>(
-      API_ENDPOINTS.INGREDIENT_COMPOSITION.SOURCES,
+      INGREDIENT_COMPOSITION_ENDPOINTS.SOURCES,
       { silent: true }
     );
     if (!data.success || !Array.isArray(data.data))
@@ -27,7 +27,7 @@ export const compositionApi = {
   },
   async save(id: string, version: number, draft: CompositionDraft) {
     const { data } = await api.put<CompositionResponseDto>(
-      API_ENDPOINTS.INGREDIENT_COMPOSITION.DETAIL(id),
+      INGREDIENT_COMPOSITION_ENDPOINTS.DETAIL(id),
       compositionMapper.toRequest(draft, version)
     );
     if (!data.success || !data.data) throw new Error('Không đọc được kết quả lưu cấu tạo.');

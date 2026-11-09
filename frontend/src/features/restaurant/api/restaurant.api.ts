@@ -1,5 +1,7 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { RESTAURANTS_ENDPOINTS } from '@/features/restaurant/constants/restaurants.endpoints';
+import { LOCATION_ENDPOINTS } from '@/features/restaurant/constants/location.endpoints';
+import { ADMIN_RESTAURANTS_ENDPOINTS } from '@/features/restaurant/constants/admin-restaurants.endpoints';
 import type { PaginationResult } from '@/types/api';
 import type {
   AdminRestaurantListResponseDto,
@@ -44,13 +46,13 @@ export const restaurantApi = {
       ...state,
       mode: state.mode === 'KEYWORD' ? 'NEARBY' : state.mode,
     });
-    const response = await api.get<RestaurantListResponseDto>(API_ENDPOINTS.RESTAURANTS.NEARBY, {
+    const response = await api.get<RestaurantListResponseDto>(RESTAURANTS_ENDPOINTS.NEARBY, {
       params,
       silent: true,
       timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
       ...(signal ? { signal } : {}),
     });
-    return restaurantMapper.toDiscoveryModel(response.data);
+    return restaurantMapper.toDiscoveryModel(response.data?.data, response.data?.meta);
   },
 
   /**
@@ -65,32 +67,32 @@ export const restaurantApi = {
       return restaurantApi.getNearby({ ...state, mode: 'NEARBY' }, signal);
     }
     const params = restaurantMapper.toDiscoveryParams({ ...state, mode: 'KEYWORD' });
-    const response = await api.get<RestaurantListResponseDto>(API_ENDPOINTS.RESTAURANTS.SEARCH, {
+    const response = await api.get<RestaurantListResponseDto>(RESTAURANTS_ENDPOINTS.SEARCH, {
       params,
       silent: true,
       timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
       ...(signal ? { signal } : {}),
     });
-    return restaurantMapper.toDiscoveryModel(response.data);
+    return restaurantMapper.toDiscoveryModel(response.data?.data, response.data?.meta);
   },
 
   /** `GET /restaurants/:id` — chi tiết quán. */
   getDetail: async (id: string): Promise<Restaurant> => {
-    const response = await api.get<RestaurantResponseDto>(API_ENDPOINTS.RESTAURANTS.DETAIL(id), {
+    const response = await api.get<RestaurantResponseDto>(RESTAURANTS_ENDPOINTS.DETAIL(id), {
       silent: true,
       timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
     });
-    return restaurantMapper.toSingleModel(response.data);
+    return restaurantMapper.toSingleModel(response.data?.data);
   },
 
   /** `POST /restaurants` — đề xuất quán mới, ở trạng thái chờ duyệt. */
   submitRestaurant: async (input: SubmitRestaurantInput): Promise<Restaurant> => {
     const payload = restaurantMapper.toSubmitDto(input);
     const response = await api.post<SubmitRestaurantResponseDto>(
-      API_ENDPOINTS.RESTAURANTS.SUBMIT,
+      RESTAURANTS_ENDPOINTS.SUBMIT,
       payload
     );
-    return restaurantMapper.toSingleModel(response.data);
+    return restaurantMapper.toSingleModel(response.data?.data);
   },
 
   /**
@@ -99,20 +101,20 @@ export const restaurantApi = {
    * tuyệt đối không thay bằng tọa độ mặc định (FR-033).
    */
   geocode: async (address: string): Promise<RestaurantGeocodeResult> => {
-    const response = await api.get<GeocodeResponseDto>(API_ENDPOINTS.LOCATION.GEOCODE, {
+    const response = await api.get<GeocodeResponseDto>(LOCATION_ENDPOINTS.GEOCODE, {
       params: { address: address.trim() },
       silent: true,
       timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
     });
-    return restaurantMapper.toGeocodeResult(response.data);
+    return restaurantMapper.toGeocodeResult(response.data?.data);
   },
 
   /** `GET /admin/restaurants` — hàng chờ duyệt (ngoài phạm vi redesign trang khám phá). */
   getQueue: async (): Promise<PaginationResult<Restaurant>> => {
     const response = await api.get<AdminRestaurantListResponseDto>(
-      API_ENDPOINTS.ADMIN_RESTAURANTS.LIST
+      ADMIN_RESTAURANTS_ENDPOINTS.LIST
     );
-    return restaurantMapper.toQueueModel(response.data);
+    return restaurantMapper.toQueueModel(response.data?.data, response.data?.meta);
   },
 
   /** `PATCH /admin/restaurants/:id/review` — duyệt hoặc từ chối (ngoài phạm vi redesign). */
@@ -123,9 +125,9 @@ export const restaurantApi = {
   ): Promise<Restaurant> => {
     const payload = restaurantMapper.toReviewDto(decision, reason);
     const response = await api.patch<ReviewRestaurantResponseDto>(
-      API_ENDPOINTS.ADMIN_RESTAURANTS.REVIEW(id),
+      ADMIN_RESTAURANTS_ENDPOINTS.REVIEW(id),
       payload
     );
-    return restaurantMapper.toReviewedModel(response.data);
+    return restaurantMapper.toReviewedModel(response.data?.data);
   },
 };

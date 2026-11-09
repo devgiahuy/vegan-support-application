@@ -5,9 +5,9 @@ import type { PublicAnswerListResponseDto } from '../types/chat-sharing.dto';
 describe('ChatSharingMapper share', () => {
   it('map share đang mở + ghép shareUrl', () => {
     const shared = chatSharingMapper.toSharedAnswer({
-      success: true,
-      data: { messageId: 'm1', shareId: 'sh-1', shared: true },
-      meta: null,
+      messageId: 'm1',
+      shareId: 'sh-1',
+      shared: true,
     });
     expect(shared.shareId).toBe('sh-1');
     expect(shared.shareUrl).toBe('/assistant/public?share=sh-1');
@@ -15,11 +15,7 @@ describe('ChatSharingMapper share', () => {
   });
 
   it('revoke shared=false + shareId rỗng → url rỗng', () => {
-    const shared = chatSharingMapper.toSharedAnswer({
-      success: true,
-      data: { message_id: 'm1', shared: false },
-      meta: null,
-    });
+    const shared = chatSharingMapper.toSharedAnswer({ message_id: 'm1', shared: false });
     expect(shared.shared).toBe(false);
     expect(shared.shareUrl).toBe('');
   });
@@ -47,7 +43,7 @@ describe('ChatSharingMapper public', () => {
       ],
       meta: { page: 1, limit: 10, total: 2, total_pages: 1 },
     };
-    const result = chatSharingMapper.toPublicList(envelope);
+    const result = chatSharingMapper.toPublicList(envelope?.data, envelope?.meta);
     expect(result.items).toHaveLength(2);
     expect(result.items[0].verification?.verifierRoleLabel).toBe('Chuyên gia dinh dưỡng');
     expect(result.items[0].authorLabel).toBe('Thành viên cộng đồng');
@@ -56,11 +52,10 @@ describe('ChatSharingMapper public', () => {
   });
 
   it('role lạ giữ nguyên văn, thiếu verification → null', () => {
-    const result = chatSharingMapper.toPublicList({
-      success: true,
-      data: [{ shareId: 's', verification: { verifierRole: 'MYSTERY' } }],
-      meta: null,
-    });
+    const result = chatSharingMapper.toPublicList(
+      [{ shareId: 's', verification: { verifierRole: 'MYSTERY' } }],
+      null
+    );
     expect(result.items[0].verification?.verifierRoleLabel).toBe('MYSTERY');
   });
 
@@ -73,9 +68,10 @@ describe('ChatSharingMapper public', () => {
 describe('ChatSharingMapper verification', () => {
   it('map kiểm chứng đủ field', () => {
     const verification = chatSharingMapper.toVerificationModel({
-      success: true,
-      data: { messageId: 'm1', verifierName: 'BS. Lan', verifierRole: 'ADMIN', note: 'OK' },
-      meta: null,
+      messageId: 'm1',
+      verifierName: 'BS. Lan',
+      verifierRole: 'ADMIN',
+      note: 'OK',
     });
     expect(verification).toMatchObject({
       messageId: 'm1',
@@ -87,11 +83,7 @@ describe('ChatSharingMapper verification', () => {
 
   it('data null → null, note rỗng → null', () => {
     expect(chatSharingMapper.toVerificationModel(null)).toBeNull();
-    const verification = chatSharingMapper.toVerificationModel({
-      success: true,
-      data: { messageId: 'm', note: '   ' },
-      meta: null,
-    });
+    const verification = chatSharingMapper.toVerificationModel({ messageId: 'm', note: '   ' });
     expect(verification?.note).toBeNull();
     expect(verification?.verifierName).toBe('Chuyên gia');
   });
@@ -106,20 +98,12 @@ describe('ChatSharingMapper verification', () => {
   });
 
   it('shareUrl theo đúng route public', () => {
-    const shared = chatSharingMapper.toSharedAnswer({
-      success: true,
-      data: { share_id: 'abc' },
-      meta: null,
-    });
+    const shared = chatSharingMapper.toSharedAnswer({ share_id: 'abc' });
     expect(shared.shareUrl).toBe('/assistant/public?share=abc');
   });
 
   it('question/answer rỗng → chuỗi rỗng (UI xử lý empty)', () => {
-    const result = chatSharingMapper.toPublicList({
-      success: true,
-      data: [{ shareId: 's' }],
-      meta: null,
-    });
+    const result = chatSharingMapper.toPublicList([{ shareId: 's' }], null);
     expect(result.items[0].question).toBe('');
     expect(result.items[0].disclaimer).toBeNull();
   });

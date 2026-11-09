@@ -215,21 +215,19 @@ export interface MealProgramDto {
 }
 
 export interface MealProgramListResponseDto {
-  items?: MealProgramListItemDto[];
-  data?: MealProgramListItemDto[];
-  pagination?: {
-    page: number;
-    limit: number;
-    totalItems?: number;
-    total?: number;
-    totalPages?: number;
-  };
-  meta?: {
+  success: true;
+  data: MealProgramListItemDto[];
+  meta: {
     page: number;
     limit: number;
     total: number;
     totalPages: number;
   };
+}
+
+export interface MealProgramResponseDto {
+  success: true;
+  data: MealProgramDto;
 }
 
 // Request Payloads

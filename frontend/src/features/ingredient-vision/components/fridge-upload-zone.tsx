@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import {
   UploadCloud,
@@ -29,21 +29,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { toast } from 'sonner';
 import {
   uploadWithReservation,
-  validateUploadFile,
   type UploadProgressInfo,
 } from '@/features/storage/api/storage-upload';
+import { useSelectedUploadImages } from '@/features/storage/hooks/use-selected-upload-images';
 import { useCreateRecognitionJobMutation } from '../queries/ingredient-recognition.queries';
 import type { RecognitionJob } from '../types/ingredient-recognition.model';
-
-interface SelectedImageItem {
-  id: string;
-  file: File;
-  previewUrl: string;
-  progress: number;
-  status: 'idle' | 'uploading' | 'done' | 'error';
-  error?: string;
-  assetId?: string;
-}
 
 interface FridgeUploadZoneProps {
   onJobCreated: (job: RecognitionJob) => void;
@@ -53,101 +43,34 @@ interface FridgeUploadZoneProps {
 const MAX_IMAGES = 6;
 
 export function FridgeUploadZone({ onJobCreated, disabled = false }: FridgeUploadZoneProps) {
-  const [selectedImages, setSelectedImages] = useState<SelectedImageItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [overallProgress, setOverallProgress] = useState(0);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  const {
+    selectedImages,
+    setSelectedImages,
+    previewingImage,
+    setPreviewingImage,
+    handleFilesAdded,
+    handleRemoveImage,
+    handleClearAll,
+    handleMoveImage,
+  } = useSelectedUploadImages({
+    kind: 'FRIDGE_IMAGE',
+    maxImages: MAX_IMAGES,
+    idPrefix: 'fridge-img',
+    isUploading,
+  });
+
   // Xem trước ảnh phóng to (Lightbox)
-  const [previewingImage, setPreviewingImage] = useState<SelectedImageItem | null>(null);
   const [previewZoom, setPreviewZoom] = useState(1);
   const [previewRotation, setPreviewRotation] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  // Thu hồi các Object URL khi component unmount
-  const selectedImagesRef = useRef(selectedImages);
-  selectedImagesRef.current = selectedImages;
-
-  useEffect(() => {
-    return () => {
-      selectedImagesRef.current.forEach((img) => {
-        URL.revokeObjectURL(img.previewUrl);
-      });
-    };
-  }, []);
-
   const createJobMutation = useCreateRecognitionJobMutation();
-
-  const handleFilesAdded = (files: FileList | File[]) => {
-    const fileArray = Array.from(files);
-    if (fileArray.length === 0) return;
-
-    if (selectedImages.length + fileArray.length > MAX_IMAGES) {
-      toast.error(`Bạn chỉ có thể chọn tối đa ${MAX_IMAGES} ảnh cho mỗi lần quét.`);
-      return;
-    }
-
-    const newItems: SelectedImageItem[] = [];
-
-    for (const file of fileArray) {
-      const validation = validateUploadFile(file, 'FRIDGE_IMAGE');
-      if (!validation.valid) {
-        toast.error(`${file.name}: ${validation.error || 'Tệp không hợp lệ'}`);
-        continue;
-      }
-
-      newItems.push({
-        id:
-          typeof crypto !== 'undefined' && crypto.randomUUID
-            ? crypto.randomUUID()
-            : `fridge-img-${Date.now()}-${Math.random()}`,
-        file,
-        previewUrl: URL.createObjectURL(file),
-        progress: 0,
-        status: 'idle',
-      });
-    }
-
-    if (newItems.length > 0) {
-      setSelectedImages((prev) => [...prev, ...newItems]);
-      if (typeof window !== 'undefined') {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    }
-  };
-
-  const handleRemoveImage = (id: string) => {
-    if (isUploading) return;
-    setSelectedImages((prev) => {
-      const target = prev.find((item) => item.id === id);
-      if (target?.previewUrl) {
-        URL.revokeObjectURL(target.previewUrl);
-      }
-      return prev.filter((item) => item.id !== id);
-    });
-    if (previewingImage?.id === id) {
-      setPreviewingImage(null);
-    }
-  };
-
-  const handleClearAll = () => {
-    if (isUploading) return;
-    selectedImages.forEach((img) => URL.revokeObjectURL(img.previewUrl));
-    setSelectedImages([]);
-    setPreviewingImage(null);
-  };
-
-  const handleMoveImage = (fromIndex: number, toIndex: number) => {
-    if (toIndex < 0 || toIndex >= selectedImages.length || isUploading) return;
-    setSelectedImages((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
-      return next;
-    });
-  };
 
   const handleZoomIn = () => setPreviewZoom((prev) => Math.min(3, prev + 0.25));
   const handleZoomOut = () => setPreviewZoom((prev) => Math.max(0.75, prev - 0.25));

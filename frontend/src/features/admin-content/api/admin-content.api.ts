@@ -1,5 +1,6 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { POSTS_ENDPOINTS } from '@/common/constants/endpoints/posts.endpoints';
+import { CONTENT_REVIEW_ENDPOINTS } from '@/common/constants/endpoints/content-review.endpoints';
 import { PostType, RecipeDifficulty, VideoSource } from '@/common/enums';
 import { adminContentMapper } from '../mappers/admin-content.mapper';
 import { reviewApi } from '@/features/review/api/review.api';
@@ -15,8 +16,12 @@ import type {
   AdminContentListQueryDto,
   AdminContentListResponseDto,
 } from '../types/admin-content.dto';
-import type { AdminContentListResult, AdminContentSubmitInput } from '../types/admin-content.model';
-import type { BasePostDto, PostDetailResponseDto } from '@/features/post/types/post.dto';
+import type {
+  AdminContentDetail,
+  AdminContentListResult,
+  AdminContentSubmitInput,
+} from '../types/admin-content.model';
+import type { PostDetailResponseDto } from '@/features/post/types/post.dto';
 import type {
   CreateRecipeRequestDto,
   RecipeDetailResponseDto,
@@ -103,18 +108,19 @@ export const adminContentApi = {
     };
 
     if (type) {
-      const res = await api.get<AdminContentListResponseDto>(API_ENDPOINTS.POSTS.LIST, {
+      const res = await api.get<AdminContentListResponseDto>(POSTS_ENDPOINTS.LIST, {
         params: { ...baseParams, type },
         silent: true,
       });
-      return adminContentMapper.toPublishedOnlyResult(assertListPayload(res), sessionUserId);
+      const body = assertListPayload(res);
+      return adminContentMapper.toPublishedOnlyResult(body.data, body.meta, sessionUserId);
     }
 
     const types = [PostType.RECIPE, PostType.BLOG, PostType.VIDEO];
     const responses = await Promise.all(
       types.map((eachType) =>
         api
-          .get<AdminContentListResponseDto>(API_ENDPOINTS.POSTS.LIST, {
+          .get<AdminContentListResponseDto>(POSTS_ENDPOINTS.LIST, {
             params: { ...baseParams, type: eachType },
             silent: true,
           })
@@ -136,18 +142,18 @@ export const adminContentApi = {
       },
     };
 
-    return adminContentMapper.toPublishedOnlyResult(merged, sessionUserId);
+    return adminContentMapper.toPublishedOnlyResult(merged.data, merged.meta, sessionUserId);
   },
 
   /**
    * Chi tiết một nội dung. `GET /posts/:idOrSlug` có ngoại lệ đọc cho Admin nên quản
    * trị viên xem được cả bản nháp của người khác; `DELETED` trả `410 CONTENT_DELETED`.
    */
-  getContent: async (idOrSlug: string): Promise<BasePostDto> => {
-    const res = await api.get<PostDetailResponseDto>(API_ENDPOINTS.POSTS.DETAIL(idOrSlug), {
+  getContent: async (idOrSlug: string): Promise<AdminContentDetail> => {
+    const res = await api.get<PostDetailResponseDto>(POSTS_ENDPOINTS.DETAIL(idOrSlug), {
       silent: true,
     });
-    if (res.data?.success && res.data.data) return res.data.data;
+    if (res.data?.success && res.data.data) return adminContentMapper.toDetailModel(res.data.data);
     throw new Error('Không tìm thấy nội dung.');
   },
 
@@ -157,7 +163,7 @@ export const adminContentApi = {
     draft: AdminContentDraft
   ): Promise<Recipe | Article | Video> => {
     const res = await api.post<PostDetailResponseDto>(
-      API_ENDPOINTS.POSTS.CREATE,
+      POSTS_ENDPOINTS.CREATE,
       buildCreateDto(type, draft),
       { showErrorToast: true }
     );
@@ -175,7 +181,7 @@ export const adminContentApi = {
     draft: AdminContentDraft
   ): Promise<Recipe | Article | Video> => {
     const res = await api.patch<PostDetailResponseDto>(
-      API_ENDPOINTS.POSTS.UPDATE(id),
+      POSTS_ENDPOINTS.UPDATE(id),
       buildUpdateDto(type, draft),
       { showErrorToast: true }
     );
@@ -190,7 +196,7 @@ export const adminContentApi = {
     id: string,
     expectedVersion: number
   ): Promise<{ id: string; status: string }> => {
-    const res = await api.delete<AdminContentDeleteResponseDto>(API_ENDPOINTS.POSTS.DELETE(id), {
+    const res = await api.delete<AdminContentDeleteResponseDto>(POSTS_ENDPOINTS.DELETE(id), {
       params: { expectedVersion },
       showErrorToast: true,
     });
@@ -206,7 +212,7 @@ export const adminContentApi = {
    */
   submitContent: async (id: string, input: AdminContentSubmitInput): Promise<void> => {
     await api.post(
-      API_ENDPOINTS.CONTENT_REVIEW.SUBMIT(id),
+      CONTENT_REVIEW_ENDPOINTS.SUBMIT(id),
       { revisionId: input.revisionId, expectedVersion: input.expectedVersion },
       { showErrorToast: true }
     );

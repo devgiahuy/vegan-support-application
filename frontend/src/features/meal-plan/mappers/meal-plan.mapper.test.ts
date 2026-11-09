@@ -49,7 +49,7 @@ const detailEnvelope: MealPlanResponseDto = {
 
 describe('MealPlanMapper', () => {
   it('map detail đầy đủ: goal, version, week range, calories số-dạng-chuỗi', () => {
-    const plan = mealPlanMapper.toDetailModel(detailEnvelope);
+    const plan = mealPlanMapper.toDetailModel(detailEnvelope.data);
     expect(plan.id).toBe('plan-1');
     expect(plan.goal).toBe(MealPlanGoal.LOSE);
     expect(plan.goalLabel).toBe('Giảm cân');
@@ -61,7 +61,7 @@ describe('MealPlanMapper', () => {
   });
 
   it('map slot FILLED đọc recipe + format kcal', () => {
-    const plan = mealPlanMapper.toDetailModel(detailEnvelope);
+    const plan = mealPlanMapper.toDetailModel(detailEnvelope.data);
     const slot = plan.items[0];
     expect(slot.filled).toBe(true);
     expect(slot.mealType).toBe(MealType.BREAKFAST);
@@ -73,7 +73,7 @@ describe('MealPlanMapper', () => {
   });
 
   it('map slot UNFILLED + lọc phần tử null trong items', () => {
-    const plan = mealPlanMapper.toDetailModel(detailEnvelope);
+    const plan = mealPlanMapper.toDetailModel(detailEnvelope.data);
     // 3 phần tử thô (1 null) → BaseMapper giữ null? toSlotList map trực tiếp nên null thành defaults
     expect(plan.items).toHaveLength(3);
     const unfilled = plan.items[1];
@@ -83,7 +83,7 @@ describe('MealPlanMapper', () => {
   });
 
   it('warnings: lọc null, dịch mã BE, giữ mã lạ nguyên văn', () => {
-    const plan = mealPlanMapper.toDetailModel(detailEnvelope);
+    const plan = mealPlanMapper.toDetailModel(detailEnvelope.data);
     expect(plan.warnings).toHaveLength(3);
     expect(plan.warnings[0].code).toBe('CALORIE_TOLERANCE_WIDENED');
     expect(plan.warnings[0].message).toContain('±20%');
@@ -91,14 +91,14 @@ describe('MealPlanMapper', () => {
   });
 
   it('B12 null khi backend không có dữ liệu, quality PARTIAL', () => {
-    const plan = mealPlanMapper.toDetailModel(detailEnvelope);
+    const plan = mealPlanMapper.toDetailModel(detailEnvelope.data);
     expect(plan.vitaminB12Mcg).toBeNull();
     expect(plan.nutritionDataQuality).toBe(NutritionDataQuality.PARTIAL);
     expect(plan.nutritionDataQualityLabel).toBe('Một phần');
   });
 
   it('shopping list gộp displayLine từ số-dạng-chuỗi', () => {
-    const plan = mealPlanMapper.toDetailModel(detailEnvelope);
+    const plan = mealPlanMapper.toDetailModel(detailEnvelope.data);
     expect(plan.shoppingList).toHaveLength(1);
     expect(plan.shoppingList[0].displayLine).toBe('300 g Cà rốt');
     expect(plan.shoppingList[0].ingredientId).toBe('ing-1');
@@ -134,7 +134,7 @@ describe('MealPlanMapper', () => {
       data: [{ id: 'a', weekStart: '2026-09-14', goal: 'MAINTAIN' }, null],
       meta: { page: 1, limit: 10, total: 2, totalPages: 1 },
     };
-    const result = mealPlanMapper.toListModel(envelope);
+    const result = mealPlanMapper.toListModel(envelope.data, envelope.meta);
     expect(result.items).toHaveLength(2);
     expect(result.metadata.totalItems).toBe(2);
     expect(result.metadata.hasNextPage).toBe(false);
@@ -142,7 +142,10 @@ describe('MealPlanMapper', () => {
   });
 
   it('toListModel meta thiếu → fallback theo số item', () => {
-    const result = mealPlanMapper.toListModel({ success: true, data: [], meta: null });
+    const result = mealPlanMapper.toListModel(
+      { success: true, data: [], meta: null }.data,
+      { success: true, data: [], meta: null }.meta
+    );
     expect(result.items).toEqual([]);
     expect(result.metadata.page).toBe(1);
   });
@@ -153,7 +156,7 @@ describe('MealPlanMapper', () => {
       data: { id: 'plan-9', deleted: true },
       meta: null,
     };
-    expect(mealPlanMapper.toDeleteModel(envelope)).toEqual({ id: 'plan-9', deleted: true });
+    expect(mealPlanMapper.toDeleteModel(envelope.data)).toEqual({ id: 'plan-9', deleted: true });
     expect(mealPlanMapper.toDeleteModel(null)).toEqual({ id: '', deleted: false });
   });
 
@@ -323,7 +326,20 @@ describe('MealPlanMapper', () => {
     expect(plan.warningDetails[0].severityLabel).toBe('Lưu ý');
 
     expect(plan.userSummary?.status).toBe('ADVISORY_ADJUSTMENTS');
+    expect(plan.userSummary?.detailLines).toEqual([
+      'Thực đơn tuần có một số lưu ý về tỷ lệ dinh dưỡng.',
+    ]);
     expect(plan.userSummary?.hardConstraintsPreserved).toBe(true);
+  });
+
+  it('tách các món trong tóm tắt thành từng dòng và bỏ dấu phân cách thừa', () => {
+    const plan = mealPlanMapper.toModel({
+      userSummary: { detail: 'Món A: có dị ứng;  Món B: chưa rõ thành phần; ;' },
+    });
+    expect(plan.userSummary?.detailLines).toEqual([
+      'Món A: có dị ứng',
+      'Món B: chưa rõ thành phần',
+    ]);
   });
 
   it('chuẩn hóa date khi backend trả về chuỗi ISO có time (split T)', () => {

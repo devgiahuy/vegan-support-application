@@ -17,7 +17,7 @@ src/
 ├── middleware.ts         # Edge: check HttpOnly cookie accessToken/access_token, redirect /login.
 │                         # KHÔNG đọc localStorage (server không thấy).
 ├── common/
-│   ├── constants/api-endpoints.ts  # MỌI endpoint tập trung ở đây. Cấm hardcode string URL trong feature.
+│   ├── constants/endpoints/ # Endpoint được nhiều feature sử dụng, chia theo domain.
 │   └── enums/            # Enum dùng chung (StatusEnum, UserRole...).
 ├── components/
 │   ├── ui/               # shadcn nguyên bản (new-york/radix, cài qua `npx shadcn@latest add`).
@@ -26,6 +26,7 @@ src/
 │   └── providers/        # query-provider, auth-provider, theme-controller. Client Component.
 ├── features/<domain>/    # Đơn vị chính. Mỗi domain 1 folder độc lập:
 │   ├── types/*.dto.ts    # Dữ liệu THÔ từ BE (optional, union, nullable). BẮT BUỘC.
+│   ├── constants/*.endpoints.ts # Endpoint thuộc riêng domain; consumer import trực tiếp.
 │   ├── types/*.model.ts  # Dữ liệu SẠCH cho UI (camelCase, non-null, typed). BẮT BUỘC.
 │   ├── mappers/*.mapper.ts # DTO -> Model (và ngược lại khi create/update). BẮT BUỘC.
 │   ├── api/*.api.ts      # Gọi axios/serverFetch + map qua mapper. Không trả DTO ra ngoài.
@@ -55,6 +56,10 @@ Client: Component -> queries/*.queries.ts -> api/*.api.ts (axios) -> mapper.toMo
 Server: Server Component -> lib/server-fetch.ts (+ mapper) -> Model -> render
 ```
 
+API client nhận `AxiosResponse`, đọc envelope backend một lần tại API function, sau đó truyền `data` DTO cho mapper; query hook quản lý cache và trạng thái, component chỉ nhận Model. Ví dụ `category.api.ts` lấy `res.data?.data` rồi gọi `categoryMapper.toTreeModel`. Với response có `meta`, truyền metadata cần thiết rõ ràng cho mapper. Không bọc thêm `APIResponse` quanh DTO đã có envelope. Trường `data` thuộc bản thân một DTO nghiệp vụ (như chi tiết bản ghi food-data) vẫn do mapper của domain xử lý; stream SSE dùng luồng riêng.
+
+Đường dẫn được chia theo nhóm endpoint. Endpoint chỉ một feature dùng nằm trong `features/<domain>/constants/`; nhóm dùng ở nhiều feature nằm trong `common/constants/endpoints/`. Import trực tiếp nhóm tương ứng, không tạo barrel gom lại tất cả endpoint. Nếu endpoint bắt đầu được nhiều feature dùng, chuyển nhóm sang common và cập nhật consumer cùng lúc.
+
 ---
 
 ## 2. Quy tắc import & biên module
@@ -64,7 +69,7 @@ Server: Server Component -> lib/server-fetch.ts (+ mapper) -> Model -> render
    Muốn dùng chéo -> nâng lên `common/` hoặc `components/`.
 3. `components/ui` không import `features/*`, `store/*`. Chỉ nhận props.
 4. `app/` không gọi trực tiếp `axios`/`fetch`. Gọi qua `features/*/queries` (client) hoặc `lib/server-fetch` (server).
-5. Endpoint mới -> thêm vào `common/constants/api-endpoints.ts` trước, rồi mới dùng.
+5. Endpoint mới -> khai báo ở `features/<domain>/constants/*.endpoints.ts` trước; nếu nhiều feature cần dùng, đặt ở `common/constants/endpoints/`. Consumer không hard-code path.
 6. UI **ưu tiên shadcn/ui** (`components/ui/*`). Thiếu component -> tải bằng CLI (mục 4.5);
    shadcn không có sẵn -> mới được tự code ở `components/shared/*`. Cấm tự viết lại component shadcn đã có.
 7. ⭐ **Mọi `api/*.api.ts` mới/sửa BẮT BUỘC phải có/cập nhật `mappers/*.mapper.ts` tương ứng.**
@@ -144,7 +149,7 @@ export const orderMapper = new OrderMapper();
 
 // features/order/api/order.api.ts — KHÔNG trả DTO
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { ORDER_ENDPOINTS } from '@/features/order/constants/order.endpoints';
 import type { APIResponse, PaginationResult } from '@/types/api';
 import type { OrderDto } from '../types/order.dto';
 import type { Order } from '../types/order.model';
@@ -155,7 +160,7 @@ export const orderApi = {
     page?: number;
     limit?: number;
   }): Promise<PaginationResult<Order>> => {
-    const res = await api.get<APIResponse<PaginationResult<OrderDto>>>('/orders', {
+    const res = await api.get<APIResponse<PaginationResult<OrderDto>>>(ORDER_ENDPOINTS.LIST, {
       params,
       silent: true,
     });
@@ -173,7 +178,7 @@ const list = res.data.data as any;
 return <div>{item.product_title /* đọc DTO trực tiếp */}</div>;
 
 // ✅ ĐÚNG
-const res = await api.get<APIResponse<PaginationResult<ProductDto>>>(API_ENDPOINTS.PRODUCTS.LIST);
+const res = await api.get<APIResponse<PaginationResult<ProductDto>>>(PRODUCT_ENDPOINTS.LIST);
 return productMapper.toPaginationModel(res.data.data); // trả PaginationResult<Product>
 ```
 
@@ -293,7 +298,7 @@ Checklist review PR/API mới:
 
 ## 5. Scaffold feature mới (làm theo thứ tự)
 
-1. Thêm endpoint vào `common/constants/api-endpoints.ts`.
+1. Thêm endpoint vào file constants của feature hoặc domain dùng chung.
 2. Tạo `features/<d>/types/<d>.dto.ts` + `types/<d>.model.ts`.
 3. Tạo `mappers/<d>.mapper.ts` (full `pickField` + `safe*`).
 4. Tạo `api/<d>.api.ts` (typed + mapper, không leak DTO).

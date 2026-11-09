@@ -66,6 +66,28 @@ function videoDto(overrides: Partial<BasePostDto> = {}): BasePostDto {
 }
 
 describe('AdminContentMapper Unit Tests', () => {
+  describe('chi tiết nội dung', () => {
+    it.each([PostType.RECIPE, PostType.BLOG, PostType.VIDEO])(
+      'chuyển DTO %s thành Model theo loại',
+      (type) => {
+        const detail = adminContentMapper.toDetailModel({
+          id: 'post-1',
+          type,
+          revision: { id: 'rev-1', title: 'Tên nội dung' },
+        });
+        expect(detail.type).toBe(type);
+        expect(detail.content.id).toBe('post-1');
+        expect(detail.content.title).toBe('Tên nội dung');
+        expect(detail.content).not.toHaveProperty('revision');
+      }
+    );
+
+    it('từ chối loại nội dung chưa hỗ trợ', () => {
+      expect(() => adminContentMapper.toDetailModel({ type: 'UNKNOWN' })).toThrow(
+        'Loại nội dung không được hỗ trợ.'
+      );
+    });
+  });
   describe('toAdminRow', () => {
     it('trả về giá trị mặc định an toàn khi dto rỗng', () => {
       const row = adminContentMapper.toAdminRow(null, SESSION_USER_ID);
@@ -192,7 +214,8 @@ describe('AdminContentMapper Unit Tests', () => {
   describe('kết quả danh sách', () => {
     it('toPublishedOnlyResult đặt source = published-only', () => {
       const result = adminContentMapper.toPublishedOnlyResult(
-        { data: [recipeDto(), videoDto()], meta: { page: 1, limit: 20, total: 2, totalPages: 1 } },
+        [recipeDto(), videoDto()],
+        { page: 1, limit: 20, total: 2, totalPages: 1 },
         SESSION_USER_ID
       );
 
@@ -206,7 +229,8 @@ describe('AdminContentMapper Unit Tests', () => {
 
     it('toAdminListResult đặt source = admin-list', () => {
       const result = adminContentMapper.toAdminListResult(
-        { data: [recipeDto()], meta: { page: 2, limit: 10, total: 25, totalPages: 3 } },
+        [recipeDto()],
+        { page: 2, limit: 10, total: 25, totalPages: 3 },
         SESSION_USER_ID
       );
 
@@ -218,10 +242,7 @@ describe('AdminContentMapper Unit Tests', () => {
     });
 
     it('chuẩn hoá meta thiếu: page >= 1 và totalPages >= 1', () => {
-      const result = adminContentMapper.toPublishedOnlyResult(
-        { data: null, meta: null },
-        SESSION_USER_ID
-      );
+      const result = adminContentMapper.toPublishedOnlyResult(null, null, SESSION_USER_ID);
 
       expect(result.rows).toEqual([]);
       expect(result.page).toBeGreaterThanOrEqual(1);
@@ -232,7 +253,8 @@ describe('AdminContentMapper Unit Tests', () => {
 
     it('bỏ qua phần tử null trong data', () => {
       const result = adminContentMapper.toPublishedOnlyResult(
-        { data: [recipeDto(), null, videoDto()], meta: null },
+        [recipeDto(), null, videoDto()],
+        null,
         SESSION_USER_ID
       );
 
@@ -361,7 +383,8 @@ describe('AdminContentMapper Unit Tests', () => {
   describe('kết quả trả về không chứa tham chiếu DTO', () => {
     it('AdminContentListResult chỉ chứa các trường Model đã định nghĩa', () => {
       const result: AdminContentListResult = adminContentMapper.toPublishedOnlyResult(
-        { data: [recipeDto()], meta: { page: 1, limit: 20, total: 1, totalPages: 1 } },
+        [recipeDto()],
+        { page: 1, limit: 20, total: 1, totalPages: 1 },
         SESSION_USER_ID
       );
 

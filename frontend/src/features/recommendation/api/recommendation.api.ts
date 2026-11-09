@@ -1,8 +1,9 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { RECOMMENDATIONS_ENDPOINTS } from '@/features/recommendation/constants/recommendations.endpoints';
 import type {
   BehaviorEventResponseDto,
   PersonalizationResponseDto,
+  RecommendationResponseDto,
 } from '../types/recommendation.dto';
 import type {
   BehaviorEventInput,
@@ -15,7 +16,7 @@ import { recommendationMapper } from '../mappers/recommendation.mapper';
 /**
  * Consumer 4 capability recommendations đã xác minh live.
  * Event là fire-and-forget: `silent` + caller không `await` chặn UI.
- * Envelope `{success, data, meta}` đọc `res.data` trực tiếp.
+ * API đọc data và metadata từ response envelope trước khi gọi mapper.
  */
 export const recommendationApi = {
   /** `GET /recommendations/home` — gợi ý đã lọc luật cứng. */
@@ -26,32 +27,32 @@ export const recommendationApi = {
     items: Recommendation[];
     meta: RecommendationMeta;
   }> => {
-    const res = await api.get(API_ENDPOINTS.RECOMMENDATIONS.HOME, {
+    const res = await api.get<RecommendationResponseDto>(RECOMMENDATIONS_ENDPOINTS.HOME, {
       params: { limit: params?.limit, ...(params?.forDate ? { forDate: params.forDate } : {}) },
       silent: true,
     });
     return {
-      items: recommendationMapper.toHomeList(res.data),
-      meta: recommendationMapper.toHomeMeta(res.data),
+      items: recommendationMapper.toHomeList(res.data?.data),
+      meta: recommendationMapper.toHomeMeta(res.data?.meta),
     };
   },
 
   /** `GET /users/me/personalization` — consent hiện tại. */
   getConsent: async (): Promise<PersonalizationConsent> => {
-    const res = await api.get<PersonalizationResponseDto>(API_ENDPOINTS.RECOMMENDATIONS.CONSENT, {
+    const res = await api.get<PersonalizationResponseDto>(RECOMMENDATIONS_ENDPOINTS.CONSENT, {
       silent: true,
     });
-    return recommendationMapper.toConsentModel(res.data);
+    return recommendationMapper.toConsentModel(res.data?.data);
   },
 
   /** `PUT /users/me/personalization` — gửi lại `consentVersion` từ GET. */
   setConsent: async (enabled: boolean, consentVersion: string): Promise<PersonalizationConsent> => {
     const res = await api.put<PersonalizationResponseDto>(
-      API_ENDPOINTS.RECOMMENDATIONS.CONSENT,
+      RECOMMENDATIONS_ENDPOINTS.CONSENT,
       recommendationMapper.toConsentDto(enabled, consentVersion),
       { showErrorToast: true }
     );
-    return recommendationMapper.toConsentModel(res.data);
+    return recommendationMapper.toConsentModel(res.data?.data);
   },
 
   /**
@@ -67,7 +68,7 @@ export const recommendationApi = {
       return false;
     }
     try {
-      await api.post<BehaviorEventResponseDto>(API_ENDPOINTS.RECOMMENDATIONS.EVENTS, payload, {
+      await api.post<BehaviorEventResponseDto>(RECOMMENDATIONS_ENDPOINTS.EVENTS, payload, {
         silent: true,
       });
       return true;

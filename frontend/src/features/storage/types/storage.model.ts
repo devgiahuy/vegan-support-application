@@ -99,3 +99,24 @@ export interface StorageAdjustment {
   reason: string;
   createdAt: Date | null;
 }
+
+/** Tham số chuyển tiếp nội bộ cho bước upload trực tiếp lên nhà cung cấp. */
+export interface StorageUploadParams {
+  uploadUrl: string;
+  apiKey?: string;
+  timestamp?: number;
+  signature?: string;
+  folder?: string;
+  fields: Record<string, string>;
+}
+
+/** Metadata media đã tải lên dùng khi tạo hoặc sửa nội dung. */
+export interface UploadedMediaMeta {
+  assetId?: string;
+  publicId: string;
+  mimeType: string;
+  bytes: number;
+  width?: number;
+  height?: number;
+  durationSeconds?: number;
+}

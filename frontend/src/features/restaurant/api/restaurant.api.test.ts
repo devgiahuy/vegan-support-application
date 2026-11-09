@@ -1,7 +1,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import api from '@/lib/axios';
 import { restaurantApi, RESTAURANT_REQUEST_TIMEOUT_MS } from './restaurant.api';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { RESTAURANTS_ENDPOINTS } from '@/features/restaurant/constants/restaurants.endpoints';
+import { LOCATION_ENDPOINTS } from '@/features/restaurant/constants/location.endpoints';
 import type { RestaurantSearchState } from '../types/restaurant.model';
 import type { RestaurantListResponseDto } from '../types/restaurant.dto';
 
@@ -49,7 +50,7 @@ describe('restaurantApi — discovery theo chế độ', () => {
       state({ lat: 10.875, lng: 106.8, page: 2, limit: 20 }),
       controller.signal
     );
-    expect(spy).toHaveBeenCalledWith(API_ENDPOINTS.RESTAURANTS.NEARBY, {
+    expect(spy).toHaveBeenCalledWith(RESTAURANTS_ENDPOINTS.NEARBY, {
       params: { radiusMeters: 5000, lat: 10.875, lng: 106.8, page: 2, limit: 20 },
       silent: true,
       timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
@@ -71,7 +72,7 @@ describe('restaurantApi — discovery theo chế độ', () => {
       state({ mode: 'NEARBY', lat: 10.8214, lng: 106.6381, radiusM: 3000 })
     );
 
-    expect(spy).toHaveBeenCalledWith(API_ENDPOINTS.RESTAURANTS.NEARBY, {
+    expect(spy).toHaveBeenCalledWith(RESTAURANTS_ENDPOINTS.NEARBY, {
       params: { radiusMeters: 3000, lat: 10.8214, lng: 106.6381 },
       silent: true,
       timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
@@ -91,7 +92,7 @@ describe('restaurantApi — discovery theo chế độ', () => {
       state({ mode: 'BOUNDS', bounds: { north: 10.9, south: 10.7, east: 106.9, west: 106.6 } })
     );
 
-    expect(spy).toHaveBeenCalledWith(API_ENDPOINTS.RESTAURANTS.NEARBY, {
+    expect(spy).toHaveBeenCalledWith(RESTAURANTS_ENDPOINTS.NEARBY, {
       params: { radiusMeters: 5000, north: 10.9, south: 10.7, east: 106.9, west: 106.6 },
       silent: true,
       timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
@@ -105,7 +106,7 @@ describe('restaurantApi — discovery theo chế độ', () => {
       state({ mode: 'KEYWORD', lat: 10.8214, lng: 106.6381, radiusM: 2000, query: 'phở' })
     );
 
-    expect(spy).toHaveBeenCalledWith(API_ENDPOINTS.RESTAURANTS.SEARCH, {
+    expect(spy).toHaveBeenCalledWith(RESTAURANTS_ENDPOINTS.SEARCH, {
       params: { radiusMeters: 2000, q: 'phở', lat: 10.8214, lng: 106.6381 },
       silent: true,
       timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
@@ -131,7 +132,7 @@ describe('restaurantApi — discovery theo chế độ', () => {
       })
     );
 
-    expect(spy).toHaveBeenCalledWith(API_ENDPOINTS.RESTAURANTS.SEARCH, {
+    expect(spy).toHaveBeenCalledWith(RESTAURANTS_ENDPOINTS.SEARCH, {
       params: {
         radiusMeters: 5000,
         q: 'chay',
@@ -154,7 +155,7 @@ describe('restaurantApi — discovery theo chế độ', () => {
       state({ mode: 'KEYWORD', lat: 10.8214, lng: 106.6381, radiusM: 2000, query: ' ' })
     );
 
-    expect(spy).toHaveBeenCalledWith(API_ENDPOINTS.RESTAURANTS.NEARBY, {
+    expect(spy).toHaveBeenCalledWith(RESTAURANTS_ENDPOINTS.NEARBY, {
       params: { radiusMeters: 2000, lat: 10.8214, lng: 106.6381 },
       silent: true,
       timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
@@ -184,7 +185,7 @@ describe('restaurantApi — discovery theo chế độ', () => {
       })
     );
 
-    expect(spy).toHaveBeenCalledWith(API_ENDPOINTS.RESTAURANTS.NEARBY, {
+    expect(spy).toHaveBeenCalledWith(RESTAURANTS_ENDPOINTS.NEARBY, {
       params: {
         radiusMeters: 5000,
         lat: 10.82,
@@ -257,7 +258,7 @@ describe('restaurantApi — geocode (FR-033)', () => {
 
     const result = await restaurantApi.geocode('  Hồ Gươm, Hà Nội  ');
 
-    expect(spy).toHaveBeenCalledWith(API_ENDPOINTS.LOCATION.GEOCODE, {
+    expect(spy).toHaveBeenCalledWith(LOCATION_ENDPOINTS.GEOCODE, {
       params: { address: 'Hồ Gươm, Hà Nội' },
       silent: true,
       timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
@@ -302,7 +303,7 @@ describe('restaurantApi — đề xuất quán', () => {
       dietTags: ['VEGAN'],
     });
 
-    expect(spy).toHaveBeenCalledWith(API_ENDPOINTS.RESTAURANTS.SUBMIT, {
+    expect(spy).toHaveBeenCalledWith(RESTAURANTS_ENDPOINTS.SUBMIT, {
       name: 'Quán chay Mới',
       address: '123 Phố Huế, Hà Nội',
       latitude: 21.0285,

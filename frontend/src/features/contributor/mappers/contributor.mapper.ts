@@ -11,7 +11,6 @@ import type { PaginationResult } from '@/types/api';
 import type {
   ContributorApplicationDto,
   ContributorApplicationListResponseDto,
-  ContributorApplicationResponseDto,
   ContributorRevocationResponseDto,
   InviteContributorRequestDto,
   ReviewApplicationRequestDto,
@@ -186,25 +185,21 @@ export class ContributorMapper extends BaseMapper<
   }
 
   /** `POST /api/v1/contributor-applications` → đơn PENDING. */
-  toSingleApplication(
-    dto: ContributorApplicationResponseDto | null | undefined
-  ): ContributorApplication {
-    const data = pickField(dto, ['data'], null) as ContributorApplicationDto | null;
+  toSingleApplication(data: ContributorApplicationDto | null | undefined): ContributorApplication {
     return this.toModel(data);
   }
 
   /** Own list + admin list kèm phân trang. */
   toApplicationList(
-    dto: ContributorApplicationListResponseDto | null | undefined
+    rawItems: ContributorApplicationListResponseDto['data'],
+    meta?: ContributorApplicationListResponseDto['meta']
   ): PaginationResult<ContributorApplication> {
-    const rawItems = pickField(dto, ['data'], null) as (ContributorApplicationDto | null)[] | null;
     const items = this.toModelList(
       safeArray<ContributorApplicationDto | null, ContributorApplicationDto | null>(
         rawItems,
         (item) => item
       )
     ).filter((item) => item.id.length > 0);
-    const meta = pickField(dto, ['meta'], null) as ContributorApplicationListResponseDto['meta'];
     return {
       items,
       metadata: meta
@@ -256,10 +251,7 @@ export class ContributorMapper extends BaseMapper<
   }
 
   /** Chuyển đổi phản hồi thu hồi quyền sang UI Model. */
-  toRevocationResult(
-    dto: ContributorRevocationResponseDto | null | undefined
-  ): ContributorRevocationResult {
-    const data = pickField(dto, ['data'], null) as ContributorRevocationResponseDto['data'];
+  toRevocationResult(data: ContributorRevocationResponseDto['data']): ContributorRevocationResult {
     const revokedBy = pickField(data, ['revokedBy', 'revoked_by'], null) as {
       displayName?: string;
       display_name?: string;

@@ -56,7 +56,7 @@ describe('RecipeDraftMapper', () => {
 
   describe('toModel', () => {
     it('chuyển đổi DTO hoàn chỉnh thành UI Model chính xác', () => {
-      const model = mapper.toModel(mockResponseDto);
+      const model = mapper.toModel(mockResponseDto.data);
 
       expect(model.title).toBe('Cà ri chay nấm đông cô');
       expect(model.description).toBe('Món cà ri thanh đạm cho bữa cơm gia đình');
@@ -106,7 +106,7 @@ describe('RecipeDraftMapper', () => {
         },
       };
 
-      const model = mapper.toModel(sparseDto);
+      const model = mapper.toModel(sparseDto.data);
       expect(model.title).toBe('');
       expect(model.servings).toBe(4);
       expect(model.prepTimeMinutes).toBe(15);
@@ -131,7 +131,7 @@ describe('RecipeDraftMapper', () => {
           },
         },
       };
-      expect(mapper.toModel(easyDto).difficulty).toBe(RecipeDifficulty.EASY);
+      expect(mapper.toModel(easyDto.data).difficulty).toBe(RecipeDifficulty.EASY);
 
       const hardDto: GenerateRecipeDraftResponseDto = {
         ...mockResponseDto,
@@ -146,11 +146,28 @@ describe('RecipeDraftMapper', () => {
           },
         },
       };
-      expect(mapper.toModel(hardDto).difficulty).toBe(RecipeDifficulty.HARD);
+      expect(mapper.toModel(hardDto.data).difficulty).toBe(RecipeDifficulty.HARD);
     });
   });
 
   describe('toDto', () => {
+    it('giữ khẩu phần và thời gian kể cả mô tả trống', () => {
+      expect(
+        mapper.toDto({
+          title: 'Đậu hũ xào sả',
+          description: '',
+          ingredientNames: ['Sả'],
+          servings: 3,
+          prepTimeMinutes: 0,
+          cookTimeMinutes: 20,
+        })
+      ).toMatchObject({
+        description: '',
+        servings: 3,
+        prepTimeMinutes: 0,
+        cookTimeMinutes: 20,
+      });
+    });
     it('chuyển đổi RecipeDraftPrompt thành GenerateRecipeDraftRequestDto với trim và loại bỏ chuỗi rỗng', () => {
       const prompt: RecipeDraftPrompt = {
         title: '  Canh chua chay  ',
@@ -167,7 +184,7 @@ describe('RecipeDraftMapper', () => {
 
   describe('toFormValues', () => {
     it('chuyển đổi RecipeDraftSuggestion thành giá trị biểu mẫu hợp lệ cho RecipeEditorForm', () => {
-      const suggestion: RecipeDraftSuggestion = mapper.toModel(mockResponseDto);
+      const suggestion: RecipeDraftSuggestion = mapper.toModel(mockResponseDto.data);
       const formValues = mapper.toFormValues(suggestion);
 
       expect(formValues.title).toBe('Cà ri chay nấm đông cô');

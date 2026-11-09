@@ -1,5 +1,5 @@
 import apiClient from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { NOTIFICATIONS_ENDPOINTS } from '@/features/notification/constants/notifications.endpoints';
 import type { PaginationResult } from '@/types/api';
 import type {
   NotificationListResponseDto,
@@ -22,7 +22,7 @@ export const notificationApi = {
     params?: GetNotificationsParams
   ): Promise<PaginationResult<AppNotification>> => {
     const response = await apiClient.get<NotificationListResponseDto>(
-      API_ENDPOINTS.NOTIFICATIONS.LIST,
+      NOTIFICATIONS_ENDPOINTS.LIST,
       {
         params: {
           page: params?.page ?? 1,
@@ -31,30 +31,30 @@ export const notificationApi = {
         },
       }
     );
-    return notificationMapper.toListModel(response.data);
+    return notificationMapper.toListModel(response.data?.data, response.data?.meta);
   },
 
   /** `GET /notifications/unread-count` — lấy số đếm chưa đọc (live API). */
   getUnreadCount: async (): Promise<UnreadCount> => {
     const response = await apiClient.get<NotificationUnreadCountResponseDto>(
-      API_ENDPOINTS.NOTIFICATIONS.UNREAD_COUNT
+      NOTIFICATIONS_ENDPOINTS.UNREAD_COUNT
     );
-    return notificationMapper.toUnreadCountFromDto(response.data);
+    return notificationMapper.toUnreadCountFromDto(response.data?.data);
   },
 
   /** `PATCH /notifications/:id/read` — đánh dấu 1 thông báo đã đọc (idempotent, live API). */
   markRead: async (id: string): Promise<{ id: string; read: boolean }> => {
     const response = await apiClient.patch<NotificationReadResponseDto>(
-      API_ENDPOINTS.NOTIFICATIONS.READ(id)
+      NOTIFICATIONS_ENDPOINTS.READ(id)
     );
-    return notificationMapper.toReadModel(response.data);
+    return notificationMapper.toReadModel(response.data?.data);
   },
 
   /** `PATCH /notifications/read-all` — đánh dấu tất cả thông báo đã đọc (live API). */
   markAllRead: async (): Promise<{ updatedCount: number }> => {
     const response = await apiClient.patch<NotificationReadAllResponseDto>(
-      API_ENDPOINTS.NOTIFICATIONS.READ_ALL
+      NOTIFICATIONS_ENDPOINTS.READ_ALL
     );
-    return notificationMapper.toReadAllModel(response.data);
+    return notificationMapper.toReadAllModel(response.data?.data);
   },
 };

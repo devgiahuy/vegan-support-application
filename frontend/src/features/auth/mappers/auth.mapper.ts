@@ -3,7 +3,6 @@ import {
   AuthSessionResponseDto,
   ContributorApplicationDto,
   LogoutResponseDto,
-  ProfileResponseDto,
   RefreshResponseDto,
   RegisterRequestDto,
   UserDto,
@@ -86,8 +85,7 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
   }
 
   /** `POST /auth/register` và `POST /auth/login` → `AuthSession`. */
-  toSessionModel(dto: AuthSessionResponseDto | null | undefined): AuthSession {
-    const data = pickField(dto, ['data'], null) as AuthSessionResponseDto['data'];
+  toSessionModel(data: AuthSessionResponseDto['data']): AuthSession {
     const rawUser = pickField<UserDto | null | undefined>(data, ['user'], null);
     return {
       accessToken: safeString(pickField(data, ['accessToken', 'access_token'], '')),
@@ -99,8 +97,7 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
   }
 
   /** `POST /auth/refresh` → `RefreshedToken`. */
-  toRefreshedTokenModel(dto: RefreshResponseDto | null | undefined): RefreshedToken {
-    const data = pickField(dto, ['data'], null) as RefreshResponseDto['data'];
+  toRefreshedTokenModel(data: RefreshResponseDto['data']): RefreshedToken {
     return {
       accessToken: safeString(pickField(data, ['accessToken', 'access_token'], '')),
       accessTokenExpiresAt: safeDate(
@@ -110,8 +107,7 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
   }
 
   /** `POST /auth/logout` → `LogoutResult`. */
-  toLogoutResultModel(dto: LogoutResponseDto | null | undefined): LogoutResult {
-    const data = pickField(dto, ['data'], null) as LogoutResponseDto['data'];
+  toLogoutResultModel(data: LogoutResponseDto['data']): LogoutResult {
     const loggedOut = safeBoolean(pickField(data, ['loggedOut'], true));
     const scope = safeEnum(
       pickField(data, ['scope'], LogoutScope.CURRENT),
@@ -122,8 +118,7 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
   }
 
   /** `GET /users/me` → `User`. Phần health/diet của `data` thuộc feature khác, bỏ qua. */
-  toProfileModel(dto: ProfileResponseDto | null | undefined): User {
-    const data = pickField(dto, ['data'], null) as UserDto | null;
+  toProfileModel(data: UserDto | null | undefined): User {
     return this.toModel(data);
   }
 

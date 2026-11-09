@@ -10295,13 +10295,28 @@
         "properties": {
           "title": {
             "type": "string",
-            "minLength": 3,
-            "maxLength": 200
+            "maxLength": 200,
+            "default": ""
           },
           "description": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 500
+            "maxLength": 500,
+            "default": ""
+          },
+          "servings": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "prepTimeMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10080
+          },
+          "cookTimeMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10080
           },
           "ingredientNames": {
             "type": "array",
@@ -10315,8 +10330,6 @@
           }
         },
         "required": [
-          "title",
-          "description",
           "ingredientNames"
         ],
         "additionalProperties": false
@@ -39224,8 +39237,8 @@
           "Content",
           "AI"
         ],
-        "summary": "Generate an editable recipe draft from a title, description and ingredient names",
-        "description": "Authenticated preview only. No post or pantry mutation. Ingredient names remain in input order; amounts, units, servings, times and steps are AI suggestions with subjective confidence. The client must let the user edit the returned draft and then call POST /api/v1/posts to save it as DRAFT. Images are not analyzed. No nutrition values are invented.",
+        "summary": "Generate an editable recipe draft from ingredient names and optional basic information",
+        "description": "Authenticated preview only. Title and description are optional; missing values are suggested from the ingredient names. Supplied values and servings and preparation/cooking times are preserved; omitted values are suggested by AI. No post or pantry mutation. Ingredient names remain in input order. The client must let the user edit the returned draft and then call POST /api/v1/posts to save it as DRAFT. Images are not analyzed. No nutrition values are invented.",
         "operationId": "generateRecipeDraft",
         "security": [
           {

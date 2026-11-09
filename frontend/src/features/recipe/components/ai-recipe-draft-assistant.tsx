@@ -29,6 +29,9 @@ export interface AiRecipeDraftSeed {
   /** Tên món và mô tả lấy thẳng từ bước "Thông tin cơ bản" — không hỏi lại. */
   title: string;
   description: string;
+  servings: number;
+  prepTimeMinutes: number;
+  cookTimeMinutes: number;
   /** Tên nguyên liệu đã nhập trong form, dùng làm danh sách khởi đầu. */
   ingredientNames: string[];
 }
@@ -65,7 +68,6 @@ export function AiRecipeDraftAssistant({
 
   const cleanTitle = seed.title.trim();
   const cleanDesc = seed.description.trim();
-  const missingBasics = cleanTitle.length < 3 || !cleanDesc;
 
   const handleOpenChange = (next: boolean) => {
     // Mỗi lần mở lại, lấy danh sách nguyên liệu mới nhất từ form làm điểm khởi đầu.
@@ -75,8 +77,8 @@ export function AiRecipeDraftAssistant({
 
   const handleGenerate = () => {
     setValidationError(null);
-    if (missingBasics) {
-      setValidationError('Cần tên món (tối thiểu 3 ký tự) và mô tả ngắn ở bước 1 để AI gợi ý.');
+    if (cleanTitle && cleanTitle.length < 3) {
+      setValidationError('Tên món cần ít nhất 3 ký tự hoặc để trống để AI gợi ý.');
       return;
     }
     if (ingredientNames.length === 0) {
@@ -86,6 +88,9 @@ export function AiRecipeDraftAssistant({
     generateDraftMutation.mutate({
       title: cleanTitle,
       description: cleanDesc,
+      servings: Number.isNaN(seed.servings) ? undefined : seed.servings,
+      prepTimeMinutes: Number.isNaN(seed.prepTimeMinutes) ? undefined : seed.prepTimeMinutes,
+      cookTimeMinutes: Number.isNaN(seed.cookTimeMinutes) ? undefined : seed.cookTimeMinutes,
       ingredientNames,
     });
   };
@@ -114,8 +119,8 @@ export function AiRecipeDraftAssistant({
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className="text-sm font-semibold">Để AI gợi ý định lượng và các bước nấu</span>
             <span className="text-xs text-pretty text-muted-foreground">
-              Tùy chọn. AI điền sẵn nguyên liệu, bước nấu, khẩu phần và thời gian; bạn vẫn sửa được
-              mọi thứ trước khi gửi.
+              AI gợi ý thông tin còn trống, định lượng và các bước nấu. Bạn có thể chỉnh sửa trước
+              khi gửi.
             </span>
           </span>
           <ChevronDown

@@ -1,6 +1,16 @@
 import * as React from 'react';
 import Image from 'next/image';
-import { Calendar, UtensilsCrossed, AlertTriangle } from 'lucide-react';
+import { Calendar, UtensilsCrossed, AlertTriangle, ShoppingCart } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { ShoppingGapView } from '@/features/receipt/components/shopping-gap-view';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MealType } from '@/common/enums';
@@ -114,11 +124,22 @@ function SlotCard({
   slot,
   actions,
   badge,
+  shopping,
 }: {
   slot: MealSlot;
   actions?: (slot: MealSlot) => React.ReactNode;
   badge?: (slot: MealSlot) => React.ReactNode;
+  shopping?: boolean;
 }) {
+  const [shoppingOpen, setShoppingOpen] = React.useState(false);
+  const meal =
+    slot.sourceType === 'CUSTOM_MEAL'
+      ? {
+          sourceType: 'CUSTOM_MEAL' as const,
+          customMealId: slot.customMealId ?? undefined,
+          servings: slot.servings || 1,
+        }
+      : { sourceType: 'RECIPE' as const, recipeId: slot.recipeId, servings: slot.servings || 1 };
   return (
     <div
       className={`flex flex-col justify-between gap-2.5 rounded-xl border p-3.5 shadow-xs transition-all h-full ${
@@ -184,6 +205,25 @@ function SlotCard({
         )}
       </div>
       {actions?.(slot)}
+      {shopping && slot.filled && (slot.recipeId || slot.customMealId) && (
+        <Dialog open={shoppingOpen} onOpenChange={setShoppingOpen}>
+          <DialogTrigger asChild>
+            <Button type="button" variant="outline" size="sm" className="w-full">
+              <ShoppingCart className="size-4" /> Xem nguyên liệu cần mua
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{slot.recipeTitle || slot.customMealName}</DialogTitle>
+              <DialogDescription>
+                {formatDayLabel(slot.date)} · {slot.mealTypeLabel}. Tồn kho được so sánh riêng cho
+                món này; các món khác có thể dùng chung nguyên liệu.
+              </DialogDescription>
+            </DialogHeader>
+            {shoppingOpen && <ShoppingGapView meals={[meal]} />}
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
@@ -314,6 +354,7 @@ export interface DayGridProps {
   slotBadge?: (slot: MealSlot) => React.ReactNode;
   targetCalories?: number;
   nutritionTargets?: EstimatedNutritionTargets | null;
+  shopping?: boolean;
 }
 
 interface DayGroup {
@@ -333,6 +374,7 @@ export function DayGrid({
   slotBadge,
   targetCalories,
   nutritionTargets,
+  shopping = false,
 }: DayGridProps) {
   const dayGroups: DayGroup[] = React.useMemo(() => {
     // Ưu tiên 1: Sử dụng cấu trúc `days` 7 ngày từ endpoint
@@ -562,6 +604,7 @@ export function DayGrid({
                   slot={slot}
                   actions={actions}
                   badge={slotBadge}
+                  shopping={shopping}
                 />
               );
             })}

@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { SAFETY_ENDPOINTS } from '@/features/safety/constants/safety.endpoints';
 import type {
   DeleteBehaviorHistoryResponseDto,
   ViolationReportResponseDto,
@@ -25,16 +25,16 @@ export const safetyApi = {
   submitReport: async (input: SubmitReportInput): Promise<ViolationReport> => {
     const payload = safetyMapper.toSubmitDto(input);
     if (!payload) throw new Error('Mục tiêu báo cáo không hợp lệ.');
-    const res = await api.post<ViolationReportResponseDto>(API_ENDPOINTS.SAFETY.REPORTS, payload);
+    const res = await api.post<ViolationReportResponseDto>(SAFETY_ENDPOINTS.REPORTS, payload);
     reportedTargets.add(payload.targetId);
-    return safetyMapper.toSingleReport(res.data);
+    return safetyMapper.toSingleReport(res.data?.data);
   },
 
   /** `DELETE /users/me/behavior-history` */
   deleteBehaviorHistory: async (): Promise<DeletionResult> => {
     const res = await api.delete<DeleteBehaviorHistoryResponseDto>(
-      API_ENDPOINTS.SAFETY.BEHAVIOR_HISTORY
+      SAFETY_ENDPOINTS.BEHAVIOR_HISTORY
     );
-    return safetyMapper.toDeletionResult(res.data);
+    return safetyMapper.toDeletionResult(res.data?.data);
   },
 };

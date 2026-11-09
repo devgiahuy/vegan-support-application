@@ -1,7 +1,7 @@
 'use client';
 
 import { API_BASE_URL } from '@/lib/env';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { CHAT_ENDPOINTS } from '@/features/chat/constants/chat.endpoints';
 import { extractDeltaText, parseSseEvent } from '../mappers/chat.mapper';
 import type { QuotaState, StreamEvent } from '../types/chat.model';
 import { chatMapper } from '../mappers/chat.mapper';
@@ -42,7 +42,7 @@ export async function streamChatMessage(
   let response: Response;
   try {
     const sendRequest = (token: string | null) =>
-      fetch(`${API_BASE_URL}${API_ENDPOINTS.CHAT.SESSION_MESSAGES(sessionId)}`, {
+      fetch(`${API_BASE_URL}${CHAT_ENDPOINTS.SESSION_MESSAGES(sessionId)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

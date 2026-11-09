@@ -12,7 +12,6 @@ import type { PaginationResult } from '@/types/api';
 import type {
   IngredientDto,
   IngredientListResponseDto,
-  IngredientResponseDto,
   ResolveResponseDto,
 } from '../types/ingredient.dto';
 import type {
@@ -88,12 +87,13 @@ export class IngredientMapper extends BaseMapper<IngredientDto, Ingredient> {
    * Chuẩn hóa meta catalog `{page,limit,total,totalPages}` về `PaginationResult`.
    * Đặt tên khác `toPaginationModel` của base vì envelope catalog khác shape base.
    */
-  toListModel(dto: IngredientListResponseDto | null | undefined): PaginationResult<Ingredient> {
-    const rawItems = pickField(dto, ['data'], null) as (IngredientDto | null)[] | null;
+  toListModel(
+    rawItems: IngredientListResponseDto['data'],
+    meta?: IngredientListResponseDto['meta']
+  ): PaginationResult<Ingredient> {
     const items = this.toModelList(
       safeArray<IngredientDto | null, IngredientDto | null>(rawItems, (c) => c)
     );
-    const meta = pickField(dto, ['meta'], null) as IngredientListResponseDto['meta'];
     const page = safeNumber(pickField(meta, ['page'], 1));
     const limit = safeNumber(pickField(meta, ['limit'], 10));
     const totalItems = safeNumber(pickField(meta, ['total'], items.length));
@@ -112,14 +112,12 @@ export class IngredientMapper extends BaseMapper<IngredientDto, Ingredient> {
   }
 
   /** `POST/PATCH /admin/ingredients*` → 1 item đủ. */
-  toSingleModel(dto: IngredientResponseDto | null | undefined): Ingredient {
-    const data = pickField(dto, ['data'], null) as IngredientDto | null;
+  toSingleModel(data: IngredientDto | null | undefined): Ingredient {
     return this.toModel(data);
   }
 
   /** `GET /ingredients/resolve` → 3 trạng thái rõ ràng. */
-  toResolutionModel(dto: ResolveResponseDto | null | undefined): IngredientResolution {
-    const data = pickField(dto, ['data'], null) as ResolveResponseDto['data'];
+  toResolutionModel(data: ResolveResponseDto['data']): IngredientResolution {
     return {
       query: safeString(pickField(data, ['query'], '')),
       normalizedQuery: safeString(pickField(data, ['normalizedQuery', 'normalized_query'], '')),

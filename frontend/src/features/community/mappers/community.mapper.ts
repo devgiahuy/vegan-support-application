@@ -15,7 +15,6 @@ import type {
   CommunityBookmarkResponseDto,
   CommunityCommentDto,
   CommunityCommentListResponseDto,
-  CommunityCommentResponseDto,
   CommunityRatingResponseDto,
   CommunitySummaryResponseDto,
   CommunityVoteResponseDto,
@@ -99,13 +98,12 @@ export class CommunityMapper extends BaseMapper<CommunityCommentDto, CommunityCo
 
   /** `GET /posts/:id/comments` — thread gốc + meta. */
   toThreadModel(
-    dto: CommunityCommentListResponseDto | null | undefined
+    rawItems: CommunityCommentListResponseDto['data'],
+    meta?: CommunityCommentListResponseDto['meta']
   ): PaginationResult<CommunityComment> {
-    const rawItems = pickField(dto, ['data'], null) as (CommunityCommentDto | null)[] | null;
     const items = this.toModelList(
       safeArray<CommunityCommentDto | null, CommunityCommentDto | null>(rawItems, (item) => item)
     ).filter((item) => item.id.length > 0);
-    const meta = pickField(dto, ['meta'], null) as CommunityCommentListResponseDto['meta'];
     return {
       items,
       metadata: meta
@@ -115,14 +113,12 @@ export class CommunityMapper extends BaseMapper<CommunityCommentDto, CommunityCo
   }
 
   /** `POST/PATCH/DELETE /comments/*` → 1 bình luận. */
-  toSingleComment(dto: CommunityCommentResponseDto | null | undefined): CommunityComment {
-    const data = pickField(dto, ['data'], null) as CommunityCommentDto | null;
+  toSingleComment(data: CommunityCommentDto | null | undefined): CommunityComment {
     return this.toModel(data);
   }
 
   /** `GET /posts/:id/community-summary` → aggregate + viewer (null-safe guest). */
-  toSummaryModel(dto: CommunitySummaryResponseDto | null | undefined): CommunitySummary {
-    const rawData = pickField(dto, ['data'], null);
+  toSummaryModel(rawData: CommunitySummaryResponseDto['data']): CommunitySummary {
     const data = (
       Array.isArray(rawData) ? rawData[0] : rawData
     ) as CommunitySummaryResponseDto['data'];
@@ -164,12 +160,11 @@ export class CommunityMapper extends BaseMapper<CommunityCommentDto, CommunityCo
   }
 
   /** `PUT/DELETE /posts/:id/vote` → idempotent. */
-  toVoteModel(dto: CommunityVoteResponseDto | null | undefined): {
+  toVoteModel(data: CommunityVoteResponseDto['data']): {
     postId: string;
     voted: boolean;
     voteCount: number;
   } {
-    const data = pickField(dto, ['data'], null) as CommunityVoteResponseDto['data'];
     return {
       postId: safeString(pickField(data, ['postId'], '')),
       voted: pickField<boolean>(data, ['voted'], false),
@@ -178,8 +173,7 @@ export class CommunityMapper extends BaseMapper<CommunityCommentDto, CommunityCo
   }
 
   /** `PUT /posts/:id/rating` → điểm user + aggregate (null khi thiếu). */
-  toRatingModel(dto: CommunityRatingResponseDto | null | undefined): CommunityRating {
-    const data = pickField(dto, ['data'], null) as CommunityRatingResponseDto['data'];
+  toRatingModel(data: CommunityRatingResponseDto['data']): CommunityRating {
     const rating = pickField(data, ['rating'], null) as
       NonNullable<CommunityRatingResponseDto['data']>['rating'] | null;
     const aggregate = pickField(data, ['aggregate'], null) as
@@ -204,11 +198,10 @@ export class CommunityMapper extends BaseMapper<CommunityCommentDto, CommunityCo
   }
 
   /** `PUT/DELETE /posts/:id/bookmark` → toggle. */
-  toBookmarkModel(dto: CommunityBookmarkResponseDto | null | undefined): {
+  toBookmarkModel(data: CommunityBookmarkResponseDto['data']): {
     postId: string;
     bookmarked: boolean;
   } {
-    const data = pickField(dto, ['data'], null) as CommunityBookmarkResponseDto['data'];
     return {
       postId: safeString(pickField(data, ['postId'], '')),
       bookmarked: pickField<boolean>(data, ['bookmarked'], false),
@@ -217,9 +210,9 @@ export class CommunityMapper extends BaseMapper<CommunityCommentDto, CommunityCo
 
   /** `GET /users/me/bookmarks` → list + meta. */
   toBookmarksList(
-    dto: CommunityBookmarkListResponseDto | null | undefined
+    rawItems: CommunityBookmarkListResponseDto['data'],
+    meta?: CommunityBookmarkListResponseDto['meta']
   ): PaginationResult<BookmarkedItem> {
-    const rawItems = pickField(dto, ['data'], null) as (BookmarkedItemDto | null)[] | null;
     const items = safeArray<BookmarkedItemDto | null, BookmarkedItem>(rawItems, (item) => ({
       postId: safeString(pickField(item, ['postId'], '')),
       type: safeString(pickField(item, ['type'], '')),
@@ -230,7 +223,6 @@ export class CommunityMapper extends BaseMapper<CommunityCommentDto, CommunityCo
       publishedAt: safeDate(pickField(item, ['publishedAt', 'published_at'], null)),
       bookmarkedAt: safeDate(pickField(item, ['bookmarkedAt', 'bookmarked_at'], null)),
     })).filter((item) => item.postId.length > 0);
-    const meta = pickField(dto, ['meta'], null) as CommunityBookmarkListResponseDto['meta'];
     return {
       items,
       metadata: meta

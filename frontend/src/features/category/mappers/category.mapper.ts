@@ -9,11 +9,9 @@ import {
 } from '@/lib/mapper';
 import type { PaginationResult } from '@/types/api';
 import type {
-  AdminCategoryListResponseDto,
   CatalogArchiveResponseDto,
+  CatalogPageMetaDto,
   CategoryDto,
-  CategoryResponseDto,
-  CategoryTreeResponseDto,
   CreateCategoryRequestDto,
   UpdateCategoryRequestDto,
 } from '../types/category.dto';
@@ -64,8 +62,7 @@ export class CategoryMapper extends BaseBidirectionalMapper<
   }
 
   /** `GET /categories` — data là mảng cây. */
-  toTreeModel(dto: CategoryTreeResponseDto | null | undefined): Category[] {
-    const data = pickField(dto, ['data'], null) as (CategoryDto | null)[] | null;
+  toTreeModel(data: (CategoryDto | null)[] | null | undefined): Category[] {
     return this.toModelList(safeArray<CategoryDto | null, CategoryDto | null>(data, (c) => c)).sort(
       (a, b) => a.sortOrder - b.sortOrder
     );
@@ -73,13 +70,12 @@ export class CategoryMapper extends BaseBidirectionalMapper<
 
   /** `GET /admin/categories` — chuẩn hóa meta catalog về `PaginationResult`. */
   toAdminPaginationModel(
-    dto: AdminCategoryListResponseDto | null | undefined
+    rawItems: (CategoryDto | null)[] | null | undefined,
+    meta: CatalogPageMetaDto | null | undefined
   ): PaginationResult<Category> {
-    const rawItems = pickField(dto, ['data'], null) as (CategoryDto | null)[] | null;
     const items = this.toModelList(
       safeArray<CategoryDto | null, CategoryDto | null>(rawItems, (c) => c)
     );
-    const meta = pickField(dto, ['meta'], null) as AdminCategoryListResponseDto['meta'];
     const page = safeNumber(pickField(meta, ['page'], 1));
     const limit = safeNumber(pickField(meta, ['limit'], 10));
     const totalItems = safeNumber(pickField(meta, ['total'], items.length));
@@ -97,18 +93,11 @@ export class CategoryMapper extends BaseBidirectionalMapper<
     };
   }
 
-  /** `POST/PATCH /admin/categories*` → 1 node. */
-  toSingleModel(dto: CategoryResponseDto | null | undefined): Category {
-    const data = pickField(dto, ['data'], null) as CategoryDto | null;
-    return this.toModel(data);
-  }
-
   /** `DELETE /admin/*` → `{id, status}`. */
-  toArchiveModel(dto: CatalogArchiveResponseDto | null | undefined): {
+  toArchiveModel(data: CatalogArchiveResponseDto['data']): {
     id: string;
     status: string;
   } {
-    const data = pickField(dto, ['data'], null) as CatalogArchiveResponseDto['data'];
     return {
       id: safeString(pickField(data, ['id'], '')),
       status: safeString(pickField(data, ['status'], 'ARCHIVED')),

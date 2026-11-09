@@ -32,7 +32,6 @@ import {
   useManualAddMealItemMutation,
 } from '@/features/meal-plan/queries/meal-plan.queries';
 import { DayGrid, formatDayLabel } from '@/features/meal-plan/components/day-grid';
-import { ShoppingList } from '@/features/meal-plan/components/shopping-list';
 import { WarningsBanner } from '@/features/meal-plan/components/warnings-banner';
 import { groupConstraintDetails } from '@/features/meal-plan/lib/constraint-details';
 import { SwapMealItemDialog } from '@/features/meal-plan/components/swap-dialog';
@@ -55,18 +54,6 @@ function MealPlanDetailContent({ id }: { id: string }) {
 
   const swapMutation = useSwapMealItemMutation();
   const manualAddMutation = useManualAddMealItemMutation();
-
-  // Danh sách các bữa ăn đã lên lịch dùng cho tính toán Đi chợ thông minh (Phase 22)
-  const planMeals = React.useMemo(() => {
-    if (!plan?.items) return [];
-    return plan.items
-      .filter((slot) => slot.filled && (slot.recipeId || slot.customMealId))
-      .map((slot) => ({
-        sourceType: slot.sourceType,
-        recipeId: slot.recipeId,
-        servings: slot.servings || 1,
-      }));
-  }, [plan?.items]);
 
   // Mục tiêu dinh dưỡng đa lượng hàng ngày: ưu tiên từ backend, fallback chuẩn theo calo TDEE (20% Đạm, 30% Béo, 50% Bột, 14g xơ/1000kcal)
   const dailyNutritionTargets: EstimatedNutritionTargets = React.useMemo(() => {
@@ -254,9 +241,17 @@ function MealPlanDetailContent({ id }: { id: string }) {
                           </li>
                         ))}
                       </ul>
+                    ) : plan.userSummary.detailLines.length > 1 ? (
+                      <ul className="list-disc space-y-1 pl-5 text-xs leading-relaxed text-foreground/85 sm:text-sm">
+                        {plan.userSummary.detailLines.map((line, index) => (
+                          <li key={`${index}-${line}`} className="break-words">
+                            {line}
+                          </li>
+                        ))}
+                      </ul>
                     ) : (
                       <p className="whitespace-pre-line text-xs sm:text-sm text-foreground/85 leading-relaxed">
-                        {plan.userSummary.detail}
+                        {plan.userSummary.detailLines.join('\n')}
                       </p>
                     )}
                   </div>
@@ -420,6 +415,7 @@ function MealPlanDetailContent({ id }: { id: string }) {
 
           {/* 5. LƯỚI LỊCH 7 NGÀY × 3 BỮA */}
           <DayGrid
+            shopping
             items={plan.items}
             days={plan.days}
             targetCalories={plan.targetCalories}
@@ -461,9 +457,6 @@ function MealPlanDetailContent({ id }: { id: string }) {
               </div>
             )}
           />
-
-          {/* 6. DANH SÁCH ĐI CHỢ & ĐI CHỢ THÔNG MINH */}
-          <ShoppingList items={plan.shoppingList} planMeals={planMeals} />
 
           <SwapMealItemDialog
             planId={plan.id}

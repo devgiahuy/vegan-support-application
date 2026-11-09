@@ -25,7 +25,8 @@ export function useRecipesQuery(params?: RecipeQueryParams, options?: { enabled?
   return useQuery({
     queryKey: RECIPE_QUERY_KEYS.list(params, userId),
     queryFn: () => recipeApi.getRecipes(params),
-    staleTime: 60 * 1000, // 1 phút
+    staleTime: 0,
+    refetchOnWindowFocus: true,
     enabled: options?.enabled ?? true,
   });
 }

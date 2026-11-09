@@ -45,7 +45,7 @@ const TREE = {
 
 describe('CategoryMapper.toTreeModel', () => {
   it('map cây 2 tầng, sắp xếp theo sortOrder, bỏ phần tử null', () => {
-    const tree = categoryMapper.toTreeModel(TREE);
+    const tree = categoryMapper.toTreeModel(TREE.data);
 
     expect(tree).toHaveLength(2);
     expect(tree[0].id).toBe('c-2');
@@ -59,11 +59,9 @@ describe('CategoryMapper.toTreeModel', () => {
   });
 
   it('children thiếu/null thành mảng rỗng, enum lạ fallback an toàn', () => {
-    const tree = categoryMapper.toTreeModel({
-      success: true,
-      data: [{ id: 'x', name: 'X', type: 'WEIRD', status: 'HIDDEN' }],
-      meta: null,
-    });
+    const tree = categoryMapper.toTreeModel([
+      { id: 'x', name: 'X', type: 'WEIRD', status: 'HIDDEN' },
+    ]);
 
     expect(tree).toHaveLength(1);
     expect(tree[0].children).toEqual([]);
@@ -78,11 +76,10 @@ describe('CategoryMapper.toTreeModel', () => {
 
 describe('CategoryMapper.toAdminPaginationModel', () => {
   it('chuẩn hóa meta catalog về PaginationResult', () => {
-    const page = categoryMapper.toAdminPaginationModel({
-      success: true,
-      data: [{ id: 'c-1', name: 'A', type: 'FOOD_TYPE', status: 'ARCHIVED' }],
-      meta: { page: 1, limit: 10, total: 25, totalPages: 3 },
-    });
+    const page = categoryMapper.toAdminPaginationModel(
+      [{ id: 'c-1', name: 'A', type: 'FOOD_TYPE', status: 'ARCHIVED' }],
+      { page: 1, limit: 10, total: 25, totalPages: 3 }
+    );
 
     expect(page.items).toHaveLength(1);
     expect(page.items[0].status).toBe(CatalogStatus.ARCHIVED);
@@ -110,12 +107,9 @@ describe('CategoryMapper.toCreateDto / toUpdateDto', () => {
 
 describe('CategoryMapper.toArchiveModel', () => {
   it('map archive response', () => {
-    expect(
-      categoryMapper.toArchiveModel({
-        success: true,
-        data: { id: 'c-1', status: 'ARCHIVED' },
-        meta: null,
-      })
-    ).toEqual({ id: 'c-1', status: 'ARCHIVED' });
+    expect(categoryMapper.toArchiveModel({ id: 'c-1', status: 'ARCHIVED' })).toEqual({
+      id: 'c-1',
+      status: 'ARCHIVED',
+    });
   });
 });

@@ -33,7 +33,7 @@ const listEnvelope: NotificationListResponseDto = {
 
 describe('NotificationMapper list', () => {
   it('map đủ field + label Việt + link nội bộ', () => {
-    const result = notificationMapper.toListModel(listEnvelope);
+    const result = notificationMapper.toListModel(listEnvelope.data, listEnvelope.meta);
     expect(result.items).toHaveLength(2);
     expect(result.items[0].typeLabel).toBe('Bài được duyệt');
     expect(result.items[0].link).toBe('/recipes/dau-hu-sot-nam');
@@ -42,7 +42,7 @@ describe('NotificationMapper list', () => {
   });
 
   it('loại lạ giữ nguyên, link ngoài → null, title rỗng → fallback', () => {
-    const result = notificationMapper.toListModel(listEnvelope);
+    const result = notificationMapper.toListModel(listEnvelope.data, listEnvelope.meta);
     expect(result.items[1].typeLabel).toBe('MYSTERY');
     expect(result.items[1].link).toBeNull();
     expect(result.items[1].title).toBe('Thông báo mới');
@@ -67,7 +67,7 @@ describe('NotificationMapper list', () => {
       ],
       meta: null,
     };
-    const res = notificationMapper.toListModel(dto);
+    const res = notificationMapper.toListModel(dto.data, dto.meta);
     expect(res.items.map((i) => i.typeLabel)).toEqual([
       'Bài viết bị từ chối',
       'Đơn cộng tác được duyệt',
@@ -81,7 +81,7 @@ describe('NotificationMapper list', () => {
 
 describe('NotificationMapper unread', () => {
   it('đếm chưa đọc + capped 9+ từ items', () => {
-    const result = notificationMapper.toListModel(listEnvelope);
+    const result = notificationMapper.toListModel(listEnvelope.data, listEnvelope.meta);
     expect(notificationMapper.toUnreadCount(result.items)).toEqual({ count: 1, capped: '1' });
     expect(notificationMapper.toUnreadCount([])).toEqual({ count: 0, capped: '' });
     const many = Array.from({ length: 12 }, (_, i) => ({
@@ -97,19 +97,25 @@ describe('NotificationMapper unread', () => {
       success: true,
       data: { count: 7 },
     };
-    expect(notificationMapper.toUnreadCountFromDto(countDto)).toEqual({ count: 7, capped: '7' });
+    expect(notificationMapper.toUnreadCountFromDto(countDto.data)).toEqual({
+      count: 7,
+      capped: '7',
+    });
 
     const cappedDto: NotificationUnreadCountResponseDto = {
       success: true,
       data: { count: 15 },
     };
-    expect(notificationMapper.toUnreadCountFromDto(cappedDto)).toEqual({ count: 15, capped: '9+' });
+    expect(notificationMapper.toUnreadCountFromDto(cappedDto.data)).toEqual({
+      count: 15,
+      capped: '9+',
+    });
 
     const zeroDto: NotificationUnreadCountResponseDto = {
       success: true,
       data: { count: 0 },
     };
-    expect(notificationMapper.toUnreadCountFromDto(zeroDto)).toEqual({ count: 0, capped: '' });
+    expect(notificationMapper.toUnreadCountFromDto(zeroDto.data)).toEqual({ count: 0, capped: '' });
 
     expect(notificationMapper.toUnreadCountFromDto(null)).toEqual({ count: 0, capped: '' });
   });
@@ -117,9 +123,7 @@ describe('NotificationMapper unread', () => {
 
 describe('NotificationMapper mutations', () => {
   it('toReadModel mặc định read=true', () => {
-    expect(
-      notificationMapper.toReadModel({ success: true, data: { id: 'n1' }, meta: null })
-    ).toEqual({
+    expect(notificationMapper.toReadModel({ id: 'n1' })).toEqual({
       id: 'n1',
       read: true,
     });
@@ -127,9 +131,7 @@ describe('NotificationMapper mutations', () => {
   });
 
   it('toReadAllModel đọc updatedCount, thiếu → 0', () => {
-    expect(
-      notificationMapper.toReadAllModel({ success: true, data: { updatedCount: 5 }, meta: null })
-    ).toEqual({
+    expect(notificationMapper.toReadAllModel({ updatedCount: 5 })).toEqual({
       updatedCount: 5,
     });
     expect(notificationMapper.toReadAllModel(null)).toEqual({ updatedCount: 0 });
@@ -148,11 +150,9 @@ describe('toTimeAgo', () => {
   });
 
   it('type rỗng → SYSTEM, link //evil → null, summary thiếu → rỗng', () => {
-    const result = notificationMapper.toListModel({
-      success: true,
-      data: [{ id: 'n', type: '', link: '//evil.example.com/x' }],
-      meta: null,
-    });
+    const result = notificationMapper.toListModel([
+      { id: 'n', type: '', link: '//evil.example.com/x' },
+    ]);
     expect(result.items[0].type).toBe('SYSTEM');
     expect(result.items[0].typeLabel).toBe('Hệ thống');
     expect(result.items[0].link).toBeNull();
@@ -160,43 +160,29 @@ describe('toTimeAgo', () => {
   });
 
   it('readAt parse đúng, thiếu → null', () => {
-    const result = notificationMapper.toListModel({
-      success: true,
-      data: [{ id: 'n', read: true, readAt: '2026-09-17T10:00:00.000Z' }],
-      meta: null,
-    });
+    const result = notificationMapper.toListModel([
+      { id: 'n', read: true, readAt: '2026-09-17T10:00:00.000Z' },
+    ]);
     expect(result.items[0].read).toBe(true);
     expect(result.items[0].readAt).not.toBeNull();
   });
 
   it('createdAt sai định dạng → timeAgo rỗng', () => {
-    const result = notificationMapper.toListModel({
-      success: true,
-      data: [{ id: 'n', createdAt: 'not-a-date' }],
-      meta: null,
-    });
+    const result = notificationMapper.toListModel([{ id: 'n', createdAt: 'not-a-date' }]);
     expect(result.items[0].timeAgo).toBe('');
   });
 
   it('meta thiếu → fallback theo số item, item rỗng id bị lọc', () => {
-    const result = notificationMapper.toListModel({
-      success: true,
-      data: [{ id: 'a' }, { id: '' }],
-      meta: null,
-    });
+    const result = notificationMapper.toListModel([{ id: 'a' }, { id: '' }]);
     expect(result.items.map((i) => i.id)).toEqual(['a']);
     expect(result.metadata).toMatchObject({ page: 1, totalItems: 1 });
   });
 
   it('tất cả đã đọc → đếm 0, capped rỗng', () => {
-    const result = notificationMapper.toListModel({
-      success: true,
-      data: [
-        { id: 'a', read: true },
-        { id: 'b', read: true },
-      ],
-      meta: null,
-    });
+    const result = notificationMapper.toListModel([
+      { id: 'a', read: true },
+      { id: 'b', read: true },
+    ]);
     expect(notificationMapper.toUnreadCount(result.items)).toEqual({ count: 0, capped: '' });
   });
 });
