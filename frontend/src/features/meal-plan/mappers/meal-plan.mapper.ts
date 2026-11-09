@@ -477,6 +477,19 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
       hardConstraintsPreserved: Boolean(
         pickField(dto, ['hardConstraintsPreserved', 'hard_constraints_preserved'], true)
       ),
+      hardViolations: safeArray(
+        pickField(dto, ['hardViolations'], []),
+        (item: NonNullable<PlanUserSummaryDto['hardViolations']>[number]) => ({
+          itemId: safeString(item?.itemId),
+          name: safeString(item?.name),
+          date: safeString(item?.date),
+          mealType: safeString(item?.mealType),
+          reasons: safeArray(item?.reasons, (reason: { code?: string; detail?: string }) => ({
+            code: safeString(reason?.code),
+            detail: safeString(reason?.detail),
+          })).filter((reason) => reason.detail),
+        })
+      ).filter((item) => item.name && item.reasons.length > 0),
     };
   }
 

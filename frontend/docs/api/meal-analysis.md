@@ -185,7 +185,8 @@ Phân tích khẩu phần và các điểm cần lưu ý trong thực đơn
             "detail",
             "advisoryCount",
             "hardConstraintViolationCount",
-            "hardConstraintsPreserved"
+            "hardConstraintsPreserved",
+            "hardViolations"
           ],
           "properties": {
             "warningCount": {
@@ -226,7 +227,6 @@ Phân tích khẩu phần và các điểm cần lưu ý trong thực đơn
             },
             "hardConstraintViolationCount": {
               "type": "integer",
-              "_truncated": true
-            },
+              "_truncate
   …(truncated — xem api-catalog.json)
 ```

@@ -15111,6 +15111,61 @@
                   },
                   "hardConstraintsPreserved": {
                     "type": "boolean"
+                  },
+                  "hardViolations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "itemId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "mealType": {
+                          "type": "string",
+                          "enum": [
+                            "BREAKFAST",
+                            "LUNCH",
+                            "DINNER"
+                          ]
+                        },
+                        "reasons": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "code": {
+                                "type": "string"
+                              },
+                              "detail": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "code",
+                              "detail"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "itemId",
+                        "name",
+                        "date",
+                        "mealType",
+                        "reasons"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "Per-slot details when current analysis finds hard constraint violations."
                   }
                 },
                 "required": [
@@ -15815,6 +15870,61 @@
                       },
                       "hardConstraintsPreserved": {
                         "type": "boolean"
+                      },
+                      "hardViolations": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "itemId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "date": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "mealType": {
+                              "type": "string",
+                              "enum": [
+                                "BREAKFAST",
+                                "LUNCH",
+                                "DINNER"
+                              ]
+                            },
+                            "reasons": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string"
+                                  },
+                                  "detail": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "code",
+                                  "detail"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "itemId",
+                            "name",
+                            "date",
+                            "mealType",
+                            "reasons"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "description": "Per-slot hard constraint reasons based on current profile and reviewed ingredient data; snapshot-only allergies are identified separately."
                       }
                     },
                     "required": [
@@ -15828,7 +15938,8 @@
                       "detail",
                       "advisoryCount",
                       "hardConstraintViolationCount",
-                      "hardConstraintsPreserved"
+                      "hardConstraintsPreserved",
+                      "hardViolations"
                     ],
                     "additionalProperties": false
                   },
@@ -17125,6 +17236,61 @@
                     },
                     "hardConstraintsPreserved": {
                       "type": "boolean"
+                    },
+                    "hardViolations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "itemId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "date": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "mealType": {
+                            "type": "string",
+                            "enum": [
+                              "BREAKFAST",
+                              "LUNCH",
+                              "DINNER"
+                            ]
+                          },
+                          "reasons": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "detail": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "detail"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "itemId",
+                          "name",
+                          "date",
+                          "mealType",
+                          "reasons"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Per-slot details when current analysis finds hard constraint violations."
                     }
                   },
                   "required": [
@@ -17707,6 +17873,61 @@
                   },
                   "hardConstraintsPreserved": {
                     "type": "boolean"
+                  },
+                  "hardViolations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "itemId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "mealType": {
+                          "type": "string",
+                          "enum": [
+                            "BREAKFAST",
+                            "LUNCH",
+                            "DINNER"
+                          ]
+                        },
+                        "reasons": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "code": {
+                                "type": "string"
+                              },
+                              "detail": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "code",
+                              "detail"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "itemId",
+                        "name",
+                        "date",
+                        "mealType",
+                        "reasons"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "Per-slot hard constraint reasons based on current profile and reviewed ingredient data; snapshot-only allergies are identified separately."
                   }
                 },
                 "required": [
@@ -17720,7 +17941,8 @@
                   "detail",
                   "advisoryCount",
                   "hardConstraintViolationCount",
-                  "hardConstraintsPreserved"
+                  "hardConstraintsPreserved",
+                  "hardViolations"
                 ],
                 "additionalProperties": false
               },

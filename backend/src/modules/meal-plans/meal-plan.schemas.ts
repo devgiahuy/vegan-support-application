@@ -7,7 +7,10 @@ import {
 } from '@prisma/client';
 import { z, mediaUrlSchema } from '../../common/validation/zod.js';
 import { dateOnlySchema } from '../profile/profile.schemas.js';
-import { mealAnalysisDataSchema } from '../meal-analysis/meal-analysis.schemas.js';
+import {
+  hardViolationSchema,
+  mealAnalysisDataSchema,
+} from '../meal-analysis/meal-analysis.schemas.js';
 
 export const MEAL_PLAN_ALGORITHM_VERSION = 'weekly-four-macro-v2' as const;
 
@@ -50,6 +53,10 @@ const mealPlanUserSummarySchema = z
     detail: z.string(),
     suggestion: z.string().nullable(),
     hardConstraintsPreserved: z.boolean(),
+    hardViolations: z
+      .array(hardViolationSchema)
+      .optional()
+      .describe('Per-slot details when current analysis finds hard constraint violations.'),
   })
   .strict();
 

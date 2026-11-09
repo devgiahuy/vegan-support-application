@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.59
+**Version:** 4.62
 
-**Cập nhật:** 28/10/2026
+**Cập nhật:** 09/11/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -13,6 +13,10 @@
 ---
 
 ## 1. Source of truth và status
+
+### Meal-plan hard constraint details — 2026-11-09 (4.62, READY)
+
+`GET /meal-plans/{id}`, `POST /meal-plans/{id}/analyze`, and `GET /meal-plans/{id}/analysis` now expose additive `hardViolations` entries containing item ID, dish, date, meal type and reason codes/details. Concrete allergy details use matching active personal allergens and ingredient descendants; recipe-level snapshot-only signals are explicitly attributed to the recipe without inventing a matching ingredient. Unknown composition and other hard reasons remain blocking. Analysis algorithm v4 invalidates earlier cached analyses; plan detail refreshes them through the existing stale-analysis path. Old consumers retain the `detail` string, now newline-separated. Web/mobile map and group repeated dishes with their meal locations. No authorization, schema storage, seed or dietary filtering rule changed. Backend lint/typecheck/build, OpenAPI and existing acceptance pass; web typecheck/tests/build and mobile typecheck/tests pass; read-only checks on the reported plan and synthetic snapshot-only/no-allergy conditions pass. Scoped page lint has pre-existing React Compiler dependency errors.
 
 ### Recipe nutrition calculated on submit, confirmed by reviewer — 2026-10-28 (4.58, READY)
 

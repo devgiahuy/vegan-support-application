@@ -82,14 +82,31 @@ function PlanSummary({ plan }: { plan: MealPlan }) {
 
   const isBlocked = summary.status === 'HARD_CONSTRAINT_BLOCKED';
 
-  // Món vi phạm ràng buộc bắt buộc: chỉ hiện một thẻ đỏ; chi tiết đầy đủ nằm ở mục "Phân tích thực đơn".
   if (isBlocked) {
+    const groups = new Map<string, { name: string; details: string[]; locations: string[] }>();
+    const mealLabels: Record<string, string> = { BREAKFAST: 'Sáng', LUNCH: 'Trưa', DINNER: 'Tối' };
+    for (const item of summary.hardViolations) {
+      const details = item.reasons.map((reason) => reason.detail);
+      const key = JSON.stringify([item.name, details]);
+      const group = groups.get(key) ?? { name: item.name, details, locations: [] };
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(item.date);
+      const date = match ? `${match[3]}/${match[2]}` : item.date;
+      const location = [mealLabels[item.mealType] ?? item.mealType, date].filter(Boolean).join(' ');
+      if (location && !group.locations.includes(location)) group.locations.push(location);
+      groups.set(key, group);
+    }
     return (
-      <View className="flex-row items-center gap-1.5 self-start rounded-full border border-destructive/30 bg-destructive/10 px-3 py-1.5">
-        <TriangleAlert size={14} color={colors.destructive} />
-        <Text className="shrink text-xs font-semibold text-destructive">
-          {summary.title || 'Có món chưa đáp ứng yêu cầu ăn uống bắt buộc'}
-        </Text>
+      <View className="gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+        <View className="flex-row items-center gap-2">
+          <TriangleAlert size={15} color={colors.destructive} />
+          <Text className="shrink text-sm font-semibold text-destructive">{summary.title || 'Có món chưa đáp ứng yêu cầu ăn uống bắt buộc'}</Text>
+        </View>
+        {groups.size ? [...groups.entries()].map(([key, group]) => (
+          <Text key={key} className="text-xs leading-5 text-foreground">
+            <Text className="font-semibold">{group.name}</Text>{group.locations.length ? ` (${group.locations.join(', ')})` : ''}: {group.details.join('. ')}
+          </Text>
+        )) : <Text className="text-xs leading-5 text-muted-foreground">{summary.detail}</Text>}
+        {summary.suggestion ? <Text className="text-xs leading-5 text-muted-foreground">{summary.suggestion}</Text> : null}
       </View>
     );
   }

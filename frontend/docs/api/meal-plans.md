@@ -472,15 +472,15 @@ Thêm recipe hoặc private custom meal vào slot
             "hardConstraintsPreserved": {
               "type": "boolean",
               "_truncated": true
+            },
+            "hardViolations": {
+              "type": "array",
+              "_truncated": true
             }
           },
           "additionalProperties": false
         },
-        "nutritionDataQuality": {
-          "type": "string",
-          "enum": [
-            "COMPLETE",
-            "PARTIAL",
+        "nutritionDat
   …(truncated — xem api-catalog.json)
 ```
 

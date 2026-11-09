@@ -69,6 +69,7 @@ export interface PlanUserSummary {
   suggestion: string | null;
   /** Backend xác nhận các ràng buộc ăn kiêng bắt buộc vẫn được giữ nguyên. */
   hardConstraintsPreserved: boolean;
+  hardViolations: { itemId: string; name: string; date: string; mealType: string; reasons: { code: string; detail: string }[] }[];
 }
 
 /** Ước tính 4 chất sinh năng lượng/xơ; mỗi chỉ số `null` = chưa đủ dữ liệu (không phải 0). */

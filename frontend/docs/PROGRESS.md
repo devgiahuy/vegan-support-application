@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Chi tiết cảnh báo ràng buộc thực đơn — Updated 2026-11-09
+
+Backend analysis v4 trả lý do theo từng món/bữa, nêu nguyên liệu dị ứng có bằng chứng và phân biệt cảnh báo chỉ có ở cấp công thức; web/mobile nhóm món lặp kèm ngày/bữa và đổi màu cảnh báo. Kiểm tra chỉ đọc thực đơn người dùng và tình huống snapshot/no-allergy pass; kiểm thử web/mobile và backend ghi ở WORK-LOG. Không thay đổi ràng buộc an toàn.
+
 ## Dinh dưỡng công thức tính khi gửi duyệt, người duyệt xác nhận — Updated 2026-10-28
 
 Tác giả không còn nhập dinh dưỡng (bỏ khỏi form, schema và request DTO; backend cũng bỏ qua). Khi gửi duyệt, backend tính từ dữ liệu chuẩn và chạy job AI nền nếu thiếu dữ liệu. Modal duyệt bài có panel "Dinh dưỡng chờ duyệt": 5 chỉ số mỗi khẩu phần kèm nguồn (Dữ liệu chuẩn / AI ước tính / Người duyệt sửa), độ tin cậy, nguyên liệu chưa tính được, trạng thái job (tự làm mới 10 giây/lần khi job đang chạy), nút "AI tính lại", sửa tay có lý do, bỏ sửa tay, giá trị bản trước (chỉ tham khảo) và lịch sử chỉnh sửa. Nút "Phê duyệt" bị khoá khi còn chỉ số trống; xử lý `RECIPE_NUTRITION_INCOMPLETE`. Feature `features/review` (DTO/Model/Mapper/API/Query + mapper test). tsc, 68 files/730+ tests, build pass; browser kiểm panel với backend local. Mobile chưa có panel duyệt dinh dưỡng.

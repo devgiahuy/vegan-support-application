@@ -415,6 +415,8 @@ Maintenance clarification 2026-10-26: titles and bodies need not be unique. Auto
 
 ## 6. RBAC summary
 
+Meal-plan warning presentation update, 2026-11-09: current hard-constraint enforcement is unchanged; analysis v4 returns per-slot structured reasons and distinguishes matched allergy ingredients from recipe-level snapshot-only signals. Existing analyses become stale through the algorithm fingerprint and are recomputed on plan detail. Prior string detail remains available with newline separation.
+
 | Capability | Guest | Member | Contributor | Admin |
 |---|:---:|:---:|:---:|:---:|
 | View/search published content | ✓ | ✓ | ✓ | ✓ |

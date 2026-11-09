@@ -1,5 +1,10 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-09] — Làm rõ cảnh báo dị ứng trong thực đơn
+
+- **Thay đổi**: analysis v4 trả hardViolations theo món/bữa và lý do có bằng chứng; web/mobile nhóm món lặp, xuống dòng và hiển thị trạng thái cảnh báo. Giữ nguyên rule dị ứng, phân biệt cảnh báo snapshot khi chưa xác định được nguyên liệu.
+- **Kiểm chứng**: backend lint/typecheck/build/OpenAPI, acceptance meal-plan/analysis; frontend typecheck, 738 tests, build; mobile typecheck, 113 tests. Kiểm tra chỉ đọc thực đơn trong ảnh và mô phỏng snapshot-only/không dị ứng pass. Lint riêng trang web vẫn có 2 lỗi React Compiler và 1 cảnh báo có sẵn tại HEAD; lint các file logic sửa đổi khác pass.
+
 ## [2026-10-29] — Trang /admin/dashboard: Chuẩn hóa hiển thị lý do báo cáo & thêm 2 nút cuộn ngang thanh tabs
 
 - **Yêu cầu**:
