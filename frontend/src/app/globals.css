@@ -234,3 +234,8 @@ body[data-scroll-locked] {
   overflow: visible !important;
   margin-right: 0px !important;
 }
+
+/* Keep the sticky restaurant map attached to the viewport while Radix locks scrolling. */
+body[data-scroll-locked]:has([data-restaurant-cluster-dialog]) {
+  overflow: clip !important;
+}

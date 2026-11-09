@@ -354,7 +354,7 @@ export function MapFallback({
           if (!open) setOpenClusterId(null);
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent data-restaurant-cluster-dialog className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               {openCluster ? `${openCluster.members.length} quán gần nhau` : 'Các quán gần nhau'}
