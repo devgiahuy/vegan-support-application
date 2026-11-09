@@ -2,7 +2,10 @@
 export const MIN_RADIUS_M = 100;
 export const MAX_RADIUS_M = 50000;
 export const DEFAULT_RADIUS_M = 5000;
-export const RADIUS_OPTIONS_M = [500, 1000, 3000, 5000, 10000, 20000, 50000] as const;
+export const RADIUS_OPTIONS_M = [100, 300, 500, 1000, 3000, 5000, 10000, 20000, 50000] as const;
+
+/** Gợi ý từ khóa nhanh dưới ô tìm kiếm — đồng bộ web. */
+export const KEYWORD_SUGGESTIONS = ['Cơm chay', 'Phở chay', 'Lẩu chay'] as const;
 
 /** Tâm bản đồ khi chưa có vị trí người dùng: Quận 1, TP. Hồ Chí Minh. Không dùng để gọi API tìm quán. */
 export const DEFAULT_MAP_CENTER = { lat: 10.7769, lng: 106.7009, label: 'Quận 1, TP. Hồ Chí Minh' } as const;
@@ -13,8 +16,8 @@ export const MAX_CATEGORIES = 30;
 
 /** Bộ lọc chế độ ăn gửi `dietPattern` (backend chỉ hỗ trợ hai giá trị này). */
 export const DIET_PATTERN_OPTIONS = [
-  { value: 'VEGAN', label: 'Thuần chay' },
-  { value: 'LACTO_OVO', label: 'Chay có trứng sữa' },
+  { value: 'VEGAN', label: 'Thuần chay (Vegan)' },
+  { value: 'LACTO_OVO', label: 'Chay có sữa và trứng' },
 ] as const;
 
 /** Nhãn chế độ ăn quán có thể gắn khi đề xuất (`dietTags` enum của backend). */

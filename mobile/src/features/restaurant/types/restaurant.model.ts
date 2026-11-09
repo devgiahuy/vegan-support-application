@@ -72,17 +72,43 @@ export interface RestaurantDiscoveryMeta {
   externalDataUnavailable: boolean;
   /** Quán ngoài chưa xác minh đã bị lọc bớt để áp dụng chế độ ăn, dị ứng hoặc thành phần cần tránh. */
   externalResultsSuppressed: boolean;
+  /** Tên nhà cung cấp dữ liệu bản đồ (rỗng khi backend không trả). */
+  provider: string;
+  /** Giới hạn kết quả mỗi lần tìm của nhà cung cấp (null khi không rõ). */
+  providerResultLimit: number | null;
+  /** `false` khi backend xác nhận không lưu vị trí tìm kiếm; null khi không có thông tin. */
+  locationStored: boolean | null;
 }
+
+/** Thông báo gom từ kết quả tìm kiếm (nguồn dữ liệu, giới hạn, dữ liệu cũ, quyền riêng tư). */
+export interface DiscoveryNotice {
+  kind: 'UNAVAILABLE' | 'SUPPRESSED' | 'TRUNCATED' | 'ATTRIBUTION' | 'STALE' | 'PRIVACY';
+  tone: 'warning' | 'info';
+  message: string;
+}
+
+/** Chế độ tìm hiện tại, dùng để chọn nội dung trạng thái rỗng. */
+export type RestaurantSearchMode = 'NEARBY' | 'KEYWORD' | 'BOUNDS';
 
 export interface RestaurantDiscoveryResult {
   items: Restaurant[];
   meta: RestaurantDiscoveryMeta;
 }
 
+/** Khung vùng bản đồ — backend yêu cầu đủ cả bốn mốc (bắc > nam, đông > tây). */
+export interface RestaurantBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
 /** Truy vấn khám phá quán gần vị trí. */
 export interface LocationQuery {
   lat: number;
   lng: number;
+  /** Khi có, tìm theo khung vùng đang xem thay vì theo `lat`/`lng` (vẫn gửi bán kính). */
+  bounds?: RestaurantBounds;
   /** Mặc định 5000, giới hạn 100–50000. */
   radiusM: number;
   /** Từ khóa món/tên quán; chỉ gọi `search` khi có từ 2 ký tự. */

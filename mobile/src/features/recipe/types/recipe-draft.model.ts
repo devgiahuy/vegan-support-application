@@ -2,8 +2,14 @@ import type { RecipeDifficulty } from '@/common/enums';
 
 /** Dữ liệu người dùng gửi cho trợ lý AI. */
 export interface RecipeDraftPrompt {
+  /** Có thể rỗng — AI sẽ gợi ý tên món. */
   title: string;
+  /** Có thể rỗng — AI sẽ gợi ý mô tả. */
   description: string;
+  /** Chỉ gửi khi người dùng đã nhập; BE giữ nguyên các giá trị này. */
+  servings?: number;
+  prepTimeMinutes?: number;
+  cookTimeMinutes?: number;
   ingredientNames: string[];
 }
 
@@ -25,6 +31,10 @@ export interface RecipeDraftStep {
 
 /** Bản nháp AI gợi ý — chỉ là đề xuất để người dùng sửa, chưa lưu và chưa được xác minh. */
 export interface RecipeDraftSuggestion {
+  /** Tên món AI gợi ý (hoặc tên người dùng đã nhập, BE giữ nguyên). */
+  title: string;
+  /** Mô tả ngắn AI gợi ý (hoặc mô tả người dùng đã nhập). */
+  description: string;
   servings: number;
   prepTimeMinutes: number;
   cookTimeMinutes: number;

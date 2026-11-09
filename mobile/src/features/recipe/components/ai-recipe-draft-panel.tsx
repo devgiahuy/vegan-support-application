@@ -16,17 +16,22 @@ const POPULAR_VEGAN_INGREDIENTS = [
 ];
 
 export interface AiRecipeDraftSeed {
-  /** Tên món và mô tả lấy thẳng từ bước "Thông tin cơ bản" — không hỏi lại. */
+  /** Thông tin lấy thẳng từ bước "Thông tin cơ bản" — không hỏi lại. Tên món và mô tả có thể để trống để AI gợi ý. */
   title: string;
   description: string;
+  /** Chỉ có giá trị khi người dùng đã nhập số hợp lệ; BE giữ nguyên các giá trị này. */
+  servings?: number;
+  prepTimeMinutes?: number;
+  cookTimeMinutes?: number;
   /** Tên nguyên liệu đã nhập ở form, dùng làm danh sách khởi đầu. */
   ingredientNames: string[];
 }
 
 /**
  * Trợ lý AI ở bước "Nguyên liệu" (chỉ khi tạo mới) — đồng bộ `ai-recipe-draft-assistant.tsx` của web.
- * Dùng tên món + mô tả đã nhập ở bước 1 và danh sách nguyên liệu chính do người dùng nhập; AI không tự thêm nguyên liệu,
- * chỉ ước lượng số lượng/đơn vị cho đúng các nguyên liệu đó và soạn các bước nấu. Kết quả xem trước rồi mới áp dụng.
+ * Dùng thông tin đã nhập ở bước 1 và danh sách nguyên liệu chính do người dùng nhập; AI gợi ý các thông tin còn trống
+ * (tên món, mô tả, khẩu phần, thời gian), không tự thêm nguyên liệu, chỉ ước lượng số lượng/đơn vị cho đúng các
+ * nguyên liệu đó và soạn các bước nấu. Giá trị người dùng đã nhập được giữ nguyên. Kết quả xem trước rồi mới áp dụng.
  */
 export function AiRecipeDraftPanel({
   seed,
@@ -35,7 +40,7 @@ export function AiRecipeDraftPanel({
 }: {
   seed: AiRecipeDraftSeed;
   onApply: (suggestion: RecipeDraftSuggestion) => void;
-  /** Quay về bước thông tin cơ bản khi thiếu tên món hoặc mô tả. */
+  /** Quay về bước thông tin cơ bản để sửa tên món, mô tả, khẩu phần hoặc thời gian. */
   onEditBasics: () => void;
 }) {
   const colors = useIconColors();
@@ -47,7 +52,7 @@ export function AiRecipeDraftPanel({
 
   const title = seed.title.trim();
   const description = seed.description.trim();
-  const missingBasics = title.length < 3 || !description;
+  const invalidTitle = title.length > 0 && title.length < 3;
 
   const toggle = () => {
     // Mỗi lần mở lại, lấy danh sách nguyên liệu mới nhất từ form làm điểm khởi đầu.
@@ -57,10 +62,17 @@ export function AiRecipeDraftPanel({
 
   const generate = async () => {
     setValidationError('');
-    if (missingBasics) return setValidationError('Cần tên món (tối thiểu 3 ký tự) và mô tả ngắn ở bước 1 để AI gợi ý.');
+    if (invalidTitle) return setValidationError('Tên món cần ít nhất 3 ký tự hoặc để trống để AI gợi ý.');
     if (ingredientNames.length === 0) return setValidationError('Thêm ít nhất 1 nguyên liệu chính để AI định lượng.');
     try {
-      const result = await mutation.mutateAsync({ title, description, ingredientNames });
+      const result = await mutation.mutateAsync({
+        title,
+        description,
+        servings: seed.servings,
+        prepTimeMinutes: seed.prepTimeMinutes,
+        cookTimeMinutes: seed.cookTimeMinutes,
+        ingredientNames,
+      });
       if (result.ingredients.length === 0 || result.steps.length === 0) {
         return setValidationError('AI trả về bản nháp chưa đầy đủ. Hãy thử lại hoặc nhập thủ công.');
       }
@@ -86,7 +98,7 @@ export function AiRecipeDraftPanel({
         <View className="flex-1 gap-0.5">
           <Text className="text-sm font-semibold text-foreground">Để AI gợi ý định lượng và các bước nấu</Text>
           <Text className="text-xs leading-4 text-muted-foreground">
-            Tùy chọn. AI điền sẵn nguyên liệu, bước nấu, khẩu phần và thời gian; bạn vẫn sửa được mọi thứ trước khi gửi.
+            AI gợi ý thông tin còn trống, định lượng và các bước nấu. Bạn có thể chỉnh sửa trước khi gửi.
           </Text>
         </View>
         <View style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }}>
@@ -99,10 +111,10 @@ export function AiRecipeDraftPanel({
           <View className="flex-row flex-wrap items-baseline justify-between gap-2">
             <Text className="flex-1 text-sm text-foreground">
               <Text className="text-muted-foreground">Món: </Text>
-              {title ? <Text className="font-medium">{title}</Text> : <Text className="italic text-muted-foreground">chưa có tên món</Text>}
+              {title ? <Text className="font-medium">{title}</Text> : <Text className="italic text-muted-foreground">để AI gợi ý tên món</Text>}
             </Text>
             <Pressable accessibilityRole="link" onPress={onEditBasics} hitSlop={8}>
-              <Text className="text-xs font-semibold text-primary">Sửa tên & mô tả</Text>
+              <Text className="text-xs font-semibold text-primary">Sửa thông tin cơ bản</Text>
             </Pressable>
           </View>
 
@@ -141,6 +153,12 @@ export function AiRecipeDraftPanel({
               {suggestion.servings} khẩu phần · sơ chế {suggestion.prepTimeMinutes} phút · nấu {suggestion.cookTimeMinutes} phút · {difficultyLabel(suggestion.difficulty)}
             </Text>
           </View>
+          {suggestion.title ? (
+            <View className="gap-0.5">
+              <Text className="text-base font-bold text-foreground">{suggestion.title}</Text>
+              {suggestion.description ? <Text className="text-xs leading-4 text-muted-foreground">{suggestion.description}</Text> : null}
+            </View>
+          ) : null}
           <Text className="text-[11px] leading-4 text-muted-foreground">
             Đây chỉ là bản nháp do AI ước lượng, chưa được xác minh. Hãy kiểm tra lại định lượng và cách nấu; AI không điền dinh dưỡng.
           </Text>

@@ -221,6 +221,33 @@ export function hasUserContent(values: RecipeEditorValues): boolean {
 }
 
 /**
+ * Điền thông tin cơ bản từ bản nháp AI chỉ ở những ô người dùng còn để trống — đồng bộ `applyDraftBasics` của web.
+ * Thời gian nhập `0` vẫn là giá trị đã nhập nên không bị ghi đè.
+ */
+export function applyDraftBasics(
+  current: RecipeEditorValues,
+  draft: { title: string; description: string; servings: number; prepTimeMinutes: number; cookTimeMinutes: number }
+): Pick<RecipeEditorValues, 'title' | 'description' | 'servings' | 'prepTime' | 'cookTime'> {
+  const keep = (value: string, fallback: number) => (Number.isNaN(parseAmount(value)) ? String(fallback) : value);
+  return {
+    title: current.title.trim() ? current.title : draft.title,
+    description: current.description.trim() ? current.description : draft.description,
+    servings: keep(current.servings, draft.servings),
+    prepTime: keep(current.prepTime, draft.prepTimeMinutes),
+    cookTime: keep(current.cookTime, draft.cookTimeMinutes),
+  };
+}
+
+/** Tên nguyên liệu → `ingredientId` đã liên kết, để bản nháp AI không làm mất liên kết người dùng đã chọn. */
+export function linkedIngredientIds(ingredients: EditorIngredient[]): Map<string, string> {
+  const linked = new Map<string, string>();
+  for (const ingredient of ingredients) {
+    if (ingredient.ingredientId) linked.set(ingredient.name.trim().toLocaleLowerCase('vi'), ingredient.ingredientId);
+  }
+  return linked;
+}
+
+/**
  * Giá trị form → payload `CreateRecipeInput`. Vị trí nguyên liệu bị đổi/xóa được dịch lại cho
  * `affectedIngredientPositions` của từng bước; tham chiếu tới nguyên liệu đã xóa bị bỏ.
  */

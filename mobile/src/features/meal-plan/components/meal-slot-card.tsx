@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Plus, Shuffle, TriangleAlert, UtensilsCrossed } from 'lucide-react-native';
+import { Plus, Shuffle, ShoppingCart, UtensilsCrossed } from 'lucide-react-native';
 
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
@@ -39,23 +39,21 @@ function SlotThumbnail({ uri }: { uri: string | null }) {
 }
 
 /**
- * Ô một bữa trong thực đơn — đồng bộ `SlotCard` của web: nhãn bữa, huy hiệu "Món cá nhân", huy hiệu cảnh báo
- * phân tích, ảnh + tên món, đạm/bột/béo/xơ, số khẩu phần, và hành động đổi món / chọn món thủ công.
+ * Ô một bữa trong thực đơn — đồng bộ `SlotCard` của web: nhãn bữa, huy hiệu "Món cá nhân", ảnh + tên món, đạm/bột/béo/xơ, số khẩu phần, và hành động đổi món / chọn món thủ công.
  */
 export function MealSlotCard({
   slot,
   disabled,
-  warningCount = 0,
-  onWarningPress,
   onSwap,
   onPick,
+  onShopping,
 }: {
   slot: MealSlot;
   disabled: boolean;
-  warningCount?: number;
-  onWarningPress?: (slot: MealSlot) => void;
   onSwap: (slot: MealSlot) => void;
   onPick: (slot: MealSlot) => void;
+  /** Mở nguyên liệu cần mua của riêng bữa này (chỉ hiện khi ô đã có món). */
+  onShopping?: (slot: MealSlot) => void;
 }) {
   const colors = useIconColors();
   const hasMacros = slot.protein > 0 || slot.carbs > 0 || slot.fat > 0 || slot.fiber > 0;
@@ -76,15 +74,6 @@ export function MealSlotCard({
             <View className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5">
               <Text className="text-[10px] font-medium text-primary">Món cá nhân</Text>
             </View>
-          ) : null}
-          {warningCount > 0 ? (
-            <Pressable
-              onPress={() => onWarningPress?.(slot)}
-              accessibilityLabel={`${warningCount} cảnh báo dinh dưỡng`}
-              className="flex-row items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5">
-              <TriangleAlert size={11} color={colors.warning} />
-              <Text className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">{warningCount} lưu ý</Text>
-            </Pressable>
           ) : null}
         </View>
         {slot.filled ? <Text className="text-xs font-semibold text-foreground">{slot.formattedCalories}</Text> : null}
@@ -124,6 +113,16 @@ export function MealSlotCard({
           ) : null}
         </View>
       )}
+
+      {onShopping && slot.filled && (slot.recipeId || slot.customMealId) ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => onShopping(slot)}
+          className="flex-row items-center justify-center gap-1.5 rounded-lg border border-border py-2 active:bg-muted">
+          <ShoppingCart size={14} color={colors.foreground} />
+          <Text className="text-xs font-semibold text-foreground">Xem nguyên liệu cần mua</Text>
+        </Pressable>
+      ) : null}
 
       <View className="flex-row items-center gap-2">
         {slot.filled ? (

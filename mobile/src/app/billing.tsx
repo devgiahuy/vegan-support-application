@@ -1,6 +1,6 @@
 import { createChatIdempotencyKey } from '@/features/chat/utils/idempotency';
 import * as React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { AppState, Pressable, Text, View } from 'react-native';
 import { Link, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useQueryClient } from '@tanstack/react-query';
@@ -35,17 +35,21 @@ const LEDGER_PREVIEW_COUNT = 3;
 function openCheckout(url: string) {
   // Expo web opens in the current tab, so an async order request cannot lose
   // its checkout to popup blocking. Native platforms ignore windowName.
-  return WebBrowser.openBrowserAsync(url, { windowName: '_self' });
+  // Android: createTask=false giữ trình duyệt trong cùng task với app, nên bấm X sẽ quay về đúng màn Billing
+  // (mặc định true mở task riêng, X có thể rơi về màn hình chính hoặc app khác).
+  return WebBrowser.openBrowserAsync(url, { windowName: '_self', createTask: false });
 }
 
 function OrderCard({
   order,
   refresh,
   busy,
+  onContinue,
 }: {
   order: BillingOrder;
   refresh: (id: string) => Promise<BillingOrder>;
   busy: boolean;
+  onContinue: (order: BillingOrder) => void;
 }) {
   const [checking, setChecking] = React.useState(false);
   const [feedback, setFeedback] = React.useState<BillingCheckFeedback | null>(null);
@@ -83,9 +87,7 @@ function OrderCard({
           label="Tiếp tục thanh toán qua payOS"
           variant="outline"
           disabled={busy}
-          onPress={() => {
-            void openCheckout(order.checkoutUrl!).catch(() => void checkPayment());
-          }}
+          onPress={() => onContinue(order)}
         />
       )}
       {order.provider === 'payos' && order.status !== 'PAID' && (
@@ -180,12 +182,17 @@ function DurationPlans({
         <Text className="text-lg font-semibold text-foreground">{selected.name}</Text>
         <Text className="text-sm text-muted-foreground">{selected.description}</Text>
         <Text className="text-2xl font-bold text-primary">{selected.priceLabel}</Text>
-        <Text className="text-xs text-muted-foreground">≈ {selected.monthlyPriceLabel} / 30 ngày</Text>
+        {selected.durationMonths !== null && selected.durationMonths > 1 ? (
+          <Text className="text-xs text-muted-foreground">≈ {selected.monthlyPriceLabel} / 30 ngày</Text>
+        ) : null}
         {selected.periodBenefitLabels.map((label) => (
           <Text key={label} className="text-sm text-foreground">
             {label}
           </Text>
         ))}
+        <Text className="text-xs leading-5 text-muted-foreground">
+          {selected.durationMonths ?? 1} chu kỳ × {selected.periodDays ?? 30} ngày kể từ khi thanh toán. Lượt của chu kỳ được dùng trước lượt mua lẻ và hết hạn khi sang chu kỳ mới. Không tự gia hạn; mua khi còn hạn sẽ nối tiếp sau ngày hết hạn hiện tại.
+        </Text>
         <PrimaryButton
           label={purchasingId === selected.id ? 'Đang tạo đơn…' : `Thanh toán gói ${selected.durationLabel} qua payOS`}
           icon={<QrCode size={18} color={colors.primaryForeground} />}
@@ -212,6 +219,9 @@ export default function BillingScreen() {
   const [page, setPage] = React.useState(1);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const intents = React.useRef(new Map<string, string>());
+  const awaitingCheckoutId = React.useRef<string | null>(null);
+  const checkingCheckout = React.useRef(false);
+  const [checkoutNotice, setCheckoutNotice] = React.useState<BillingCheckFeedback | null>(null);
   const catalog = useBillingCatalogQuery();
   const allowances = useEntitlementsQuery();
   // Biến động quyền lợi chỉ hiện 3 dòng mới nhất, phần còn lại mở bằng "Xem thêm".
@@ -236,12 +246,61 @@ export default function BillingScreen() {
       });
       intents.current.delete(productId);
       setSelectedId(order.id);
-      if (order.checkoutUrl) await openCheckout(order.checkoutUrl);
-      await client.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
+      await continueCheckout(order);
     } catch (error) {
       setActionError(billingErrorMessage(error));
     }
   }
+  /**
+   * Mở trang payOS; khi người dùng đóng trình duyệt thì tự hỏi payOS trạng thái đơn để không phải bấm
+   * "Kiểm tra thanh toán". App cũng tự kiểm tra lại khi quay về foreground (xem effect AppState bên dưới).
+   */
+  async function continueCheckout(order: BillingOrder) {
+    if (!order.checkoutUrl) return;
+    setCheckoutNotice(null);
+    awaitingCheckoutId.current = order.id;
+    try {
+      await openCheckout(order.checkoutUrl);
+    } catch {
+      // Không mở được trình duyệt: vẫn kiểm tra xem đơn đã được thanh toán chưa.
+    }
+    await checkAfterCheckout(order.id, false);
+  }
+  async function checkAfterCheckout(id: string, silentWhenPending: boolean) {
+    // Kiểm tra im lặng nhường chỗ cho lần đang chạy; lần sau khi đóng trình duyệt luôn phải báo kết quả.
+    if (silentWhenPending && checkingCheckout.current) return;
+    checkingCheckout.current = true;
+    try {
+      const result = await reconcile.mutateAsync(id);
+      if (result.status !== 'PENDING') awaitingCheckoutId.current = null;
+      if (silentWhenPending && result.status === 'PENDING') return;
+      setCheckoutNotice({
+        message: billingCheckMessage(result),
+        checkedAtLabel: billingCheckTime(),
+        isError: false,
+        status: result.status,
+      });
+    } catch (error) {
+      if (silentWhenPending) return;
+      setCheckoutNotice({
+        message: billingErrorMessage(error),
+        checkedAtLabel: billingCheckTime(),
+        isError: true,
+      });
+    } finally {
+      checkingCheckout.current = false;
+    }
+  }
+  const checkAfterCheckoutRef = React.useRef(checkAfterCheckout);
+  checkAfterCheckoutRef.current = checkAfterCheckout;
+  // Người dùng có thể sang app ngân hàng rồi quay lại app: đơn đang chờ thì kiểm tra lại, im lặng nếu vẫn chờ.
+  React.useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      const id = awaitingCheckoutId.current;
+      if (state === 'active' && id) void checkAfterCheckoutRef.current(id, true);
+    });
+    return () => subscription.remove();
+  }, []);
   async function refresh(id: string) {
     setActionError(null);
     return reconcile.mutateAsync(id);
@@ -327,6 +386,32 @@ export default function BillingScreen() {
                 {actionError}
               </Text>
             )}
+            {checkoutNotice && (
+              <View
+                accessibilityRole={checkoutNotice.isError ? 'alert' : undefined}
+                accessibilityLiveRegion="polite"
+                className={cn(
+                  'gap-1 rounded-xl border p-4',
+                  checkoutNotice.isError
+                    ? 'border-destructive/30 bg-destructive/5'
+                    : checkoutNotice.status === 'PAID'
+                      ? 'border-primary/40 bg-primary/5'
+                      : 'border-border bg-card'
+                )}
+              >
+                <Text className="text-xs text-muted-foreground">
+                  Kiểm tra thanh toán lúc {checkoutNotice.checkedAtLabel}
+                </Text>
+                <Text
+                  className={cn(
+                    'text-sm leading-5',
+                    checkoutNotice.isError ? 'text-destructive' : 'text-foreground'
+                  )}
+                >
+                  {checkoutNotice.message}
+                </Text>
+              </View>
+            )}
             {selectedId && (
               <View className="gap-3">
                 <Text className="text-xl font-semibold text-foreground">Đơn hàng đang xem</Text>
@@ -338,7 +423,12 @@ export default function BillingScreen() {
                   </Text>
                 ) : (
                   selected.data && (
-                    <OrderCard order={selected.data} refresh={refresh} busy={reconcile.isPending} />
+                    <OrderCard
+                      order={selected.data}
+                      refresh={refresh}
+                      busy={reconcile.isPending}
+                      onContinue={(order) => void continueCheckout(order)}
+                    />
                   )
                 )}
               </View>
@@ -414,6 +504,7 @@ export default function BillingScreen() {
                     order={order}
                     refresh={refresh}
                     busy={reconcile.isPending}
+                    onContinue={(item) => void continueCheckout(item)}
                   />
                 ))
               )}

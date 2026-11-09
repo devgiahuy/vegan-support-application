@@ -21,7 +21,6 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { RecommendedForYou } from '@/features/recommendation/components/recommended-for-you';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
 import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
-import { RESTAURANT_SEARCH_PANEL_ENABLED } from '@/features/restaurant/lib/feature-flags';
 import { useIconColors } from '@/lib/theme-colors';
 
 /** Bốn lối vào tra cứu dinh dưỡng — đồng bộ khối "Tra cứu Dinh dưỡng & Kiến thức Khoa học" của web. */
@@ -204,9 +203,7 @@ export default function HomeScreen() {
 
         <View className="mt-3.5 rounded-2xl border border-border bg-card p-4">
           <Text className="text-sm text-muted-foreground">
-            {RESTAURANT_SEARCH_PANEL_ENABLED
-              ? 'Cho phép vị trí hoặc nhập địa chỉ để xem quán chay gần bạn và tìm theo món.'
-              : 'Cho phép vị trí để xem quán chay gần bạn trên bản đồ.'}
+            Cho phép vị trí hoặc nhập địa chỉ để xem quán chay gần bạn và tìm theo món.
           </Text>
           <View className="mt-4">
             <Link href={'/restaurants' as Href} asChild>
