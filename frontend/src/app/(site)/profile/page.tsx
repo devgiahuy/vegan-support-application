@@ -123,10 +123,18 @@ export default function ProfilePage() {
   const { user, setUser } = useAuthStore();
   const currentUser = detailedProfile?.user ?? user;
 
-  // Tự động đồng bộ user từ detailedProfile vào useAuthStore nếu store chưa có
+  // Tự động đồng bộ user từ detailedProfile vào useAuthStore khi store chưa có hoặc hồ sơ mới hơn
   React.useEffect(() => {
-    if (detailedProfile?.user && !user) {
-      setUser(detailedProfile.user);
+    const freshUser = detailedProfile?.user;
+    if (!freshUser) return;
+    if (
+      !user ||
+      user.id !== freshUser.id ||
+      user.avatarUrl !== freshUser.avatarUrl ||
+      user.displayName !== freshUser.displayName ||
+      user.role !== freshUser.role
+    ) {
+      setUser(freshUser);
     }
   }, [detailedProfile?.user, user, setUser]);
   const {

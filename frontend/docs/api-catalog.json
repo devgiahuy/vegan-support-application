@@ -1,7 +1,7 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "..\\backend\\openapi.json",
-  "generatedAt": "2026-11-09T04:57:48.930Z",
+  "generatedAt": "2026-11-10T04:48:23.368Z",
   "stats": {
     "operations": 190,
     "groups": 42,
@@ -1230,7 +1230,7 @@
       "method": "POST",
       "path": "/api/v1/posts/{id}/submit",
       "group": "Content Review",
-      "summary": "Submit một immutable draft revision để Admin review",
+      "summary": "Submit một immutable draft revision để duyệt hoặc xuất bản",
       "operationId": "submitPostRevision",
       "params": [
         {

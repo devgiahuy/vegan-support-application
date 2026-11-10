@@ -23,7 +23,9 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { resolveAuthorDisplay } from '@/lib/author-display';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/store/useAuthStore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,6 +37,8 @@ import { CommunitySummary } from '@/features/community/components/community-summ
 import { VoteButton } from '@/features/community/components/vote-button';
 import { ReportButton } from '@/components/shared/report-button';
 import { ReportTargetKind } from '@/common/enums';
+import { ReviewStatusBanner } from '@/features/review/components/review-status-banner';
+import { ReviewHistoryDialog } from '@/features/review/components/review-history-dialog';
 import { PostCard } from './post-card';
 import { DeletePostDialog } from './delete-post-dialog';
 import type { Post, Article } from '../types/post.model';
@@ -46,12 +50,15 @@ interface PostDetailViewProps {
 
 export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
   const router = useRouter();
+  const user = useAuthStore((s) => s.user);
   // Tương tác vote/lưu giữ ở state local của component (API vote/bookmark chưa có).
   // Không dùng store toàn cục để tránh nhầm dữ liệu mẫu với dữ liệu thật.
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
+  const [historyDialogOpen, setHistoryDialogOpen] = React.useState(false);
   const [isSaved, setIsSaved] = React.useState<boolean>(
     ('saved' in post ? post.saved : false) ?? false
   );
+  const isArticle = 'version' in post;
 
   const ARTICLE_FALLBACK_COVER =
     'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800&auto=format&fit=crop&q=80';
@@ -67,7 +74,11 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
     ('formattedPublishedAt' in post ? post.formattedPublishedAt : post.publishedAt) || '';
   const summary = ('excerpt' in post ? post.excerpt : post.summary) || '';
   const contentMarkdown = ('content' in post ? post.content : post.contentMarkdown) || '';
-  const authorAvatar = ('avatar' in post.author ? post.author.avatar : post.author.avatarUrl) || '';
+  const authorDisplay = resolveAuthorDisplay(post.author, user, {
+    fallbackName: 'Tác giả VeggieConnect',
+  });
+  const authorName = authorDisplay.name;
+  const authorAvatar = authorDisplay.avatarUrl;
   const authorRoleTitle =
     ('roleTitle' in post.author ? post.author.roleTitle : undefined) || 'Tác giả';
   const score = 'stats' in post ? post.stats.likes : post.score;
@@ -79,10 +90,6 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
     toast.success(
       !isSaved ? 'Đã lưu bài viết vào danh sách của bạn!' : 'Đã bỏ lưu bài viết khỏi danh sách.'
     );
-  };
-
-  const handleVoteChange = () => {
-    toast.success('Đã ghi nhận đánh giá của bạn!');
   };
 
   const handleShare = () => {
@@ -244,8 +251,32 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
         </span>
       </nav>
 
-      {/* Moderation Alert Banner if not PUBLISHED */}
-      {post.status === 'PENDING' && (
+      {/* Review Status Banner cho bài viết thật từ Backend */}
+      {isArticle &&
+        (authorDisplay.isCurrentUser || (post.revisionStatus ?? post.status) !== 'PUBLISHED') && (
+          <>
+            <ReviewStatusBanner
+              postId={post.id}
+              postTitle={post.title}
+              postStatus={post.revisionStatus ?? post.status}
+              revisionId={post.revisionId}
+              revisionVersion={post.revisionVersion ?? post.version}
+              publishedRevisionVersion={post.publishedRevisionVersion}
+              isAuthor={authorDisplay.isCurrentUser}
+              onOpenHistory={() => setHistoryDialogOpen(true)}
+              onSuccess={() => router.refresh()}
+            />
+            <ReviewHistoryDialog
+              open={historyDialogOpen}
+              onOpenChange={setHistoryDialogOpen}
+              postId={post.id}
+              postTitle={post.title}
+            />
+          </>
+        )}
+
+      {/* Moderation Alert Banner cho kiểu dữ liệu legacy */}
+      {!isArticle && (post.status === 'PENDING' || post.status === 'PENDING_REVIEW') && (
         <div className="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-800 dark:text-amber-300">
           <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
           <div className="text-sm space-y-0.5">
@@ -259,7 +290,7 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
         </div>
       )}
 
-      {post.status === 'FLAGGED' && (
+      {!isArticle && post.status === 'FLAGGED' && (
         <div className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">
           <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
           <div className="text-sm space-y-0.5">
@@ -301,16 +332,14 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
         <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-border/70">
           <div className="flex items-center gap-3">
             <Avatar className="h-12 w-12 ring-2 ring-primary/20">
-              <AvatarImage src={authorAvatar} alt={post.author.name} />
+              {authorAvatar ? <AvatarImage src={authorAvatar} alt={authorName} /> : null}
               <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                {post.author.name.charAt(0)}
+                {authorDisplay.initials}
               </AvatarFallback>
             </Avatar>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm sm:text-base font-bold text-foreground">
-                  {post.author.name}
-                </span>
+                <span className="text-sm sm:text-base font-bold text-foreground">{authorName}</span>
                 {isExpert ? (
                   <Badge
                     variant="secondary"
@@ -409,7 +438,6 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
               orientation="vertical"
               size="lg"
               itemTitle={post.title}
-              onVoteChange={handleVoteChange}
             />
             <Button
               variant="ghost"
@@ -439,12 +467,7 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
             <span className="text-xs font-semibold text-muted-foreground">
               Đánh giá độ hữu ích:
             </span>
-            <VoteControl
-              initialScore={score}
-              orientation="horizontal"
-              size="sm"
-              onVoteChange={handleVoteChange}
-            />
+            <VoteControl initialScore={score} orientation="horizontal" size="sm" />
           </div>
 
           {/* Article Markdown Body */}
@@ -475,14 +498,14 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
           <Card className="rounded-3xl border-border/80 bg-gradient-to-br from-card to-primary/5 p-6 shadow-sm">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <Avatar className="h-16 w-16 ring-2 ring-primary/30">
-                <AvatarImage src={authorAvatar} alt={post.author.name} />
+                {authorAvatar ? <AvatarImage src={authorAvatar} alt={authorName} /> : null}
                 <AvatarFallback className="text-lg bg-primary/10 text-primary">
-                  {post.author.name.charAt(0)}
+                  {authorDisplay.initials}
                 </AvatarFallback>
               </Avatar>
               <div className="space-y-1 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h4 className="text-lg font-bold text-foreground">{post.author.name}</h4>
+                  <h4 className="text-lg font-bold text-foreground">{authorName}</h4>
                   <Badge className="bg-primary/10 text-primary text-xs">{authorRoleTitle}</Badge>
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">

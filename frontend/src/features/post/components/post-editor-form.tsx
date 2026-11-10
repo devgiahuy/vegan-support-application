@@ -32,13 +32,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { SafeImage } from '@/components/shared/safe-image';
-import { CategoryType, PostStatus, UserRole } from '@/common/enums';
+import { CategoryType, UserRole } from '@/common/enums';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { flattenCategories } from '@/features/category/utils/flatten-categories';
 import { ImageUploader } from './image-uploader';
 import type { Post, DietSchool, Article } from '../types/post.model';
-import { useCreateArticleMutation, useUpdateArticleMutation } from '../queries/post.queries';
+import {
+  ArticleSubmitForReviewError,
+  useCreateAndSubmitArticleMutation,
+  useCreateArticleMutation,
+  useUpdateAndSubmitArticleMutation,
+  useUpdateArticleMutation,
+} from '../queries/post.queries';
 import { addTrackedUserPost } from '../utils/user-posts-tracker';
 
 const CATEGORIES = [
@@ -109,6 +115,8 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
   const user = useAuthStore((s) => s.user);
   const createArticleMutation = useCreateArticleMutation();
   const updateArticleMutation = useUpdateArticleMutation();
+  const createAndSubmitMutation = useCreateAndSubmitArticleMutation();
+  const updateAndSubmitMutation = useUpdateAndSubmitArticleMutation();
 
   const { data: categoryTree = [] } = useCategoryTreeQuery(CategoryType.CONTENT_TOPIC);
   const flatCategories = React.useMemo(() => flattenCategories(categoryTree), [categoryTree]);
@@ -160,11 +168,11 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
   const [tags, setTags] = React.useState<string[]>(initialPost?.tags || []);
   const [newTagInput, setNewTagInput] = React.useState('');
 
-  // Quyền xuất bản lấy từ phiên đăng nhập thật:
-  // Người đóng góp / Quản trị viên được xuất bản ngay, Thành viên phải chờ duyệt.
+  // Quyền xuất bản tự động lấy từ phiên đăng nhập thật (backend sẽ quyết định cuối cùng):
+  // Người đóng góp được tự động duyệt & xuất bản; Thành viên và Quản trị viên (duyệt chéo) cần kiểm duyệt.
   const sessionUser = useAuthStore((s) => s.user);
-  const canPublishDirectly =
-    sessionUser?.role === UserRole.CONTRIBUTOR || sessionUser?.role === UserRole.ADMIN;
+  const isContributor = sessionUser?.role === UserRole.CONTRIBUTOR;
+  const isAdmin = sessionUser?.role === UserRole.ADMIN;
 
   // Tên tác giả hiển thị ở xem trước
   const previewAuthorName =
@@ -233,87 +241,93 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
       return;
     }
 
-    let postStatus: PostStatus = PostStatus.PENDING_REVIEW;
-    if (actionType === 'DRAFT') {
-      postStatus = PostStatus.DRAFT;
-    } else {
-      postStatus = canPublishDirectly ? PostStatus.PUBLISHED : PostStatus.PENDING_REVIEW;
-    }
-
     setIsSubmitting(true);
     try {
       const categoryId = flatCategories.find((c) => c.name === category)?.id || '';
-      if (isEditing && initialPost) {
-        await updateArticleMutation.mutateAsync({
-          id: initialPost.id,
-          article: {
-            title: trimmedTitle,
-            category: { id: categoryId, name: category },
-            excerpt: summary.trim() || trimmedTitle,
-            content: trimmedContent,
-            coverImageUrl: coverImage,
-            coverMedia,
-            tags,
-            status: postStatus,
-            version:
-              'version' in initialPost && typeof initialPost.version === 'number'
-                ? initialPost.version
-                : 1,
-          },
-        });
+      const articlePayload: Partial<Article> = {
+        title: trimmedTitle,
+        category: { id: categoryId, name: category },
+        excerpt: summary.trim() || trimmedTitle,
+        content: trimmedContent,
+        coverImageUrl: coverImage,
+        coverMedia,
+        tags,
+      };
+      const expectedVersion =
+        initialPost && 'version' in initialPost && typeof initialPost.version === 'number'
+          ? initialPost.version
+          : 1;
 
-        toast.success(
-          actionType === 'DRAFT'
-            ? 'Đã cập nhật bản nháp bài viết!'
-            : postStatus === 'PUBLISHED'
-              ? 'Đã cập nhật và xuất bản bài viết thành công!'
-              : 'Đã gửi cập nhật tới Chuyên gia Dinh dưỡng để kiểm duyệt!'
-        );
-        if (initialPost?.id && user?.id) {
-          addTrackedUserPost(user.id, {
+      if (actionType === 'DRAFT') {
+        if (isEditing && initialPost) {
+          await updateArticleMutation.mutateAsync({
             id: initialPost.id,
-            type: 'BLOG',
-            title: trimmedTitle,
-            createdAt: new Date().toISOString(),
+            article: { ...articlePayload, version: expectedVersion },
           });
-        }
-        router.push(`/articles/${initialPost.id}`);
-      } else {
-        const res = await createArticleMutation.mutateAsync({
-          title: trimmedTitle,
-          category: { id: categoryId, name: category },
-          excerpt: summary.trim() || trimmedTitle,
-          content: trimmedContent,
-          coverImageUrl: coverImage,
-          coverMedia,
-          tags,
-          status: postStatus,
-        });
-
-        toast.success(
-          actionType === 'DRAFT'
-            ? 'Đã lưu bài viết vào Bản nháp!'
-            : postStatus === 'PUBLISHED'
-              ? '🎉 Bài viết đã được xuất bản công khai!'
-              : '🎉 Bài viết đã gửi thành công! Đang chờ Chuyên gia Dinh dưỡng kiểm duyệt.'
-        );
-
-        const targetId = res?.id;
-        if (targetId && user?.id) {
-          addTrackedUserPost(user.id, {
-            id: targetId,
-            type: 'BLOG',
-            title: trimmedTitle,
-            createdAt: new Date().toISOString(),
-          });
-        }
-        if (postStatus === 'PUBLISHED' && targetId) {
-          router.push(`/articles/${targetId}`);
+          toast.success('Đã cập nhật bản nháp bài viết!');
+          if (initialPost.id && user?.id) {
+            addTrackedUserPost(user.id, {
+              id: initialPost.id,
+              type: 'BLOG',
+              title: trimmedTitle,
+              createdAt: new Date().toISOString(),
+            });
+          }
+          router.push(`/articles/${initialPost.id}`);
         } else {
-          router.push('/articles');
+          const created = await createArticleMutation.mutateAsync(articlePayload);
+          toast.success('Đã lưu bài viết vào Bản nháp!');
+          if (created?.id && user?.id) {
+            addTrackedUserPost(user.id, {
+              id: created.id,
+              type: 'BLOG',
+              title: created.title || trimmedTitle,
+              createdAt: new Date().toISOString(),
+            });
+          }
+          if (created?.id) {
+            router.push(`/articles/${created.id}/edit`);
+          } else {
+            router.push('/articles');
+          }
         }
+        return;
       }
-    } catch {
+
+      const saved =
+        isEditing && initialPost
+          ? await updateAndSubmitMutation.mutateAsync({
+              id: initialPost.id,
+              article: { ...articlePayload, version: expectedVersion },
+            })
+          : await createAndSubmitMutation.mutateAsync(articlePayload);
+
+      const targetId = saved?.id || initialPost?.id;
+      if (targetId && user?.id) {
+        addTrackedUserPost(user.id, {
+          id: targetId,
+          type: 'BLOG',
+          title: saved?.title || trimmedTitle,
+          createdAt: new Date().toISOString(),
+        });
+      }
+      if (targetId) {
+        router.push(`/articles/${targetId}`);
+      } else {
+        router.push('/articles');
+      }
+    } catch (error) {
+      if (error instanceof ArticleSubmitForReviewError && error.article.id) {
+        if (user?.id) {
+          addTrackedUserPost(user.id, {
+            id: error.article.id,
+            type: 'BLOG',
+            title: error.article.title || trimmedTitle,
+            createdAt: new Date().toISOString(),
+          });
+        }
+        router.push(`/articles/${error.article.id}/edit`);
+      }
       // Error handled by mutation toast
     } finally {
       setIsSubmitting(false);
@@ -333,7 +347,7 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
                 : 'Thành viên'}
           </Badge>
           <span className="text-xs text-muted-foreground truncate">
-            {canPublishDirectly ? 'Xuất bản trực tiếp' : 'Chờ duyệt'}
+            {isContributor ? 'Tự động xuất bản' : 'Chờ duyệt'}
           </span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -355,7 +369,7 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
             className="h-8 text-xs rounded-xl px-3 font-semibold shadow-xs"
           >
             <Send className="h-3.5 w-3.5 mr-1" />
-            {canPublishDirectly ? 'Xuất bản' : 'Gửi duyệt'}
+            {isContributor ? 'Xuất bản' : 'Gửi duyệt'}
           </Button>
         </div>
       </div>
@@ -369,14 +383,18 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
             </span>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground">
-                {canPublishDirectly
-                  ? 'Quyền tài khoản: Xuất bản bài viết trực tiếp'
-                  : 'Quyền thành viên: Bài viết sẽ được kiểm duyệt'}
+                {isContributor
+                  ? 'Quyền tài khoản: Tự động xuất bản bài viết'
+                  : isAdmin
+                    ? 'Quyền Quản trị viên: Duyệt chéo trước khi xuất bản'
+                    : 'Quyền thành viên: Bài viết sẽ được kiểm duyệt'}
               </p>
               <p className="text-xs text-muted-foreground line-clamp-1 sm:line-clamp-none">
-                {canPublishDirectly
-                  ? 'Bài viết của bạn sẽ được hiển thị công khai ngay sau khi đăng.'
-                  : 'Bài viết sẽ được chuyển vào hàng đợi kiểm duyệt của Chuyên gia Dinh dưỡng trước khi công khai.'}
+                {isContributor
+                  ? 'Bài viết của Người đóng góp được tự động duyệt và hiển thị công khai ngay sau khi đăng.'
+                  : isAdmin
+                    ? 'Để đảm bảo tính khách quan, bài viết do Quản trị viên tạo cần một Quản trị viên khác duyệt trước khi công khai.'
+                    : 'Bài viết sẽ được chuyển vào hàng đợi kiểm duyệt của Ban biên tập trước khi công khai.'}
               </p>
             </div>
           </div>
@@ -560,15 +578,17 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
             </CardHeader>
             <CardContent className="p-4 pt-1 space-y-3">
               <p className="text-xs text-muted-foreground leading-relaxed">
-                {canPublishDirectly ? (
+                {isContributor ? (
                   <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
                     <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                    Bài viết sẽ xuất bản công khai ngay lập tức.
+                    Bài viết sẽ được duyệt tự động và xuất bản công khai ngay lập tức.
                   </span>
                 ) : (
                   <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-medium">
                     <Clock className="h-3.5 w-3.5 shrink-0" />
-                    Bài viết sẽ gửi tới Chuyên gia duyệt trước khi công khai.
+                    {isAdmin
+                      ? 'Bài viết sẽ được chuyển tới Quản trị viên khác thẩm định trước khi công khai.'
+                      : 'Bài viết sẽ được Ban biên tập kiểm duyệt trước khi hiển thị công khai.'}
                   </span>
                 )}
               </p>
@@ -582,10 +602,14 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
                 >
                   <Send className="h-4 w-4" />
                   {isSubmitting
-                    ? 'Đang lưu bài viết...'
-                    : canPublishDirectly
-                      ? 'Xuất bản bài viết'
-                      : 'Gửi chuyên gia duyệt bài'}
+                    ? 'Đang xử lý bài viết...'
+                    : isContributor
+                      ? isEditing
+                        ? 'Lưu & xuất bản ngay'
+                        : 'Xuất bản bài viết'
+                      : isEditing
+                        ? 'Lưu & gửi kiểm duyệt'
+                        : 'Gửi bài để duyệt'}
                 </Button>
 
                 <Button

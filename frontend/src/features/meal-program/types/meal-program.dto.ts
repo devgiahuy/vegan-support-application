@@ -91,7 +91,6 @@ export interface ProgramWeekDto {
   projectionStatus?: 'CURRENT' | 'STALE';
   projection_status?: 'CURRENT' | 'STALE';
   selectedAlternativeRank?: number | null;
-  selected_alternative_rank?: number | null;
   alternatives?: WeekAlternativeDto[];
   failure?: { code?: string; message?: string } | null;
   snapshot?: WeeklyPlanSnapshotDto | null;

@@ -111,10 +111,6 @@ export interface AnalysisSummaryDto {
   warning_count?: number | string;
   cautionCount?: number | string;
   caution_count?: number | string;
-  infoCount?: number | string;
-  info_count?: number | string;
-  selectedItemCount?: number | string;
-  selected_item_count?: number | string;
   userStatus?: string;
   user_status?: string;
   title?: string;

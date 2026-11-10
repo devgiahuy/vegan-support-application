@@ -18,10 +18,13 @@ import { EmptyState } from '@/components/shared/empty-state';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -30,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 import { ReviewDecision, ReviewItemStatus, PostType, ModerationPriority } from '@/common/enums';
 import { getApiErrorCode } from '@/lib/api-error';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -106,57 +110,60 @@ export function ReviewQueueTable() {
   const isForbidden = getApiErrorCode(query.error) === 'FORBIDDEN';
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {/* Bộ lọc */}
       <div className="flex flex-wrap items-center gap-2">
         <Select value={status} onValueChange={resetPage(setStatus)}>
-          <SelectTrigger className="h-9 text-xs rounded-xl w-[150px] bg-card">
+          <SelectTrigger className="h-9 w-[150px] rounded-xl bg-card text-xs">
             <SelectValue placeholder="Trạng thái" />
           </SelectTrigger>
           <SelectContent>
-            {STATUS_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value} className="text-xs">
-                {o.label}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              {STATUS_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value} className="text-xs">
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         <Select value={type} onValueChange={resetPage(setType)}>
-          <SelectTrigger className="h-9 text-xs rounded-xl w-[140px] bg-card">
+          <SelectTrigger className="h-9 w-[140px] rounded-xl bg-card text-xs">
             <SelectValue placeholder="Loại" />
           </SelectTrigger>
           <SelectContent>
-            {TYPE_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value} className="text-xs">
-                {o.label}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              {TYPE_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value} className="text-xs">
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         <Select value={priority} onValueChange={resetPage(setPriority)}>
-          <SelectTrigger className="h-9 text-xs rounded-xl w-[150px] bg-card">
+          <SelectTrigger className="h-9 w-[150px] rounded-xl bg-card text-xs">
             <SelectValue placeholder="Ưu tiên" />
           </SelectTrigger>
           <SelectContent>
-            {PRIORITY_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value} className="text-xs">
-                {o.label}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              {PRIORITY_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value} className="text-xs">
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
-        <span className="text-xs text-muted-foreground ml-auto">
+        <span className="ml-auto text-xs text-muted-foreground">
           {totalItems > 0 ? `${totalItems} bài trong hàng chờ` : ''}
         </span>
       </div>
 
       {query.isLoading ? (
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-20 animate-pulse rounded-2xl border border-border/60 bg-muted/40"
-            />
+            <Skeleton key={i} className="h-20 w-full rounded-2xl border border-border/60" />
           ))}
         </div>
       ) : query.isError || isForbidden ? (
@@ -190,16 +197,132 @@ export function ReviewQueueTable() {
         />
       ) : (
         <>
-          <div className="overflow-x-auto rounded-2xl border border-border/70">
+          {/* Mobile Cards (< 768px) */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {items.map((item) => {
+              const isOwn = !!sessionUserId && item.author.id === sessionUserId;
+              const decidable = item.canDecide && !isOwn;
+              const targetRevisionId = item.revisionId || item.postId;
+
+              return (
+                <div
+                  key={`mobile-${item.postId}-${item.revisionId || ''}`}
+                  className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card p-4 shadow-2xs"
+                >
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-semibold break-words text-foreground">
+                        {item.title}
+                      </p>
+                      <Badge
+                        variant="outline"
+                        className="mt-0.5 shrink-0 px-1.5 py-0 font-mono text-[10px]"
+                      >
+                        v{item.revisionVersion}
+                      </Badge>
+                    </div>
+                    {item.excerpt && (
+                      <p className="line-clamp-2 text-xs break-words text-muted-foreground">
+                        {item.excerpt}
+                      </p>
+                    )}
+                    <p className="text-[11px] text-muted-foreground">
+                      {item.typeLabel || item.type} • {item.formattedCreatedAt}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                    <span className="font-medium break-words text-foreground">
+                      {item.author.displayName || item.author.name}
+                    </span>
+                    {item.author.role !== 'MEMBER' && (
+                      <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+                        {item.author.role}
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge
+                      variant="outline"
+                      className={cn('rounded-full', priorityBadgeClass(item.priority))}
+                    >
+                      {item.isHighPriority && <ShieldAlert className="mr-1 inline size-3" />}
+                      {item.priorityLabel}
+                    </Badge>
+                    <Badge variant="secondary" className="rounded-full text-xs">
+                      {item.postStatusLabel || item.statusLabel}
+                    </Badge>
+                    {item.aiFlags.length > 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                        <Flag className="size-3.5 shrink-0" />
+                        {item.aiFlags.length} cờ AI
+                      </span>
+                    )}
+                    {item.activeReporterCount > 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
+                        <ShieldAlert className="size-3.5 shrink-0" />
+                        {item.activeReporterCount} báo cáo
+                      </span>
+                    )}
+                  </div>
+
+                  <Separator className="bg-border/60" />
+
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {isOwn && (
+                      <p className="mr-auto flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <AlertTriangle className="size-3" /> Bài của bạn
+                      </p>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-1 rounded-xl px-2.5 text-xs"
+                      onClick={() => setDetailRevisionId(targetRevisionId)}
+                    >
+                      <Eye className="size-3.5" /> Xem xét
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-8 gap-1 rounded-xl bg-emerald-600 px-2.5 text-xs font-medium text-white hover:bg-emerald-700"
+                      disabled={!decidable}
+                      title={
+                        decidable ? 'Duyệt bài viết' : 'Bạn không thể tự duyệt bài của chính mình'
+                      }
+                      onClick={() => setDecisionTarget({ item, decision: ReviewDecision.APPROVE })}
+                    >
+                      <Check className="size-3.5" /> Duyệt
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-1 rounded-xl px-2.5 text-xs text-destructive hover:bg-destructive/10"
+                      disabled={!decidable}
+                      title={
+                        decidable ? 'Từ chối bài viết' : 'Bạn không thể tự duyệt bài của chính mình'
+                      }
+                      onClick={() => setDecisionTarget({ item, decision: ReviewDecision.REJECT })}
+                    >
+                      <X className="size-3.5" /> Từ chối
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop / Tablet Table (>= 768px) */}
+          <div className="hidden overflow-hidden rounded-2xl border border-border/70 bg-card md:block">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Bài viết</TableHead>
-                  <TableHead>Tác giả</TableHead>
-                  <TableHead>Ưu tiên</TableHead>
-                  <TableHead>Cảnh báo</TableHead>
-                  <TableHead>Trạng thái</TableHead>
-                  <TableHead className="text-right">Thao tác</TableHead>
+                  <TableHead className="px-2.5">Bài viết</TableHead>
+                  <TableHead className="px-2.5">Tác giả</TableHead>
+                  <TableHead className="px-2.5">Ưu tiên</TableHead>
+                  <TableHead className="px-2.5">Cảnh báo</TableHead>
+                  <TableHead className="px-2.5">Trạng thái</TableHead>
+                  <TableHead className="px-2.5 text-right">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -210,15 +333,26 @@ export function ReviewQueueTable() {
 
                   return (
                     <TableRow key={item.postId + '-' + (item.revisionId || '')}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-foreground">{item.title}</p>
-                          <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0">
+                      <TableCell className="min-w-[180px] max-w-[300px] p-2.5 whitespace-normal">
+                        <div className="flex items-start gap-1.5">
+                          <p
+                            className="line-clamp-2 font-medium break-words text-foreground"
+                            title={item.title}
+                          >
+                            {item.title}
+                          </p>
+                          <Badge
+                            variant="outline"
+                            className="mt-0.5 shrink-0 px-1.5 py-0 font-mono text-[10px]"
+                          >
                             v{item.revisionVersion}
                           </Badge>
                         </div>
                         {item.excerpt && (
-                          <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                          <p
+                            className="mt-0.5 line-clamp-1 text-xs break-words text-muted-foreground"
+                            title={item.excerpt}
+                          >
                             {item.excerpt}
                           </p>
                         )}
@@ -226,61 +360,65 @@ export function ReviewQueueTable() {
                           {item.typeLabel || item.type} • {item.formattedCreatedAt}
                         </p>
                       </TableCell>
-                      <TableCell className="text-sm">
-                        <span className="font-medium">{item.author.displayName || item.author.name}</span>
-                        {item.author.role !== 'MEMBER' && (
-                          <Badge variant="outline" className="ml-1.5 text-[10px] px-1 py-0">
-                            {item.author.role}
-                          </Badge>
-                        )}
+                      <TableCell className="min-w-[125px] max-w-[180px] p-2.5 text-sm whitespace-normal">
+                        <div className="flex flex-col items-start gap-1">
+                          <span className="line-clamp-2 font-medium break-words">
+                            {item.author.displayName || item.author.name}
+                          </span>
+                          {item.author.role !== 'MEMBER' && (
+                            <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+                              {item.author.role}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="p-2.5 whitespace-nowrap">
                         <Badge
                           variant="outline"
-                          className={`rounded-full ${priorityBadgeClass(item.priority)}`}
+                          className={cn('rounded-full', priorityBadgeClass(item.priority))}
                         >
-                          {item.isHighPriority && <ShieldAlert className="h-3 w-3 mr-1 inline" />}
+                          {item.isHighPriority && <ShieldAlert className="mr-1 inline size-3" />}
                           {item.priorityLabel}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="p-2.5 whitespace-normal">
                         {item.aiFlags.length > 0 || item.activeReporterCount > 0 ? (
-                          <span className="inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                          <div className="flex flex-col items-start gap-1 text-xs text-amber-600 dark:text-amber-400">
                             {item.aiFlags.length > 0 && (
-                              <span className="inline-flex items-center gap-1">
-                                <Flag className="h-3.5 w-3.5" />
+                              <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                                <Flag className="size-3.5 shrink-0" />
                                 {item.aiFlags.length} cờ AI
                               </span>
                             )}
                             {item.activeReporterCount > 0 && (
-                              <span className="inline-flex items-center gap-1 text-destructive font-medium">
-                                <ShieldAlert className="h-3.5 w-3.5" />
+                              <span className="inline-flex items-center gap-1 font-medium whitespace-nowrap text-destructive">
+                                <ShieldAlert className="size-3.5 shrink-0" />
                                 {item.activeReporterCount} báo cáo
                               </span>
                             )}
-                          </span>
+                          </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="p-2.5 whitespace-nowrap">
                         <Badge variant="secondary" className="rounded-full text-xs">
                           {item.postStatusLabel || item.statusLabel}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-1.5">
+                      <TableCell className="p-2.5 text-right whitespace-nowrap">
+                        <div className="flex flex-wrap items-center justify-end gap-1.5 lg:flex-nowrap">
                           <Button
                             size="sm"
                             variant="outline"
-                            className="gap-1 rounded-xl text-xs h-8"
+                            className="h-8 shrink-0 gap-1 rounded-xl px-2.5 text-xs"
                             onClick={() => setDetailRevisionId(targetRevisionId)}
                           >
-                            <Eye className="h-3.5 w-3.5" /> Xem xét
+                            <Eye className="size-3.5" /> Xem xét
                           </Button>
                           <Button
                             size="sm"
-                            className="gap-1 rounded-xl text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                            className="h-8 shrink-0 gap-1 rounded-xl bg-emerald-600 px-2.5 text-xs font-medium text-white hover:bg-emerald-700"
                             disabled={!decidable}
                             title={
                               decidable
@@ -291,12 +429,12 @@ export function ReviewQueueTable() {
                               setDecisionTarget({ item, decision: ReviewDecision.APPROVE })
                             }
                           >
-                            <Check className="h-3.5 w-3.5" /> Duyệt
+                            <Check className="size-3.5" /> Duyệt
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="gap-1 rounded-xl text-xs h-8 text-destructive hover:bg-destructive/10"
+                            className="h-8 shrink-0 gap-1 rounded-xl px-2.5 text-xs text-destructive hover:bg-destructive/10"
                             disabled={!decidable}
                             title={
                               decidable
@@ -307,12 +445,12 @@ export function ReviewQueueTable() {
                               setDecisionTarget({ item, decision: ReviewDecision.REJECT })
                             }
                           >
-                            <X className="h-3.5 w-3.5" /> Từ chối
+                            <X className="size-3.5" /> Từ chối
                           </Button>
                         </div>
                         {isOwn && (
                           <p className="mt-1 flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
-                            <AlertTriangle className="h-3 w-3" /> Bài của bạn
+                            <AlertTriangle className="size-3" /> Bài của bạn
                           </p>
                         )}
                       </TableCell>
@@ -331,9 +469,9 @@ export function ReviewQueueTable() {
                 aria-label="Trang trước"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="rounded-xl h-8 w-8"
+                className="size-8 rounded-xl"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="size-4" />
               </Button>
               <span className="text-xs text-muted-foreground">
                 Trang {page} / {totalPages}
@@ -344,9 +482,9 @@ export function ReviewQueueTable() {
                 aria-label="Trang sau"
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
-                className="rounded-xl h-8 w-8"
+                className="size-8 rounded-xl"
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="size-4" />
               </Button>
             </div>
           )}
@@ -360,9 +498,7 @@ export function ReviewQueueTable() {
           onOpenChange={(open) => !open && setDetailRevisionId(null)}
           revisionId={detailRevisionId}
           onDecide={(dec) => {
-            const item = items.find(
-              (i) => (i.revisionId || i.postId) === detailRevisionId
-            );
+            const item = items.find((i) => (i.revisionId || i.postId) === detailRevisionId);
             if (item) {
               setDecisionTarget({
                 item,

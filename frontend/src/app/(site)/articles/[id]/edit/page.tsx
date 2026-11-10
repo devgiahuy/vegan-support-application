@@ -3,14 +3,7 @@
 import * as React from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import {
-  Home,
-  ChevronRight,
-  Pencil,
-  ArrowLeft,
-  AlertCircle,
-  Loader2,
-} from 'lucide-react';
+import { Home, ChevronRight, Pencil, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuthGuard } from '@/components/shared/auth-guard';
 import { PostEditorForm } from '@/features/post/components/post-editor-form';
@@ -113,7 +106,7 @@ export default function EditPostPage() {
           <ReviewStatusBanner
             postId={article.id}
             postTitle={article.title}
-            postStatus={article.status}
+            postStatus={article.revisionStatus ?? article.status}
             revisionId={article.revisionId}
             revisionVersion={article.revisionVersion ?? article.version}
             publishedRevisionVersion={article.publishedRevisionVersion}

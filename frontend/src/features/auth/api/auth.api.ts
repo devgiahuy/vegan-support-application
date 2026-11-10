@@ -20,14 +20,6 @@ export interface LoginPayload {
   password: string;
 }
 
-/**
- * Ghi chú P3 (FR-011): Đăng nhập Google/Apple CHƯA được tích hợp vì backend chưa
- * công bố endpoint OAuth trong contract đã `READY` (`docs/api/auth.md`).
- * Nút Google/Apple trên UI chỉ là placeholder ("sẽ sớm khả dụng"), không gọi API,
- * không xử lý callback, không suy diễn role/quyền. Không đánh dấu hoàn thành
- * trong `BACKEND_INTEGRATION.md` cho tới khi backend chốt contract.
- */
-
 export const authApi = {
   register: async (values: RegisterFormValues): Promise<AuthSession> => {
     const payload = authMapper.toRegisterDto(values);

@@ -1,5 +1,29 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Đồng bộ giao diện và luồng tự động duyệt cho Contributor khi đăng công thức, cẩm nang và video — Updated 2026-11-10
+
+Cập nhật toàn bộ consumer `POST /posts/{id}/submit` trên web (`features/review`, công thức, cẩm nang, video ẩm thực) đọc trạng thái `revision.status` thực tế từ backend thay vì mặc định hiển thị "Chờ kiểm duyệt". Khi Contributor tạo mới hoặc xuất bản sạch nhận `PUBLISHED`, modal thành công ở `/recipes/new` hiển thị trạng thái "Đăng công thức thành công!" / "Đã xuất bản" và bỏ nút "Phê duyệt ngay"; các luồng cẩm nang (`/articles/new`, `/articles/[id]/edit`) và video (`/videos/new`) thực hiện đủ `POST/PATCH /posts` → `POST /posts/:id/submit` và hiển thị thông báo tự động xuất bản (Admin và nội dung `PENDING_REVIEW`/`FLAGGED`/`QUARANTINED` vẫn giữ luồng kiểm duyệt). Đã pass `tsc --noEmit`, scoped ESLint (0 lỗi), `npm test` (103 files / 827 tests), `npm run build` (47 routes) và `git diff --check`; chưa kiểm thử tương tác trực tiếp trên trình duyệt và chưa cập nhật mobile. Giữ nguyên tỷ lệ hoàn thành tính năng và giữ trạng thái endpoint `CHANGING` chờ mobile/backend gates.
+
+## Đồng bộ ảnh đại diện tài khoản trên trang chi tiết nội dung — Updated 2026-11-10
+
+Gỡ ảnh đại diện giữ chỗ cứng (`i.pravatar.cc`) trong `RecipeMapper` và bổ sung tầng chuẩn hóa hiển thị tác giả (`resolveAuthorDisplay`) cùng cơ chế đồng bộ `useAuthStore` và làm mới cache công thức, video, bài viết, bình luận khi cập nhật hồ sơ tại `/profile`. Đảm bảo `/recipes/:id`, `/videos/:id`, `/articles/:id`, thẻ nội dung và bình luận hiển thị đúng ảnh đại diện thật của tài khoản hoặc chữ viết tắt khi tài khoản chưa có/vừa xóa ảnh. Giữ nguyên tỷ lệ hoàn thành tính năng. Chi tiết kiểm chứng tại WORK-LOG.
+
+## Sửa double toast khi vote ở trang chi tiết bài viết — Updated 2026-11-10
+
+Gỡ callback `handleVoteChange` hiển thị toast trùng (`"Đã ghi nhận đánh giá của bạn!"`) khỏi hai `VoteControl` trong `PostDetailView` (`/articles/[id]`), để `VoteControl` tự hiển thị một thông báo đúng trạng thái upvote/downvote/hủy bình chọn giống trang công thức và video. Giữ nguyên tỷ lệ hoàn thành tính năng. Chi tiết kiểm chứng tại WORK-LOG.
+
+## Ẩn thanh dung lượng khi tải ảnh — Updated 2026-11-10
+
+Gỡ bỏ thanh và chỉ báo hạn ngạch dung lượng lưu trữ khỏi các thành phần tải ảnh (`ImageUploader`, phần đầu hộp thoại `AdminContentEditorDialog` và dòng `Dung lượng khả dụng` trong `CustomMealPhotoUploader` nhưng vẫn giữ kiểm tra chặn khi hết hạn ngạch). Giữ thanh hạn ngạch `StorageQuotaWidget` trong `VideoUploader` (cho luồng tải/đăng video) và các màn hình quản lý lưu trữ (`/profile?tab=storage`, `/admin/storage`). Giữ nguyên tỷ lệ hoàn thành tính năng. Chi tiết kiểm chứng tại WORK-LOG.
+
+## Sửa responsive giao diện Contributor — Updated 2026-11-10
+
+Điều chỉnh độ rộng cột và thanh thao tác ở `ReviewQueueTable` (kèm danh sách thẻ cho màn hình `< 768px`) để hiển thị đủ cả ba nút `Xem xét`, `Duyệt`, `Từ chối` không bị cắt khuất; sửa modal gửi công thức thành công ở `/recipes/new` dùng flex layout với `sm:max-w-xl` để hộp thông tin và 3 nút thao tác không tràn hay đè viền trên Contributor/Admin. Giữ nguyên tỷ lệ hoàn thành tính năng. Chi tiết kiểm chứng tại WORK-LOG.
+
+## Rà soát DTO frontend — Updated 2026-11-10
+
+Dọn các trường response và kiểu payload SSE không có consumer được xác định; giữ nguyên chức năng và tỷ lệ hoàn thành. Chi tiết kiểm chứng tại WORK-LOG.
+
 ## Xóa cuộc trò chuyện — Updated 2026-11-09
 
 Tài khoản đã đăng nhập có thể xóa cuộc trò chuyện của mình khỏi lịch sử trên web và mobile sau khi xác nhận. Backend xóa mềm, giữ nội dung theo chính sách lưu trữ; phiên đang nhận câu trả lời phải chờ hoàn tất. Đã kiểm tra quyền sở hữu, trạng thái xử lý và khả năng truy cập sau xóa bằng cơ sở dữ liệu riêng.

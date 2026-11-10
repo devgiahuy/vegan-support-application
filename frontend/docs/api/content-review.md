@@ -2,7 +2,7 @@
 # Content Review
 
 ## POST `/api/v1/posts/{id}/submit`
-Submit một immutable draft revision để Admin review
+Submit một immutable draft revision để duyệt hoặc xuất bản
 - operationId: `submitPostRevision`
 - Params: `path:id* (string)`
 - Request: `SubmitPostRequest` (required)

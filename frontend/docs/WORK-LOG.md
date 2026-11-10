@@ -1,5 +1,82 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-10] — Tự động duyệt & cập nhật popup/trạng thái đăng công thức, cẩm nang, video cho Contributor
+
+- **Mục tiêu**: điều chỉnh popup thành công của Contributor khi tạo công thức ở `/recipes/new` và đồng bộ luồng tạo/sửa/nộp nội dung cho công thức, cẩm nang (`/articles/new`, `/articles/[id]/edit`) và video (`/videos/new`) theo rule backend mới (Contributor hợp lệ tự động xuất bản; Member, Admin duyệt chéo và bài `FLAGGED`/`QUARANTINED` vẫn vào kiểm duyệt).
+- **Thay đổi**:
+  - `src/features/review/`:
+    - Mở rộng `SubmitPostResponseDataDto` / `SubmitPostResult` và `ContentReviewMapper.toSubmitResult` đọc `postStatus`, `revisionStatus`, `publishedRevisionVersion`, `publishedAt`, `isAutoPublished`.
+    - `reviewApi.submitPost` trả về `SubmitPostResult` đã map qua mapper; `useSubmitPostMutation` toast theo `isAutoPublished` / `FLAGGED`/`QUARANTINED` / `PENDING_REVIEW`, invalidate thêm cache `POST_QUERY_KEYS`, `RECIPE_QUERY_KEYS`, `VIDEO_QUERY_KEYS` và xử lý lỗi xung đột `409`.
+    - `SubmitReviewDialog` và `ReviewStatusBanner` đổi nhãn hành động sang `"Xuất bản nội dung"` / `"Xuất bản ngay"` / `"Xuất bản lại"` cho Contributor và truyền `SubmitPostResult` về caller.
+  - Công thức (`src/features/recipe/` & `src/app/(site)/recipes/`):
+    - Thêm `revisionStatus` vào `Recipe` và `RecipeMapper.toModel`; `submitSavedRecipe` dùng `SubmitPostResult` để cập nhật `status`, `revisionStatus`, `publishedRevisionVersion`, `publishedAt`; `useCreateAndSubmitRecipeMutation` / `useUpdateAndSubmitRecipeMutation` toast theo trạng thái thực tế.
+    - `/recipes/new`: modal thành công phân nhánh theo `revisionStatus ?? status` (`PUBLISHED` hiển thị icon `CheckCircle2`, tiêu đề `"Đăng công thức thành công!"`, badge `"Đã xuất bản"`, hộp thông tin tự động xuất bản công khai và 2 nút `"Về kho công thức"` / `"Xem bài viết của bạn"`, bỏ hẳn khối Ban biên tập pending và nút `"Phê duyệt ngay"`; `FLAGGED`/`QUARANTINED` hiện `"Đã ghi nhận công thức!"` / `"Cần rà soát"`; `PENDING_REVIEW` hiện `"Gửi công thức thành công!"` / `"Chờ kiểm duyệt"`).
+    - `RecipeEditorForm`, `RecipeEditorReview`, `/recipes/[id]/edit`, `RecipeDetailView`: truyền `autoPublishEligible={isContributor}` và ưu tiên `revisionStatus ?? status` cho `ReviewStatusBanner`.
+  - Cẩm nang (`src/features/post/` & `src/app/(site)/articles/[id]/edit/page.tsx`):
+    - Thêm `revisionStatus` vào `Article` và `PostMapper.toModel`; bổ sung `ArticleSubmitForReviewError`, `submitSavedArticle`, `useCreateAndSubmitArticleMutation`, `useUpdateAndSubmitArticleMutation`.
+    - `PostEditorForm`: tách rõ `isContributor` vs `isAdmin` (Admin cần duyệt chéo, không hiển thị "Tự động xuất bản"), gắn luồng `'SUBMIT'` gọi mutation create/update + submit thực tế, lỗi submit chuyển về `/articles/:id/edit` để giữ bản nháp; `PostDetailView` và `/articles/[id]/edit` gắn `ReviewStatusBanner` + `ReviewHistoryDialog` với `revisionStatus ?? status`.
+  - Video (`src/features/video/` & `src/app/(site)/videos/new/page.tsx`):
+    - Thêm `revisionStatus` vào `Video` và `VideoMapper.toModel`; bổ sung `VideoSubmitForReviewError`, `submitSavedVideo`, `useCreateAndSubmitVideoMutation`; dọn double toast và lời gọi `reviewApi` trực tiếp khỏi `app/(site)/videos/new/page.tsx`; `VideoDetailView` dùng `revisionStatus ?? status` cho banner và badge trạng thái.
+  - Unit tests: mở rộng `content-review.mapper.test.ts`, `review.api.test.ts`, `recipe.mapper.test.ts`, `post.mapper.test.ts`, `video.mapper.test.ts`; thêm mới `recipe.queries.test.ts`, `post.queries.test.ts`, `video.queries.test.ts`.
+- **Kiểm chứng**:
+  - `node node_modules/typescript/bin/tsc --noEmit`: 0 lỗi.
+  - `npx eslint` trên toàn bộ 34 file sửa/tạo mới: 0 lỗi (23 cảnh báo có sẵn trước đó ở `videos/new/page.tsx`, `post-detail-view.tsx`, `recipe-detail-view.tsx`, `video-detail-view.tsx`).
+  - `npx prettier --check` trên 34 file sửa/tạo mới: đạt chuẩn Prettier 100%.
+  - `npm test`: `103 passed (103)` test files, `827 passed (827)` tests.
+  - `npm run build`: build thành công 47/47 routes (chỉ có cảnh báo có sẵn `middleware` deprecated).
+  - `git diff --check -- src/`: exit code 0.
+  - Lưu ý: chưa chạy kiểm thử tương tác trực tiếp trên trình duyệt thực; cập nhật `docs/BACKEND_INTEGRATION.md` giữ `POST /posts/{id}/submit` ở `CHANGING` vì mobile và backend release gates chưa hoàn tất.
+- **PROGRESS**: giữ nguyên tỷ lệ hoàn thành tính năng.
+
+## [2026-11-10] — Đồng bộ ảnh đại diện tài khoản trên `/recipes/:id`, `/videos/:id`, `/articles/:id`
+
+- **Mục tiêu**: khắc phục lỗi `/recipes/:id` hiển thị ảnh đại diện giả mặc định (`i.pravatar.cc/80?img=32`) thay vì ảnh tài khoản thật (hoặc chữ cái viết tắt khi chưa có/đã xóa ảnh), đồng thời đảm bảo mọi màn hình `/recipes/:id`, `/videos/:id`, `/articles/:id`, thẻ nội dung và bình luận luôn đồng bộ tức thì với ảnh đại diện của tài khoản.
+- **Thay đổi**:
+  - `src/features/recipe/mappers/recipe.mapper.ts` & `recipe.mapper.test.ts`: bỏ fallback cứng `'https://i.pravatar.cc/80?img=32'`, giữ `author.avatarUrl` thật (`undefined` nếu rỗng/null).
+  - `src/lib/author-display.ts` & `author-display.test.ts`: thêm `getAuthorInitials` và `resolveAuthorDisplay` ưu tiên `displayName`, `avatarUrl` (kể cả rỗng khi vừa xóa ảnh) và `initials` từ `useAuthStore.user` khi tài khoản hiện tại là tác giả hoặc chủ bình luận (`assumeOwnerIfMeId`).
+  - `src/features/profile/queries/profile.queries.ts`, `profile.queries.test.ts` & `src/app/(site)/profile/page.tsx`: xuất hàm `syncProfileUpdateCaches` cập nhật `useAuthStore`, `PROFILE_QUERY_KEYS.detail()`, `AUTH_QUERY_KEYS.me()` và invalidate cache `PROFILE`, `RECIPE`, `VIDEO`, `POST`, `COMMUNITY`, `ADMIN_CONTENT`, `CONTENT_REVIEW` khi `PATCH /users/me` thành công; đồng bộ lại `useAuthStore` ở `/profile` khi `id`/`avatarUrl`/`displayName`/`role` thay đổi.
+  - Cập nhật `RecipeDetailView`, `RecipeCard`, `VideoDetailView`, `VideoCard`, `PostDetailView`, `PostCard`, `CommentItem` dùng `resolveAuthorDisplay`, không render `<AvatarImage>` khi `avatarUrl` rỗng để fallback `initials` hiển thị sạch.
+  - `src/lib/author-avatar-sync.test.ts`: bổ sung kiểm thử render SSR cho `RecipeDetailView`, `RecipeCard`, `VideoDetailView`, `VideoCard`, `PostDetailView`, `PostCard` và `CommentItem`.
+- **Kiểm chứng**: `node node_modules/typescript/bin/tsc --noEmit` (0 lỗi), ESLint các file thêm/sửa (0 lỗi; còn 32 cảnh báo có sẵn trước đó), `npm test` (100 files / 806 tests pass, gồm `author-display.test.ts`, `author-avatar-sync.test.ts`, `profile.queries.test.ts`, `recipe.mapper.test.ts`), `npm run build` (47 trang pass, có cảnh báo có sẵn `middleware` deprecated) và `git diff --check` pass. Chưa kiểm thử tương tác trực tiếp trên trình duyệt.
+- **PROGRESS**: giữ nguyên tỷ lệ hoàn thành tính năng.
+
+## [2026-11-10] — Sửa lỗi double toast khi bấm mũi tên vote ở `/articles/[id]`
+
+- **Mục tiêu**: khắc phục tình trạng bấm mũi tên upvote/downvote trên trang chi tiết bài viết (`/articles/[id]`) bị hiển thị 2 toast cùng lúc (toast trạng thái từ `VoteControl` kèm toast `"Đã ghi nhận đánh giá của bạn!"` từ `PostDetailView`).
+- **Thay đổi**:
+  - `src/features/post/components/post-detail-view.tsx`: gỡ `handleVoteChange` và prop `onVoteChange={handleVoteChange}` ở cả `VoteControl` desktop (cột trái) và mobile (banner), đồng bộ với `RecipeDetailView` và `VideoDetailView` để chỉ giữ 1 toast mô tả đúng thao tác từ `VoteControl`.
+- **File chính**: `src/features/post/components/post-detail-view.tsx`.
+- **Kiểm chứng**: `npx eslint src/features/post/components/post-detail-view.tsx` (0 lỗi, 6 cảnh báo unused import có sẵn từ trước), `node node_modules/typescript/bin/tsc --noEmit` (0 lỗi), `npm test` (97 files / 793 tests pass), `npm run build` (47 trang pass, có cảnh báo có sẵn `middleware` deprecated) và `git diff --check` pass. Chưa kiểm tra trực tiếp trên trình duyệt.
+- **PROGRESS**: giữ nguyên tỷ lệ hoàn thành tính năng.
+
+## [2026-11-10] — Ẩn thanh dung lượng khi tải ảnh, chỉ hiển thị khi tải video
+
+- **Mục tiêu**: ẩn thanh hạn ngạch dung lượng lưu trữ khi người dùng tải ảnh trên các trang tạo/sửa nội dung và món ăn riêng, chỉ giữ hiển thị thanh dung lượng khi tải video (và tại trang quản lý lưu trữ).
+- **Thay đổi**:
+  - `src/features/post/components/image-uploader.tsx`: bỏ import và hiển thị `<StorageQuotaWidget variant="compact" className="pt-2" />` khỏi trình tải ảnh bìa (áp dụng cho tạo/sửa công thức, bài viết, ảnh bìa video và trình soạn nội dung admin).
+  - `src/features/admin-content/components/admin-content-editor-dialog.tsx`: bỏ `<StorageQuotaWidget variant="compact" className="mx-6 -mb-2" />` đặt cố định trên đầu hộp thoại soạn thảo để không hiện ở bước chọn loại, tạo công thức, tạo bài viết và không bị lặp ở nhánh video.
+  - `src/features/custom-meal/components/custom-meal-photo-uploader.tsx`: bỏ icon `HardDrive` và khối hiển thị `Dung lượng khả dụng: ...`; giữ lại `useStorageUsageQuery()` và kiểm tra `isStorageExceeded` để vẫn ngăn tải ảnh mới khi tài khoản hết hạn ngạch.
+  - Giữ nguyên `<StorageQuotaWidget variant="compact" className="pt-2" />` trong `src/features/video/components/video-uploader.tsx` và các trang quản lý lưu trữ (`/profile?tab=storage`, `/admin/storage`).
+- **Kiểm chứng**: `node node_modules/typescript/bin/tsc --noEmit` (0 lỗi), ESLint các file sửa (0 lỗi; còn 1 cảnh báo có sẵn `Button` chưa dùng tại `custom-meal-photo-uploader.tsx`), `npm test` (98 files / 799 tests pass), `npm run build` (47 trang pass, có cảnh báo có sẵn `middleware` deprecated) và `git diff --check` pass. Chưa kiểm tra trực tiếp trên trình duyệt.
+- **PROGRESS**: giữ nguyên tỷ lệ hoàn thành tính năng.
+
+## [2026-11-10] — Sửa responsive hàng chờ duyệt Contributor và modal gửi công thức
+
+- **Mục tiêu**: khắc phục bảng hàng chờ kiểm duyệt bị tràn ngang làm khuất nút `Từ chối` và cột `Thao tác`; khắc phục modal `"Gửi công thức thành công!"` cho Contributor/Admin bị tràn viền và đè nút ở màn hình hẹp.
+- **Thay đổi**:
+  - `ReviewQueueTable`: cho phép xuống dòng (`whitespace-normal` + giới hạn `max-w` và `line-clamp-2`) ở cột `Bài viết`, xếp dọc tên tác giả và badge vai trò ở cột `Tác giả`, xếp dọc cờ AI / báo cáo ở cột `Cảnh báo`, gọn padding ô (`p-2.5`) và nút (`px-2.5`) với `lg:flex-nowrap` để hiển thị đủ `Xem xét`, `Duyệt`, `Từ chối` trên desktop; bổ sung bố cục thẻ trên mobile (`md:hidden`), `SelectGroup` và `Skeleton`.
+  - `/recipes/new` success modal: đổi `DialogContent` sang `flex flex-col` với `sm:max-w-xl`, `overflow-x-hidden overflow-y-auto`, `max-h-[calc(100dvh-2rem)]`; dùng `DialogDescription asChild` tránh lồng `<Badge>` không hợp lệ trong `<p>`; cập nhật khối `"Tiêu chuẩn chất lượng thuần thực vật"` dùng `Separator` và `DialogFooter` dùng `sm:flex-wrap sm:justify-center` cùng nút `w-full sm:w-auto` (khi `isModerator`) / `sm:flex-1` để không đè nhau hay tràn viền.
+  - `/contributor/dashboard`: đổi lưới thẻ chỉ số nhanh từ `sm:grid-cols-3` sang `md:grid-cols-3`.
+- **File chính**: `src/features/review/components/review-queue-table.tsx`, `src/app/(site)/recipes/new/page.tsx`, `src/app/(site)/contributor/dashboard/page.tsx`.
+- **Kiểm chứng**: `node node_modules/typescript/bin/tsc --noEmit` (0 lỗi), ESLint các file sửa (0 lỗi; còn 1 cảnh báo có sẵn `Layers` chưa dùng ở `contributor/dashboard/page.tsx`), `npm test` (97 files / 793 tests pass), `npm run build` (47 trang pass, có cảnh báo có sẵn `middleware` deprecated) và `git diff --check` pass. Chưa kiểm tra trực tiếp trên trình duyệt.
+- **PROGRESS**: giữ nguyên tỷ lệ hoàn thành tính năng.
+
+## [2026-11-10] — Rà soát DTO và mapper
+
+- **Thay đổi**: bỏ các trường response không được mapper sử dụng ở chat, billing, meal analysis và meal program; bỏ kiểu SSE không có consumer và cập nhật fixture mapper. Giữ các trường liên quan nguồn gốc dinh dưỡng và ràng buộc an toàn; không đổi request hoặc hành vi mapper.
+- **Kiểm chứng**: đồng bộ catalog từ OpenAPI trong repository; TypeScript, 793 tests, lint các file sửa, build 47 trang và `git diff --check` pass. Build cảnh báo convention middleware đã deprecated.
+- **Tiến độ**: không thay đổi tỷ lệ hoàn thành tính năng.
+
 ## [2026-11-09] — Cập nhật biểu tượng đang suy nghĩ
 
 - **Thay đổi**: dùng biểu tượng Sparkles của hệ thống cho trạng thái chờ chat, xoay bằng transform và tôn trọng tùy chọn giảm chuyển động.

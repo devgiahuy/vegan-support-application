@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { UploadCloud, AlertCircle, HardDrive, Loader2 } from 'lucide-react';
+import { UploadCloud, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useStorageUsageQuery } from '@/features/storage/queries/storage.queries';
@@ -116,21 +116,6 @@ export const CustomMealPhotoUploader: React.FC<CustomMealPhotoUploaderProps> = (
           Hỗ trợ JPG, PNG, WebP (tối đa 5 MB/ảnh) • {currentCount}/{maxFiles} ảnh
         </p>
       </div>
-
-      {/* Thông tin dung lượng còn lại */}
-      {storageUsage && (
-        <div className="flex items-center justify-between text-[11px] text-muted-foreground px-1">
-          <span className="flex items-center gap-1">
-            <HardDrive className="w-3 h-3 text-muted-foreground" />
-            Dung lượng khả dụng:
-          </span>
-          <span
-            className={isStorageExceeded ? 'text-destructive font-semibold' : 'text-foreground'}
-          >
-            {storageUsage.usage.remainingFormatted} / {storageUsage.usage.limitFormatted}
-          </span>
-        </div>
-      )}
 
       {isStorageExceeded && (
         <p className="text-xs text-destructive flex items-center gap-1 mt-1">

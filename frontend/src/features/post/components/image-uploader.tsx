@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils';
 import { validateImageFile } from '../utils/media-validator';
 import type { UploadedMediaMeta } from '@/features/storage/types/storage.model';
 import { uploadWithReservation } from '@/features/storage/api/storage-upload';
-import { StorageQuotaWidget } from '@/features/storage/components/storage-quota-widget';
 
 interface ImageUploaderProps {
   value?: string | null;
@@ -181,9 +180,6 @@ export function ImageUploader({
           )}
         </div>
       )}
-
-      {/* Thông tin hạn ngạch lưu trữ rút gọn */}
-      <StorageQuotaWidget variant="compact" className="pt-2" />
     </div>
   );
 }

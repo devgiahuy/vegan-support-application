@@ -15,6 +15,7 @@ import {
 import { ReviewStatusBanner } from '@/features/review/components/review-status-banner';
 import { ReviewHistoryDialog } from '@/features/review/components/review-history-dialog';
 import { useAuthStore } from '@/store/useAuthStore';
+import { UserRole } from '@/common/enums';
 import type { RecipeFormValues } from '@/features/recipe/schemas/recipe-form.schema';
 import { recipeFormToRecipe, recipeToFormValues } from '@/features/recipe/utils/recipe-form-values';
 import { getApiErrorCode } from '@/lib/api-error';
@@ -38,6 +39,7 @@ export default function EditRecipePage() {
   const isAuthor = Boolean(
     !currentUser || !recipe?.author?.id || currentUser.id === recipe.author.id
   );
+  const isContributor = currentUser?.role === UserRole.CONTRIBUTOR;
 
   const initialFormValues = React.useMemo<Partial<RecipeFormValues> | undefined>(
     () => (recipe ? recipeToFormValues(recipe) : undefined),
@@ -126,7 +128,9 @@ export default function EditRecipePage() {
                 <Pencil className="h-7 w-7 text-primary" /> Chỉnh Sửa Công Thức
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Sửa theo từng bước, xem lại rồi lưu. Bản sửa được gửi kiểm duyệt ngay khi lưu.
+                {isContributor
+                  ? 'Sửa theo từng bước, xem lại rồi lưu. Bản sửa của Người đóng góp được tự động xuất bản công khai ngay khi lưu.'
+                  : 'Sửa theo từng bước, xem lại rồi lưu. Bản sửa được gửi kiểm duyệt ngay khi lưu.'}
               </p>
             </div>
             <Button asChild variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
@@ -140,7 +144,7 @@ export default function EditRecipePage() {
           <ReviewStatusBanner
             postId={recipe.id}
             postTitle={recipe.title}
-            postStatus={recipe.status}
+            postStatus={recipe.revisionStatus ?? recipe.status}
             revisionId={recipe.revisionId}
             revisionVersion={recipe.revisionVersion ?? recipe.version}
             publishedRevisionVersion={recipe.publishedRevisionVersion}
@@ -164,7 +168,8 @@ export default function EditRecipePage() {
             onSubmit={handleSubmit}
             isSubmitting={updateMutation.isPending}
             formTitle="Cập nhật công thức món chay"
-            submitLabel="Lưu & gửi kiểm duyệt"
+            autoPublishEligible={isContributor}
+            submitLabel={isContributor ? 'Lưu & xuất bản ngay' : 'Lưu & gửi kiểm duyệt'}
           />
         </div>
       )}

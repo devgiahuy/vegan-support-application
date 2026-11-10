@@ -324,8 +324,6 @@ describe('MealAnalysisMapper', () => {
         totalWarnings: 3,
         highCount: 1,
         cautionCount: 2,
-        infoCount: 0,
-        selectedItemCount: 15,
       },
       warnings: [],
     });

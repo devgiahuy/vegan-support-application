@@ -3,8 +3,9 @@
 import * as React from 'react';
 import { CornerDownRight, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { resolveAuthorDisplay } from '@/lib/author-display';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { CommunityComment } from '../types/community.model';
 import { useDeleteCommentMutation } from '../queries/community.queries';
@@ -39,7 +40,11 @@ export function CommentItem({
   const isOwner = Boolean(
     user && comment.author && (comment.author.id === user.id || comment.author.id === 'me')
   );
-  const initials = (comment.author?.displayName ?? '?').slice(0, 1).toUpperCase();
+  const authorDisplay = resolveAuthorDisplay(comment.author, user, {
+    fallbackName: 'Người dùng ẩn danh',
+    fallbackInitials: '?',
+    assumeOwnerIfMeId: true,
+  });
 
   if (comment.isPlaceholder || !comment.content) {
     return (
@@ -52,13 +57,14 @@ export function CommentItem({
   return (
     <div className="flex items-start gap-3">
       <Avatar className="size-9 shrink-0">
-        <AvatarFallback>{initials}</AvatarFallback>
+        {authorDisplay.avatarUrl ? (
+          <AvatarImage src={authorDisplay.avatarUrl} alt={authorDisplay.name} />
+        ) : null}
+        <AvatarFallback>{authorDisplay.initials}</AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-semibold">
-            {comment.author?.displayName ?? 'Người dùng ẩn danh'}
-          </span>
+          <span className="text-sm font-semibold">{authorDisplay.name}</span>
           {comment.editedAt && (
             <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
               Đã sửa

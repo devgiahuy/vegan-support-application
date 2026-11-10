@@ -75,6 +75,8 @@ describe('RecipeMapper', () => {
     expect(model.statusLabel).toBe('Đã xuất bản');
     expect(model.version).toBe(3);
     expect(model.author.name).toBe('Đầu bếp An');
+    expect(model.author.avatarUrl).toBeNull();
+    expect(model.author.avatar).toBeUndefined();
     expect(model.servings).toBe(4);
     expect(model.prepTimeMinutes).toBe(10);
     expect(model.cookTimeMinutes).toBe(15);
@@ -317,6 +319,60 @@ describe('RecipeMapper', () => {
     const model = recipeMapper.toModel(dto);
     expect(model.isExpertAuthor).toBe(false);
     expect(model.author.isExpert).toBe(false);
+  });
+
+  it('preserves real author avatarUrl and never injects hardcoded placeholder avatar', () => {
+    const dtoWithAvatar = backendRecipeDto();
+    dtoWithAvatar.author = {
+      id: 'usr-1',
+      displayName: 'Đầu bếp An',
+      avatarUrl: 'https://res.cloudinary.com/demo/image/upload/chef-an.jpg',
+    };
+    const withAvatar = recipeMapper.toModel(dtoWithAvatar);
+    expect(withAvatar.author.avatarUrl).toBe(
+      'https://res.cloudinary.com/demo/image/upload/chef-an.jpg'
+    );
+    expect(withAvatar.author.avatar).toBe(
+      'https://res.cloudinary.com/demo/image/upload/chef-an.jpg'
+    );
+
+    const dtoWithoutAvatar = backendRecipeDto();
+    dtoWithoutAvatar.author = {
+      id: 'usr-2',
+      displayName: 'Demo Platform Contributor',
+      avatarUrl: null,
+    };
+    const withoutAvatar = recipeMapper.toModel(dtoWithoutAvatar);
+    expect(withoutAvatar.author.avatarUrl).toBeNull();
+    expect(withoutAvatar.author.avatar).toBeUndefined();
+  });
+
+  it('maps revisionStatus independently from post status for dual-revision recipes', () => {
+    const dto = backendRecipeDto();
+    dto.status = 'PUBLISHED';
+    dto.version = 4;
+    dto.publishedRevisionVersion = 3;
+    dto.revision = {
+      ...dto.revision,
+      id: 'rev-102',
+      version: 4,
+      status: 'PENDING_REVIEW',
+    };
+
+    const model = recipeMapper.toModel(dto);
+    expect(model.status).toBe(PostStatus.PUBLISHED);
+    expect(model.revisionStatus).toBe(PostStatus.PENDING_REVIEW);
+    expect(model.publishedRevisionVersion).toBe(3);
+    expect(model.version).toBe(4);
+    expect(model.revisionVersion).toBe(4);
+  });
+
+  it('leaves revisionStatus undefined when revision.status is absent', () => {
+    const dto = backendRecipeDto();
+    dto.revision = { ...dto.revision, status: undefined };
+
+    const model = recipeMapper.toModel(dto);
+    expect(model.revisionStatus).toBeUndefined();
   });
 });
 

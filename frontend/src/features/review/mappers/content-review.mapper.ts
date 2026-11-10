@@ -23,6 +23,7 @@ import type {
   ReviewQueueListResponseDto,
   ReviewRecipeIngredientDto,
   ReviewRecipeInstructionDto,
+  SubmitPostResponseDataDto,
 } from '../types/content-review.dto';
 import {
   AiFlagModel,
@@ -39,6 +40,7 @@ import {
   ReviewRecipeInstructionModel,
   ReviewRecipeModel,
   ReviewVideoModel,
+  SubmitPostResult,
 } from '../types/content-review.model';
 
 // ==========================================
@@ -357,6 +359,45 @@ export class ContentReviewMapper extends BaseMapper<ReviewQueueItemDto, ContentR
     return {
       decision: decision === ReviewDecisionEnum.APPROVE ? 'APPROVE' : 'REJECT',
       reason: reason.trim(),
+    };
+  }
+
+  toSubmitResult(dto: SubmitPostResponseDataDto | null | undefined): SubmitPostResult {
+    const postStatus = parsePostReviewStatus(safeString(pickField(dto, ['status'], 'DRAFT')));
+    const revisionRawStatus = safeString(pickField(dto?.revision, ['status'], ''));
+    const revisionStatus = revisionRawStatus
+      ? parsePostReviewStatus(revisionRawStatus)
+      : postStatus;
+    const type = parsePostType(safeString(pickField(dto, ['type'], 'BLOG')));
+    const version = safeNumber(pickField(dto, ['version'], 1));
+    const revisionVersion = safeNumber(dto?.revision?.version, version);
+    const rawPublishedRevVersion = pickField<number | null>(
+      dto,
+      ['publishedRevisionVersion'],
+      null
+    );
+    const publishedRevisionVersion =
+      typeof rawPublishedRevVersion === 'number' && Number.isFinite(rawPublishedRevVersion)
+        ? rawPublishedRevVersion
+        : null;
+    const publishedAt = safeDate(pickField(dto, ['publishedAt', 'published_at'], null));
+
+    return {
+      postId: safeString(pickField(dto, ['id'], '')),
+      type,
+      slug: safeString(pickField(dto, ['slug'], '')),
+      title: safeString(dto?.revision?.title, ''),
+      postStatus,
+      postStatusLabel: getPostReviewStatusLabel(postStatus),
+      version,
+      revisionId: safeString(dto?.revision?.id, ''),
+      revisionVersion,
+      revisionStatus,
+      revisionStatusLabel: getPostReviewStatusLabel(revisionStatus),
+      publishedRevisionVersion,
+      publishedAt,
+      formattedPublishedAt: formatDate(publishedAt),
+      isAutoPublished: revisionStatus === PostReviewStatus.PUBLISHED,
     };
   }
 }

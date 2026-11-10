@@ -28,8 +28,10 @@ import { BookmarkButton } from '@/features/community/components/bookmark-button'
 import { ReportButton } from '@/components/shared/report-button';
 import { ReportTargetKind } from '@/common/enums';
 import type { Video } from '../types/video.model';
+import { getPostStatusLabel } from '@/features/post/mappers/post.mapper';
 import { ReviewStatusBanner } from '@/features/review/components/review-status-banner';
 import { ReviewHistoryDialog } from '@/features/review/components/review-history-dialog';
+import { resolveAuthorDisplay } from '@/lib/author-display';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'next/navigation';
 
@@ -42,7 +44,13 @@ export function VideoDetailView({ video, relatedVideos }: VideoDetailViewProps) 
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const [historyDialogOpen, setHistoryDialogOpen] = React.useState(false);
-  const isAuthor = Boolean(user && video.author?.id && user.id === video.author.id);
+  const authorDisplay = resolveAuthorDisplay(video.author, user, {
+    fallbackName: 'Bếp Chay An Nhiên',
+  });
+  const isAuthor = authorDisplay.isCurrentUser;
+  const effectiveStatus = video.revisionStatus ?? video.status;
+  const displayStatusLabel =
+    isAuthor && video.revisionStatus ? getPostStatusLabel(video.revisionStatus) : video.statusLabel;
   const handleShare = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(window.location.href);
@@ -50,8 +58,8 @@ export function VideoDetailView({ video, relatedVideos }: VideoDetailViewProps) 
     }
   };
 
-  const authorName = video.author?.name || 'Bếp Chay An Nhiên';
-  const authorAvatar = video.author?.avatarUrl || '';
+  const authorName = authorDisplay.name;
+  const authorAvatar = authorDisplay.avatarUrl;
   const categoryName =
     typeof video.category === 'string' ? video.category : video.category?.name || 'Món chay';
   const views = 'stats' in video && video.stats ? video.stats.views : 0;
@@ -81,11 +89,11 @@ export function VideoDetailView({ video, relatedVideos }: VideoDetailViewProps) 
         {/* LEFT COLUMN: Video Player & Recipe Info */}
         <div className="space-y-6 lg:col-span-8">
           {/* Review Status Banner (hiển thị cho tác giả hoặc khi video chưa xuất bản) */}
-          {(isAuthor || video.status !== 'PUBLISHED') && (
+          {(isAuthor || effectiveStatus !== 'PUBLISHED') && (
             <ReviewStatusBanner
               postId={video.id}
               postTitle={video.title}
-              postStatus={video.status}
+              postStatus={effectiveStatus}
               revisionId={video.revisionId}
               revisionVersion={video.revisionVersion ?? video.version}
               publishedRevisionVersion={video.publishedRevisionVersion}
@@ -120,9 +128,9 @@ export function VideoDetailView({ video, relatedVideos }: VideoDetailViewProps) 
               <Badge variant="outline" className="text-xs">
                 {video.formattedDuration}
               </Badge>
-              {video.statusLabel && (
+              {displayStatusLabel && (
                 <Badge variant="secondary" className="text-xs">
-                  {video.statusLabel}
+                  {displayStatusLabel}
                 </Badge>
               )}
             </div>
@@ -137,7 +145,7 @@ export function VideoDetailView({ video, relatedVideos }: VideoDetailViewProps) 
                 <Avatar className="h-11 w-11 ring-2 ring-primary/20">
                   {authorAvatar ? <AvatarImage src={authorAvatar} alt={authorName} /> : null}
                   <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                    {authorName[0]}
+                    {authorDisplay.initials}
                   </AvatarFallback>
                 </Avatar>
                 <div>
@@ -272,7 +280,10 @@ export function VideoDetailView({ video, relatedVideos }: VideoDetailViewProps) 
                     {item.title}
                   </h5>
                   <p className="text-[11px] text-muted-foreground truncate">
-                    {item.author?.name || 'Bếp Chay An Nhiên'}
+                    {
+                      resolveAuthorDisplay(item.author, user, { fallbackName: 'Bếp Chay An Nhiên' })
+                        .name
+                    }
                   </p>
                   <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                     <span>

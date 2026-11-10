@@ -13,7 +13,9 @@ import {
   Share2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { resolveAuthorDisplay } from '@/lib/author-display';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/store/useAuthStore';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -28,6 +30,7 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, className, horizontal = false }: PostCardProps) {
+  const user = useAuthStore((s) => s.user);
   // Trạng thái lưu giữ ở state local (API bookmark chưa có), không dùng store toàn cục.
   const [isSaved, setIsSaved] = React.useState<boolean>(
     ('saved' in post ? post.saved : false) ?? false
@@ -44,7 +47,11 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
   const publishedDate =
     ('formattedPublishedAt' in post ? post.formattedPublishedAt : post.publishedAt) || '';
   const summary = ('excerpt' in post ? post.excerpt : post.summary) || '';
-  const authorAvatar = ('avatar' in post.author ? post.author.avatar : post.author.avatarUrl) || '';
+  const authorDisplay = resolveAuthorDisplay(post.author, user, {
+    fallbackName: 'Tác giả VeggieConnect',
+  });
+  const authorName = authorDisplay.name;
+  const authorAvatar = authorDisplay.avatarUrl;
   const score = 'stats' in post ? post.stats.likes : post.score;
   const views = 'stats' in post ? post.stats.views : post.views;
   const commentCount = 'stats' in post ? post.stats.comments : post.commentCount;
@@ -138,20 +145,20 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
                     post.status === 'PENDING_REVIEW' || post.status === 'PENDING'
                       ? 'bg-amber-500/90 text-white'
                       : post.status === 'REJECTED'
-                      ? 'bg-destructive/90 text-destructive-foreground'
-                      : post.status === 'DRAFT'
-                      ? 'bg-slate-700/90 text-white'
-                      : 'bg-muted text-muted-foreground'
+                        ? 'bg-destructive/90 text-destructive-foreground'
+                        : post.status === 'DRAFT'
+                          ? 'bg-slate-700/90 text-white'
+                          : 'bg-muted text-muted-foreground'
                   )}
                 >
                   {post.statusLabel ||
                     (post.status === 'PENDING_REVIEW' || post.status === 'PENDING'
                       ? 'Chờ duyệt'
                       : post.status === 'REJECTED'
-                      ? 'Từ chối'
-                      : post.status === 'DRAFT'
-                      ? 'Bản nháp'
-                      : post.status)}
+                        ? 'Từ chối'
+                        : post.status === 'DRAFT'
+                          ? 'Bản nháp'
+                          : post.status)}
                 </Badge>
               )}
             </div>
@@ -191,15 +198,13 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
             <div className="mt-4 flex items-center justify-between pt-3 border-t border-border/50">
               <div className="flex items-center gap-2 min-w-0">
                 <Avatar className="h-7 w-7 ring-1 ring-primary/20">
-                  <AvatarImage src={authorAvatar} alt={post.author.name} />
+                  {authorAvatar ? <AvatarImage src={authorAvatar} alt={authorName} /> : null}
                   <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                    {post.author.name.charAt(0)}
+                    {authorDisplay.initials}
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-foreground truncate">
-                    {post.author.name}
-                  </p>
+                  <p className="text-xs font-semibold text-foreground truncate">{authorName}</p>
                   <div className="flex items-center gap-1">
                     <Badge
                       variant="outline"
@@ -263,20 +268,20 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
                 post.status === 'PENDING_REVIEW' || post.status === 'PENDING'
                   ? 'bg-amber-500/90 text-white'
                   : post.status === 'REJECTED'
-                  ? 'bg-destructive/90 text-destructive-foreground'
-                  : post.status === 'DRAFT'
-                  ? 'bg-slate-700/90 text-white'
-                  : 'bg-muted text-muted-foreground'
+                    ? 'bg-destructive/90 text-destructive-foreground'
+                    : post.status === 'DRAFT'
+                      ? 'bg-slate-700/90 text-white'
+                      : 'bg-muted text-muted-foreground'
               )}
             >
               {post.statusLabel ||
                 (post.status === 'PENDING_REVIEW' || post.status === 'PENDING'
                   ? 'Chờ duyệt'
                   : post.status === 'REJECTED'
-                  ? 'Từ chối'
-                  : post.status === 'DRAFT'
-                  ? 'Bản nháp'
-                  : post.status)}
+                    ? 'Từ chối'
+                    : post.status === 'DRAFT'
+                      ? 'Bản nháp'
+                      : post.status)}
             </Badge>
           )}
         </div>
@@ -347,13 +352,13 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
         <div className="mt-5 flex items-center justify-between pt-4 border-t border-border/60">
           <div className="flex items-center gap-2.5 min-w-0">
             <Avatar className="h-8 w-8 ring-1 ring-primary/20">
-              <AvatarImage src={authorAvatar} alt={post.author.name} />
+              {authorAvatar ? <AvatarImage src={authorAvatar} alt={authorName} /> : null}
               <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                {post.author.name.charAt(0)}
+                {authorDisplay.initials}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-foreground truncate">{post.author.name}</p>
+              <p className="text-xs font-semibold text-foreground truncate">{authorName}</p>
               <Badge
                 variant="outline"
                 className={cn(

@@ -6,7 +6,9 @@ import { Play, Clock, Eye, Heart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SafeImage } from '@/components/shared/safe-image';
+import { resolveAuthorDisplay } from '@/lib/author-display';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/store/useAuthStore';
 import type { Video } from '../types/video.model';
 import { VIDEO_FALLBACK_COVER, resolveVideoCover } from '@/lib/safe-image';
 
@@ -17,13 +19,17 @@ interface VideoCardProps {
 }
 
 export function VideoCard({ video, priority = false, className }: VideoCardProps) {
+  const user = useAuthStore((s) => s.user);
   // Lọc URL video (youtube watch, blob:...) khỏi `next/image`:
   // YouTube watch → thumbnail i.ytimg.com, còn lại → ảnh fallback.
   const coverImage = resolveVideoCover(video.coverImageUrl);
   const categoryName =
     typeof video.category === 'string' ? video.category : video.category?.name || 'Món chay';
-  const authorName = video.author?.name || 'Bếp Chay An Nhiên';
-  const authorAvatar = video.author?.avatarUrl || '';
+  const authorDisplay = resolveAuthorDisplay(video.author, user, {
+    fallbackName: 'Bếp Chay An Nhiên',
+  });
+  const authorName = authorDisplay.name;
+  const authorAvatar = authorDisplay.avatarUrl;
   const duration =
     video.formattedDuration ||
     (video.durationSeconds ? `${Math.floor(video.durationSeconds / 60)} phút` : '05:00');
@@ -85,7 +91,7 @@ export function VideoCard({ video, priority = false, className }: VideoCardProps
             <Avatar className="h-7 w-7 ring-1 ring-primary/20">
               {authorAvatar ? <AvatarImage src={authorAvatar} alt={authorName} /> : null}
               <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                {authorName.charAt(0)}
+                {authorDisplay.initials}
               </AvatarFallback>
             </Avatar>
             <span className="truncate text-xs font-medium text-foreground">{authorName}</span>

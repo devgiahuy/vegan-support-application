@@ -65,7 +65,6 @@ export interface EntitlementDto extends BillingBenefitsDto {
 }
 export interface EntitlementSubscriptionDto {
   productId?: string;
-  startsAt?: string;
   endsAt?: string;
   periodEndsAt?: string;
   periodDays?: number | string;

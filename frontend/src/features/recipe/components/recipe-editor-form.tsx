@@ -91,6 +91,8 @@ interface RecipeEditorFormProps {
   /** Tên form cho trình đọc màn hình. */
   formTitle?: string;
   submitLabel?: string;
+  /** Tài khoản Người đóng góp được tự động duyệt và xuất bản ngay khi gửi. */
+  autoPublishEligible?: boolean;
   /** Slot trợ lý AI ở bước Nguyên liệu (chỉ trang tạo mới dùng). */
   renderAssistant?: (
     seed: AiRecipeDraftSeed,
@@ -125,6 +127,7 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
       isSubmitting = false,
       formTitle = 'Biểu mẫu công thức món chay',
       submitLabel = 'Gửi công thức để duyệt',
+      autoPublishEligible = false,
       renderAssistant,
     }: RecipeEditorFormProps,
     ref
@@ -775,6 +778,7 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
                   values={values}
                   issues={liveIssues}
                   categoryName={categoryName}
+                  autoPublishEligible={autoPublishEligible}
                   onEdit={(target) => goTo(target)}
                   onFixIssue={focusIssue}
                 />

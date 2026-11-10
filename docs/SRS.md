@@ -110,6 +110,7 @@ User-approved 2026-10-25 allergy/composition extension: members select allergies
 
 ### FR-04 Review and moderation
 
+- **Approved change, 2026-11-10; implementation pending:** A currently approved Contributor's own recipe, handbook, or video is automatically approved and published when submitted, including submitted edits. Member content requires a decision by an eligible Contributor or Administrator. Automatic publication must preserve auditability and must not represent unreviewed nutrition estimates as verified. The existing behavior below remains in force until implementation is complete.
 - Recipe, handbook, and video content follows draft → submitted → approved/rejected publication review.
 - AI moderation and user reports create review signals, never automatic hard deletion.
 - Administrators record decisions and reasons in an audit trail.
@@ -220,6 +221,7 @@ User-approved 2026-10-25 allergy/composition extension: members select allergies
 - Only verified server-side settlement grants snapshotted benefits, once. Browser return URLs cannot grant allowances. Purchases never modify roles or bypass dietary rules, consent, provider controls or confirmation.
 - User-authorized provider conversion (2026-10-14) uses payOS exclusively for new purchases. payOS has no independent sandbox and checkout transfers real money; the development application must disclose this. Missing merchant credentials disable checkout without a simulation fallback. Application production rollout, recurring subscriptions, automatic refunds and mobile-store distribution remain deferred.
 - Historical VNPAY/local simulation orders and existing balances remain readable with original provider identity. Their old settlement/checkout routes are removed. Partial payments remain pending; only a verified fully paid provider order grants the fixed package once. Extra transferred money does not add package benefits or trigger automatic refunds.
+- Planned admin catalog management (requested 2026-11-10): an administrator can create, view, edit and withdraw packages offered to members, including their price and supported allowance options. Changes apply to future orders; existing orders and subscriptions retain their purchased snapshots. This management flow is not yet implemented.
 
 ## 6. Non-functional requirements
 
