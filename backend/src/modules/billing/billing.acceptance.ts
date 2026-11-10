@@ -223,7 +223,15 @@ const balance = async () =>
   billingEnvelope(entitlementSchema).parse(await (await request('/entitlements/me')).json()).data;
 const createOrder = async (productId: string, key = randomUUID()) =>
   billingEnvelope(billingOrderSchema).parse(
-    await (await request('/billing/orders', 'POST', { productId, idempotencyKey: key })).json(),
+    await (
+      await request('/billing/orders', 'POST', {
+        productId,
+        idempotencyKey: key,
+        expectedProductVersion: (
+          await db.billingProduct.findUniqueOrThrow({ where: { id: productId } })
+        ).version,
+      })
+    ).json(),
   ).data;
 const expectCode = (code: string) => (error: unknown) =>
   error instanceof AppError && error.code === code;

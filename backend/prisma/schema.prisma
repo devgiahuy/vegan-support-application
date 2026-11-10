@@ -47,6 +47,20 @@ model BillingProduct {
   @@map("billing_products")
 }
 
+model BillingProductAudit {
+  id         String   @id @default(uuid()) @map("_id")
+  productId  String   @map("product_id")
+  actorId    String   @map("actor_id")
+  action     String
+  reason     String
+  beforeJson String?  @map("before_json")
+  afterJson  String   @map("after_json")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([productId, createdAt])
+  @@map("billing_product_audits")
+}
+
 model PaymentOrder {
   referenceVersion    Int                @default(0) @map("reference_version")
   id                  String             @id @default(uuid()) @map("_id")

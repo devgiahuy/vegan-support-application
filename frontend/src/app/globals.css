@@ -228,14 +228,16 @@ body {
 
 
 /* ==========================================================================
-   Radix Scroll Lock Safety: Ngăn giật layout (CLS), giật Navbar và nhảy cuộn
+   Radix Scroll Lock Safety: Ngăn giật layout (CLS), giật Navbar/Sidebar sticky và nhảy cuộn
    ========================================================================== */
-body[data-scroll-locked] {
-  overflow: visible !important;
+/* Dùng selector html body[data-scroll-locked] (0,1,2) để thắng style động (0,1,1) của react-remove-scroll-bar. */
+html body[data-scroll-locked] {
+  overflow-x: clip !important;
+  overflow-y: visible !important;
   margin-right: 0px !important;
 }
 
 /* Keep the sticky restaurant map attached to the viewport while Radix locks scrolling. */
-body[data-scroll-locked]:has([data-restaurant-cluster-dialog]) {
+html body[data-scroll-locked]:has([data-restaurant-cluster-dialog]) {
   overflow: clip !important;
 }

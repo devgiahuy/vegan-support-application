@@ -80,6 +80,7 @@ export interface EntitlementDto extends BillingBenefitsDto {
   ledger?: EntitlementLedgerDto[];
 }
 export interface CreateBillingOrderRequestDto {
+  expectedProductVersion: number;
   productId: string;
   idempotencyKey: string;
 }

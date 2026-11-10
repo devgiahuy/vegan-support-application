@@ -10,6 +10,7 @@ import { ShowMoreButton, useShowMore } from '@/components/shared/show-more';
 import { LoadingState } from '@/components/shared/state-views';
 import { useAuthStore } from '@/store/useAuthStore';
 import { billingErrorMessage } from '@/features/billing/lib/billing-errors';
+import { getApiErrorCode } from '@/lib/api-error';
 import {
   billingCheckMessage,
   billingCheckTime,
@@ -159,9 +160,9 @@ function DurationPlans({
     <View className="gap-3">
       <Text className="text-2xl font-semibold text-foreground">Combo tiện ích theo thời hạn</Text>
       <Text className="text-sm leading-5 text-muted-foreground">
-        Không tự gia hạn. Mỗi chu kỳ 30 ngày được cấp lượt chat AI, quét tủ lạnh, phân tích hóa đơn và thêm ô tủ đồ ăn khi còn hạn.
+        Không tự gia hạn. Quyền lợi được cấp theo nội dung của từng gói.
       </Text>
-      <View accessibilityRole="radiogroup" className="flex-row gap-2">
+      <View accessibilityRole="radiogroup" className="flex-row flex-wrap gap-2">
         {plans.map((plan) => {
           const active = plan.id === selected.id;
           return (
@@ -173,7 +174,7 @@ function DurationPlans({
               className={cn('flex-1 items-center gap-0.5 rounded-xl border px-2 py-3', active ? 'border-primary bg-primary/10' : 'border-border bg-card')}
             >
               <Text className={cn('text-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>{plan.durationLabel}</Text>
-              {plan.savingsPercent > 0 ? <Text className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">Tiết kiệm {plan.savingsPercent}%</Text> : <Text className="text-[11px] text-muted-foreground"> </Text>}
+              <Text className="text-center text-xs text-muted-foreground">{plan.name}</Text>
             </Pressable>
           );
         })}
@@ -237,17 +238,27 @@ export default function BillingScreen() {
   );
   async function buy(productId: string) {
     setActionError(null);
+    const product = catalog.data?.products.find((item) => item.id === productId);
+    if (!product || product.version < 1) {
+      setActionError('Không xác định được phiên bản gói. Vui lòng tải lại danh sách.');
+      return;
+    }
     const key = intents.current.get(productId) ?? createChatIdempotencyKey();
     intents.current.set(productId, key);
     try {
       const order = await purchase.mutateAsync({
         productId,
         idempotencyKey: key,
+        expectedProductVersion: product.version,
       });
       intents.current.delete(productId);
       setSelectedId(order.id);
       await continueCheckout(order);
     } catch (error) {
+      if (getApiErrorCode(error) === 'BILLING_PRODUCT_CHANGED' || getApiErrorCode(error) === 'BILLING_PRODUCT_UNAVAILABLE') {
+        intents.current.delete(productId);
+        void catalog.refetch();
+      }
       setActionError(billingErrorMessage(error));
     }
   }

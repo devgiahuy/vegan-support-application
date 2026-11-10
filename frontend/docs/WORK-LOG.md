@@ -1,5 +1,49 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-10] — Sửa lỗi hiển thị lặp `30 ngày`, `90 ngày`, `360 ngày` trên card gói tiện ích ở `/billing`
+
+- **Mục tiêu**: khắc phục lỗi trên card `Gói tiện ích theo thời hạn` tại `/billing` hiển thị lặp thời hạn ở các nút chọn gói (`Gói tiện ích 30 ngày · 30 ngày`, `Gói tiện ích 90 ngày · 90 ngày`, `Gói tiện ích 360 ngày · 360 ngày`), đồng thời giữ hiển thị đầy đủ tên + thời hạn khi có gói tùy chỉnh không chứa thời hạn trong tên.
+- **Nguyên nhân**: tên các gói seed trong backend đã chứa sẵn `30 ngày` / `90 ngày` / `360 ngày` (`Gói tiện ích 30 ngày`, `Gói tiện ích 90 ngày`, `Gói tiện ích 360 ngày`), nhưng `DurationPlanCard` và `OrderRow` trong `src/features/billing/components/billing-view.tsx` nối cứng `{item.name} · {item.durationLabel}` / `{order.productName} · {order.durationLabel}` mà không kiểm tra trùng lặp ở tầng mapper.
+- **Thay đổi**:
+  - `src/features/billing/types/billing.model.ts`: bổ sung `displayName` vào `BillingProduct` và `durationSuffixLabel` vào `BillingOrder`.
+  - `src/features/billing/mappers/billing.mapper.ts`: thêm helper `hasDurationInName` (so khớp ranh giới ký tự chữ/số không phân biệt hoa thường, tránh khớp nhầm kiểu `130 ngày` với `30 ngày`), tính `displayName` trong `ProductMapper` và `durationSuffixLabel` trong `OrderMapper` để chỉ nối thời hạn khi tên gói chưa chứa sẵn thời hạn đó.
+  - `src/features/billing/components/billing-view.tsx`: `DurationPlanCard` hiển thị `{item.displayName}` và dùng `spacing={plans.length > 3 ? 2 : 0}` với `cn(...)` để giữ viền/bo góc sạch khi có nhiều gói; `OrderRow` chỉ hiển thị ` · {order.durationSuffixLabel}` khi khác rỗng.
+  - `src/features/billing/mappers/billing.mapper.test.ts` & `src/features/billing/components/billing-view.test.ts`: bổ sung unit test mapper (kèm case `Gói Tiết Kiệm · 30 ngày`, `Gói 130 ngày · 30 ngày`) và SSR render test cho `DurationPlanCard` và `OrderRow`.
+- **Kiểm chứng**:
+  - `node node_modules/typescript/bin/tsc --noEmit`: 0 lỗi.
+  - `npx eslint` trên 5 file sửa/tạo mới: 0 lỗi, 0 cảnh báo.
+  - `npx prettier --check` trên 5 file sửa/tạo mới: đạt chuẩn 100%.
+  - `npm test`: `105 passed (105)` test files, `831 passed (831)` tests (bao gồm 13 tests trong `billing.mapper.test.ts` và 2 tests trong `billing-view.test.ts`).
+  - `npm run build`: build thành công 47/47 routes (có cảnh báo có sẵn `middleware` deprecated); đã khởi động lại server `next start` cục bộ cổng 3000 và xác nhận 140/140 JS chunks trên `/billing` khớp `.next/`. Chưa kiểm thử đăng nhập trực tiếp màn `/billing` trên trình duyệt tương tác.
+  - `git diff --check -- src/ docs/`: pass.
+- **PROGRESS**: giữ nguyên tỷ lệ hoàn thành tính năng.
+
+## [2026-11-10] — Sửa lỗi sidebar/topbar bị lệch và cắt khuất khi cuộn trang và mở popup ở `/admin/dashboard?tab=billing-catalog`
+
+- **Mục tiêu**: khắc phục lỗi khi cuộn xuống trên `/admin/dashboard?tab=billing-catalog` rồi mở popup (`Chi tiết`, `Chỉnh sửa`, `Tạo gói nháp`, `Mở bán`/`Ngừng bán`), sidebar bên trái (và topbar) bị trượt lên trên làm mất logo/nhóm menu đầu và kết thúc lơ lửng giữa màn hình.
+- **Nguyên nhân**: rule `body[data-scroll-locked]` (độ ưu tiên `0,1,1`) trong `src/app/globals.css` bị thẻ `<style>` cùng selector `(0,1,1)` do `react-remove-scroll-bar` chèn động sau vào `<head>` ghi đè lại bằng `overflow: hidden !important` và `margin-right: 15px !important`, khiến `body` trở thành scroll container tại `scrollTop = 0` và làm hỏng `position: sticky` của `<aside>` và `<header>` trong `AdminLayout`.
+- **Thay đổi**:
+  - `src/app/globals.css`: đổi selector sang `html body[data-scroll-locked]` (độ ưu tiên `0,1,2`) và đặt `overflow-x: clip !important; overflow-y: visible !important; margin-right: 0px !important;` (kèm `html body[data-scroll-locked]:has([data-restaurant-cluster-dialog]) { overflow: clip !important; }`) để bảo toàn `position: sticky` của sidebar, topbar và các vùng sticky khác khi mở bất kỳ Radix Dialog/Sheet/Select/DropdownMenu nào.
+  - `src/app/(admin)/admin/layout.tsx`: đổi `min-h-screen` / `h-screen` sang `min-h-dvh` / `h-dvh` trên shell và `<aside>` cho khớp viewport động.
+- **Kiểm chứng**:
+  - `node node_modules/typescript/bin/tsc --noEmit`: 0 lỗi.
+  - `npx eslint "src/app/(admin)/admin/layout.tsx"`: 0 lỗi (còn 2 cảnh báo có sẵn `Bell`, `ShieldCheck` chưa dùng).
+  - `npm test`: `104 passed (104)` files, `828 passed (828)` tests.
+  - `npm run build`: build thành công 47/47 routes (có cảnh báo có sẵn `middleware` deprecated); đã đối chiếu CSS bundle sau build và xác nhận hành vi `sticky` trong Microsoft Edge headless (`asideTop: 0`, `headerTop: 0`, `margin-right: 0px` khi cuộn 600px và kích hoạt `[data-scroll-locked]`).
+  - `git diff --check`: pass. Chưa kiểm thử đăng nhập trực tiếp màn hình admin bằng trình duyệt tương tác.
+- **PROGRESS**: giữ nguyên tỷ lệ hoàn thành tính năng.
+
+## [2026-11-10] — Chuẩn bị danh mục gói quản trị (IN_PROGRESS)
+
+- Biểu mẫu sửa gói cho phép bỏ trống lý do; API và audit hỗ trợ lý do không được cung cấp. Lý do vẫn bắt buộc khi tạo hoặc thay đổi trạng thái bán.
+- Sửa component dashboard còn khóa nút: chỉnh sửa dùng được cho gói đang bán; mở/ngừng bán gọi mutation có phiên bản, lý do và xác nhận. Đã đồng bộ Swagger, chạy typecheck, lint, 828 tests và build; khởi động lại frontend local cổng 3000. Chưa kiểm thử thao tác trực tiếp bằng tài khoản admin.
+- Hoàn thiện API và dashboard sửa gói đang bán, mở/ngừng bán có lý do và audit; web/mobile xác nhận phiên bản gói khi tạo đơn. Smoke HTTP cô lập đạt cho thay đổi trạng thái, sửa và từ chối phiên bản cũ; acceptance billing đầy đủ dừng do thiếu hai fixture ảnh của database cô lập.
+- Đưa nút chỉnh sửa gói nháp ra danh sách; nút sửa gói đang bán và ngừng bán hiển thị trạng thái chưa khả dụng theo hợp đồng backend.
+- Tích hợp API quản trị `READY` cho danh sách, chi tiết, tạo và sửa gói nháp; kiểm tra HTTP backend cô lập cho phân quyền, xung đột phiên bản và audit. Trạng thái bán chưa kết nối vì endpoint vẫn `IN_PROGRESS`.
+- Dashboard admin có tab Gói tiện ích với danh sách và chi tiết gói đang bán lấy từ query catalog hiện có; giao diện nêu rõ CRUD chưa khả dụng. Không tích hợp API quản trị chưa `READY`.
+- Web và mobile bỏ phép tính tiết kiệm dựa trên gói một tháng, hiển thị tên để phân biệt các lựa chọn cùng thời hạn; cập nhật kiểm thử mapper tương ứng.
+- Mapper tests billing: web 12/12 và mobile 12/12 đạt. CRUD quản trị, kiểm tra phiên bản khi tạo đơn và các cổng phát hành đầy đủ vẫn chưa hoàn tất.
+
 ## [2026-11-10] — Tự động duyệt & cập nhật popup/trạng thái đăng công thức, cẩm nang, video cho Contributor
 
 - **Mục tiêu**: điều chỉnh popup thành công của Contributor khi tạo công thức ở `/recipes/new` và đồng bộ luồng tạo/sửa/nộp nội dung cho công thức, cẩm nang (`/articles/new`, `/articles/[id]/edit`) và video (`/videos/new`) theo rule backend mới (Contributor hợp lệ tự động xuất bản; Member, Admin duyệt chéo và bài `FLAGGED`/`QUARANTINED` vẫn vào kiểm duyệt).

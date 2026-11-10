@@ -103,7 +103,7 @@ export async function seedBillingProducts(prisma: PrismaClient): Promise<void> {
       });
   }
   await prisma.billingProduct.updateMany({
-    where: { id: { in: retiredBillingProductIds } },
-    data: { active: false },
+    where: { id: { in: retiredBillingProductIds }, version: 1, active: true },
+    data: { active: false, version: { increment: 1 } },
   });
 }

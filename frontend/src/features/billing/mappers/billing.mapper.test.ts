@@ -140,7 +140,7 @@ describe('billing mapper', () => {
       })
     ).toMatchObject({ provider: 'vnpay', checkoutUrl: null, pending: false });
   });
-  it('groups duration plans with savings and keeps one-time packs separate', () => {
+  it('groups duration plans without assuming their benefits are comparable', () => {
     const catalog = catalogMapper.toModel({
       enabled: true,
       provider: 'payos',
@@ -175,8 +175,8 @@ describe('billing mapper', () => {
     expect(catalog.oneTimeProducts.map((p) => p.id)).toEqual(['chat-100']);
     expect(catalog.durationPlans.map((p) => [p.id, p.durationLabel, p.savingsPercent])).toEqual([
       ['combo-1m', '30 ngày', 0],
-      ['combo-3m', '90 ngày', 15],
-      ['combo-12m', '360 ngày', 30],
+      ['combo-3m', '90 ngày', 0],
+      ['combo-12m', '360 ngày', 0],
     ]);
     expect(catalog.durationPlans[0]?.periodBenefitLabels).toEqual([
       '100 lượt chat AI mỗi 30 ngày',
@@ -184,6 +184,74 @@ describe('billing mapper', () => {
     ]);
     expect(catalog.oneTimeProducts[0]?.periodBenefitLabels).toEqual([]);
     expect(orderMapper.toModel({ durationMonths: 3 }).durationLabel).toBe('90 ngày');
+  });
+  it('avoids repeating duration labels when package names already include them', () => {
+    const catalog = catalogMapper.toModel({
+      enabled: true,
+      provider: 'payos',
+      products: [
+        {
+          id: 'combo-1m',
+          name: 'Gói tiện ích 30 ngày',
+          priceVnd: 69000,
+          chatCredits: 300,
+          durationMonths: 1,
+        },
+        {
+          id: 'combo-3m',
+          name: 'Gói tiện ích 90 ngày',
+          priceVnd: 176000,
+          chatCredits: 300,
+          durationMonths: 3,
+        },
+        {
+          id: 'combo-12m',
+          name: 'Gói tiện ích 360 ngày',
+          priceVnd: 580000,
+          chatCredits: 300,
+          durationMonths: 12,
+        },
+        {
+          id: 'combo-vip',
+          name: 'Gói Tiết Kiệm',
+          priceVnd: 99000,
+          chatCredits: 500,
+          durationMonths: 1,
+        },
+        {
+          id: 'combo-130',
+          name: 'Gói 130 ngày',
+          priceVnd: 119000,
+          chatCredits: 600,
+          durationMonths: 1,
+        },
+      ],
+    });
+    expect(catalog.durationPlans.map((plan) => plan.displayName)).toEqual([
+      'Gói tiện ích 30 ngày',
+      'Gói Tiết Kiệm · 30 ngày',
+      'Gói 130 ngày · 30 ngày',
+      'Gói tiện ích 90 ngày',
+      'Gói tiện ích 360 ngày',
+    ]);
+    expect(
+      orderMapper.toModel({
+        productName: 'Gói tiện ích 30 ngày',
+        durationMonths: 1,
+      }).durationSuffixLabel
+    ).toBe('');
+    expect(
+      orderMapper.toModel({
+        productName: 'Gói Cơ Bản',
+        durationMonths: 3,
+      }).durationSuffixLabel
+    ).toBe('90 ngày');
+    expect(
+      orderMapper.toModel({
+        productName: 'Thêm 100 lượt chat',
+        durationMonths: null,
+      }).durationSuffixLabel
+    ).toBe('');
   });
   it('adds active subscription period credits to available allowances', () => {
     const model = entitlementMapper.toModel({

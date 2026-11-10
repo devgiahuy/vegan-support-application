@@ -17,6 +17,7 @@ import {
   Newspaper,
   Menu,
   Wallet,
+  Package,
   Activity,
 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -42,6 +43,7 @@ const NAV_MONITOR = [
   { label: 'Báo cáo vi phạm', href: '/admin/dashboard?tab=reports', icon: Flag, badge: '5' },
   // { label: 'Kiểm chứng AI', href: '/admin/dashboard?tab=ai-verifications', icon: ShieldCheck },
   { label: 'Doanh thu AI', href: '/admin/dashboard?tab=ai-revenue', icon: Wallet },
+  { label: 'Gói tiện ích', href: '/admin/dashboard?tab=billing-catalog', icon: Package },
   { label: 'Truy vết AI', href: '/admin/dashboard?tab=ai-usage', icon: Activity },
   { label: 'Nhật ký hệ thống', href: '/admin/dashboard?tab=logs', icon: ScrollText },
   { label: 'Lưu trữ & Quota', href: '/admin/storage', icon: HardDrive },
@@ -49,7 +51,7 @@ const NAV_MONITOR = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <React.Suspense fallback={<div className="min-h-screen bg-background" />}>
+    <React.Suspense fallback={<div className="min-h-dvh bg-background" />}>
       <AdminLayoutInner>{children}</AdminLayoutInner>
     </React.Suspense>
   );
@@ -107,6 +109,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         return 'Giám sát AI';
       case 'ai-revenue':
         return 'Doanh thu mua quota AI';
+      case 'billing-catalog':
+        return 'Gói tiện ích';
       case 'ai-usage':
         return 'Truy vết sử dụng AI';
       case 'restaurants':
@@ -196,9 +200,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="flex min-h-screen bg-muted/20">
+    <div className="flex min-h-dvh bg-muted/20">
       {/* Sidebar desktop - sticky and self-scrolling */}
-      <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col justify-between border-r bg-card p-4 lg:flex overflow-y-auto z-30">
+      <aside className="sticky top-0 hidden h-dvh w-72 shrink-0 flex-col justify-between border-r bg-card p-4 lg:flex overflow-y-auto z-30">
         <div className="space-y-5">
           <Link href="/admin/dashboard" className="flex items-center px-2 py-1 focus:outline-none">
             <BrandLogo variant="mark" size="md" withSubtitle="Admin Portal" asLink={false} />

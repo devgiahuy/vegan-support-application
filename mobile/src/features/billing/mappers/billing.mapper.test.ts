@@ -80,7 +80,7 @@ test('historical orders preserve their provider without checkout or polling', ()
     assert.match(order.providerLabel, /Chỉ xem/);
   }
 });
-test('catalog splits one-time packs from duration plans and computes savings against the 1-month plan', () => {
+test('catalog splits one-time packs from duration plans without assuming comparable benefits', () => {
   const catalog = catalogMapper.toModel({
     enabled: true,
     provider: 'payos',
@@ -94,7 +94,7 @@ test('catalog splits one-time packs from duration plans and computes savings aga
   assert.deepEqual(catalog.durationPlans.map((item) => item.id), ['combo-1m', 'combo-12m']);
   assert.equal(catalog.durationPlans[0]!.savingsPercent, 0);
   assert.equal(catalog.durationPlans[1]!.durationLabel, '360 ngày');
-  assert.equal(catalog.durationPlans[1]!.savingsPercent, 30);
+  assert.equal(catalog.durationPlans[1]!.savingsPercent, 0);
   assert.match(catalog.durationPlans[0]!.periodBenefitLabels[0]!, /100 lượt chat AI mỗi 30 ngày/);
   assert.equal(catalog.durationPlans[0]!.periodBenefitLabels.at(-1), '+50 ô tủ đồ ăn khi còn hạn');
 });

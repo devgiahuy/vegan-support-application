@@ -158,15 +158,7 @@ export class CatalogMapper extends BaseMapper<BillingCatalogDto, BillingCatalog>
     const plans = products
       .filter((product) => product.durationMonths !== null)
       .sort((a, b) => (a.durationMonths ?? 0) - (b.durationMonths ?? 0));
-    const monthly = plans.find((plan) => plan.durationMonths === 1);
-    const durationPlans = plans.map((plan) => {
-      const fullPrice = monthly ? monthly.priceVnd * (plan.durationMonths ?? 1) : 0;
-      return {
-        ...plan,
-        savingsPercent:
-          fullPrice > plan.priceVnd ? Math.round((1 - plan.priceVnd / fullPrice) * 100) : 0,
-      };
-    });
+    const durationPlans = plans;
     return {
       enabled:
         safeBoolean(pickField(dto, ['enabled'], false)) &&

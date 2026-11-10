@@ -77,6 +77,7 @@ export interface EntitlementSubscriptionDto {
   receiptPerPeriod?: number | string;
 }
 export interface CreateBillingOrderRequestDto {
+  expectedProductVersion: number;
   productId: string;
   idempotencyKey: string;
 }

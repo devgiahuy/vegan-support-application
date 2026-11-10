@@ -1,5 +1,17 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Sửa lỗi hiển thị lặp thời hạn 30/90/360 ngày trên card gói tiện ích — Updated 2026-11-10
+
+Bổ sung chuẩn hóa nhãn hiển thị theo thời hạn trong `billing.mapper.ts` / `billing.model.ts` (`BillingProduct.displayName` và `BillingOrder.durationSuffixLabel`) để chỉ ghép thêm `durationLabel` khi tên gói chưa chứa sẵn thông tin thời hạn. Khắc phục tình trạng nút chọn gói trong `DurationPlanCard` (và dòng đơn hàng `OrderRow`) ở `/billing` hiển thị lặp `Gói tiện ích 30 ngày · 30 ngày`, `Gói tiện ích 90 ngày · 90 ngày`, `Gói tiện ích 360 ngày · 360 ngày`; giữ được khả năng phân biệt khi quản trị viên tạo nhiều gói cùng thời hạn và giữ ổn định bố cục `ToggleGroup` khi có từ 4 gói trở lên. Giữ nguyên tỷ lệ hoàn thành tính năng. Chi tiết kiểm chứng tại WORK-LOG.
+
+## Sửa lỗi sidebar sticky mất vị trí khi cuộn trang và mở popup ở Admin Dashboard — Updated 2026-11-10
+
+Nâng độ ưu tiên selector ghi đè khóa cuộn Radix trong `globals.css` (`html body[data-scroll-locked]` thắng style động của `react-remove-scroll-bar`) để giữ `overflow-x: clip` / `overflow-y: visible` và `margin-right: 0px`, tránh `body` biến thành vùng cuộn `overflow: hidden` làm thanh sidebar và topbar `sticky` ở `/admin/dashboard?tab=billing-catalog` (cũng như các màn hình admin/sticky khác) bị bật ngược lên trên và cắt khuất khi mở popup sau lúc cuộn trang; đồng thời chuyển chiều cao shell/sidebar `AdminLayout` sang `min-h-dvh` / `h-dvh`. Giữ nguyên tỷ lệ hoàn thành tính năng. Chi tiết kiểm chứng tại WORK-LOG.
+
+## Chuẩn bị danh mục gói quản trị — IN_PROGRESS 2026-11-10
+
+Dashboard admin tích hợp danh sách, chi tiết, tạo, sửa, mở bán và ngừng bán gói; lý do khi sửa gói là tùy chọn. Web và mobile gửi phiên bản gói khi mua và yêu cầu xem lại nếu giá/quyền lợi thay đổi. Cần triển khai đồng bộ client và backend; bộ acceptance backend đầy đủ chưa qua do thiếu fixture ảnh trên database cô lập. Chi tiết tại WORK-LOG và `docs/ADMIN_BILLING_CATALOG_PLAN.md` ở thư mục gốc.
+
 ## Đồng bộ giao diện và luồng tự động duyệt cho Contributor khi đăng công thức, cẩm nang và video — Updated 2026-11-10
 
 Cập nhật toàn bộ consumer `POST /posts/{id}/submit` trên web (`features/review`, công thức, cẩm nang, video ẩm thực) đọc trạng thái `revision.status` thực tế từ backend thay vì mặc định hiển thị "Chờ kiểm duyệt". Khi Contributor tạo mới hoặc xuất bản sạch nhận `PUBLISHED`, modal thành công ở `/recipes/new` hiển thị trạng thái "Đăng công thức thành công!" / "Đã xuất bản" và bỏ nút "Phê duyệt ngay"; các luồng cẩm nang (`/articles/new`, `/articles/[id]/edit`) và video (`/videos/new`) thực hiện đủ `POST/PATCH /posts` → `POST /posts/:id/submit` và hiển thị thông báo tự động xuất bản (Admin và nội dung `PENDING_REVIEW`/`FLAGGED`/`QUARANTINED` vẫn giữ luồng kiểm duyệt). Đã pass `tsc --noEmit`, scoped ESLint (0 lỗi), `npm test` (103 files / 827 tests), `npm run build` (47 routes) và `git diff --check`; chưa kiểm thử tương tác trực tiếp trên trình duyệt và chưa cập nhật mobile. Giữ nguyên tỷ lệ hoàn thành tính năng và giữ trạng thái endpoint `CHANGING` chờ mobile/backend gates.

@@ -10,6 +10,8 @@ export interface BillingBenefits {
 export interface BillingProduct extends BillingBenefits {
   id: string;
   name: string;
+  /** Tên gói kèm thời hạn khi tên chưa chứa sẵn thông tin thời hạn. */
+  displayName: string;
   description: string;
   version: number;
   priceVnd: number;
@@ -40,6 +42,8 @@ export interface BillingOrder extends BillingBenefits {
   productId: string;
   productName: string;
   durationLabel: string;
+  /** Nhãn thời hạn hiển thị kèm tên gói (rỗng với gói mua một lần hoặc khi tên gói đã chứa sẵn thời hạn). */
+  durationSuffixLabel: string;
   provider: BillingProvider;
   priceLabel: string;
   providerLabel: string;

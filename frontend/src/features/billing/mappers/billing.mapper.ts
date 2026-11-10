@@ -61,6 +61,22 @@ const durationMonths = (value: unknown): number | null => {
 };
 export const durationLabel = (months: number | null) =>
   months === null ? 'Mua một lần' : months * 30 + ' ngày';
+const normalizeLabelText = (value: string) => value.trim().replace(/\s+/g, ' ');
+const hasDurationInName = (name: string, durationText: string) => {
+  const normalizedName = normalizeLabelText(name);
+  const normalizedDuration = normalizeLabelText(durationText);
+  if (!normalizedName || !normalizedDuration) return false;
+  const escaped = normalizedDuration.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?:^|[^\\p{L}\\p{N}])${escaped}(?=$|[^\\p{L}\\p{N}])`, 'iu').test(
+    normalizedName
+  );
+};
+const durationSuffix = (name: string, months: number | null, label: string) =>
+  months === null || hasDurationInName(name, label) ? '' : label;
+const formatProductDisplayName = (name: string, months: number | null, label: string) => {
+  const suffix = durationSuffix(name, months, label);
+  return suffix ? `${name} · ${suffix}` : name;
+};
 const provider = (value: unknown): BillingProvider =>
   value === 'payos' || value === 'sandbox' || value === 'vnpay' ? value : 'UNKNOWN';
 const providerLabel = (value: BillingProvider) =>
@@ -118,21 +134,24 @@ function checkoutUrl(value: unknown): string | null {
 class ProductMapper extends BaseMapper<BillingProductDto, BillingProduct> {
   toModel(dto: BillingProductDto | null | undefined): BillingProduct {
     const id = safeString(pickField(dto, ['id'], ''));
+    const name = safeString(pickField(dto, ['name'], 'Gói quyền lợi'));
     const priceVnd = count(pickField(dto, ['priceVnd'], 0));
     const allowance = benefits(dto);
     const months = durationMonths(pickField(dto, ['durationMonths'], null));
+    const duration = durationLabel(months);
     const periodDays = months ? count(pickField(dto, ['periodDays'], 30)) || 30 : null;
     return {
       ...allowance,
       id,
-      name: safeString(pickField(dto, ['name'], 'Gói quyền lợi')),
+      name,
+      displayName: formatProductDisplayName(name, months, duration),
       description: safeString(pickField(dto, ['description'], '')),
       version: count(pickField(dto, ['version'], 0)),
       priceVnd,
       priceLabel: formatCurrency(priceVnd),
       canBuy: Boolean(id && priceVnd > 0 && allowance.benefitLabels.length),
       durationMonths: months,
-      durationLabel: durationLabel(months),
+      durationLabel: duration,
       periodDays,
       monthlyPriceLabel: months ? formatCurrency(Math.round(priceVnd / months)) : '',
       periodBenefitLabels: months
@@ -158,15 +177,7 @@ export class CatalogMapper extends BaseMapper<BillingCatalogDto, BillingCatalog>
     const plans = products
       .filter((product) => product.durationMonths !== null)
       .sort((a, b) => (a.durationMonths ?? 0) - (b.durationMonths ?? 0));
-    const monthly = plans.find((plan) => plan.durationMonths === 1);
-    const durationPlans = plans.map((plan) => {
-      const fullPrice = monthly ? monthly.priceVnd * (plan.durationMonths ?? 1) : 0;
-      return {
-        ...plan,
-        savingsPercent:
-          fullPrice > plan.priceVnd ? Math.round((1 - plan.priceVnd / fullPrice) * 100) : 0,
-      };
-    });
+    const durationPlans = plans;
     return {
       enabled:
         safeBoolean(pickField(dto, ['enabled'], false)) &&
@@ -188,12 +199,16 @@ export class OrderMapper extends BaseMapper<BillingOrderDto, BillingOrder> {
   toModel(dto: BillingOrderDto | null | undefined): BillingOrder {
     const currentStatus = status(safeString(pickField(dto, ['status'], '')));
     const source = provider(safeString(pickField(dto, ['provider'], '')));
+    const productName = safeString(pickField(dto, ['productName'], 'Gói quyền lợi'));
+    const months = durationMonths(pickField(dto, ['durationMonths'], null));
+    const duration = durationLabel(months);
     return {
       ...benefits(dto),
       id: safeString(pickField(dto, ['id'], '')),
       productId: safeString(pickField(dto, ['productId'], '')),
-      productName: safeString(pickField(dto, ['productName'], 'Gói quyền lợi')),
-      durationLabel: durationLabel(durationMonths(pickField(dto, ['durationMonths'], null))),
+      productName,
+      durationLabel: duration,
+      durationSuffixLabel: durationSuffix(productName, months, duration),
       provider: source,
       priceLabel: formatCurrency(count(pickField(dto, ['priceVnd'], 0))),
       providerLabel: providerLabel(source),

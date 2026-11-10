@@ -1,9 +1,9 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "..\\backend\\openapi.json",
-  "generatedAt": "2026-11-10T04:48:23.368Z",
+  "generatedAt": "2026-11-10T10:08:06.080Z",
   "stats": {
-    "operations": 190,
+    "operations": 195,
     "groups": 42,
     "schemas": 166
   },
@@ -3131,6 +3131,265 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/billing/products",
+      "group": "Billing",
+      "summary": "Admin: list active and inactive packages",
+      "operationId": "",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "object",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/billing/products",
+      "group": "Billing",
+      "summary": "Create an inactive package",
+      "operationId": "",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "name",
+            "description",
+            "priceVnd",
+            "chatCredits",
+            "fridgeCredits",
+            "receiptCredits",
+            "pantrySlots",
+            "durationMonths",
+            "reason"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "priceVnd": {
+              "type": "integer"
+            },
+            "chatCredits": {
+              "type": "integer"
+            },
+            "fridgeCredits": {
+              "type": "integer"
+            },
+            "receiptCredits": {
+              "type": "integer"
+            },
+            "pantrySlots": {
+              "type": "integer"
+            },
+            "durationMonths": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "enum": [
+                    1
+                  ]
+                },
+                {
+                  "type": "number",
+                  "enum": [
+                    3
+                  ]
+                },
+                {
+                  "type": "number",
+                  "enum": [
+                    12
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "201": "object",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/billing/products/{id}",
+      "group": "Billing",
+      "summary": "Admin: inspect a package",
+      "operationId": "",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "object",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/billing/products/{id}",
+      "group": "Billing",
+      "summary": "Update a package with version check",
+      "operationId": "",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "name",
+            "description",
+            "priceVnd",
+            "chatCredits",
+            "fridgeCredits",
+            "receiptCredits",
+            "pantrySlots",
+            "expectedVersion"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "priceVnd": {
+              "type": "integer"
+            },
+            "chatCredits": {
+              "type": "integer"
+            },
+            "fridgeCredits": {
+              "type": "integer"
+            },
+            "receiptCredits": {
+              "type": "integer"
+            },
+            "pantrySlots": {
+              "type": "integer"
+            },
+            "expectedVersion": {
+              "type": "integer"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "object",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/billing/products/{id}/availability",
+      "group": "Billing",
+      "summary": "Change package availability with version check",
+      "operationId": "",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "active",
+            "expectedVersion",
+            "reason"
+          ],
+          "properties": {
+            "active": {
+              "type": "boolean"
+            },
+            "expectedVersion": {
+              "type": "integer"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "object",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/billing/products",
       "group": "Billing",
       "summary": "List packages and payOS checkout availability",
@@ -3200,7 +3459,7 @@
       "method": "POST",
       "path": "/api/v1/billing/orders",
       "group": "Billing",
-      "summary": "Create idempotent package order; server snapshots price and benefits",
+      "summary": "Create idempotent package order; confirm displayed product version for new orders",
       "operationId": "",
       "params": [],
       "request": {
@@ -3216,6 +3475,9 @@
             },
             "idempotencyKey": {
               "type": "string"
+            },
+            "expectedProductVersion": {
+              "type": "integer"
             }
           },
           "additionalProperties": false

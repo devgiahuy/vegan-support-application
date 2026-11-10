@@ -2,6 +2,11 @@ import type { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import { z } from '../../common/validation/zod.js';
 import {
   billingCatalogSchema,
+  adminBillingProductParamsSchema,
+  adminBillingProductSchema,
+  adminBillingCreateSchema,
+  adminBillingUpdateSchema,
+  adminBillingAvailabilitySchema,
   billingEnvelope,
   billingIdSchema,
   billingListQuerySchema,
@@ -28,6 +33,73 @@ export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z
   };
   for (const operation of [
     {
+      method: 'post' as const,
+      path: '/api/v1/admin/billing/products',
+      summary: 'Create an inactive package',
+      body: adminBillingCreateSchema,
+      params: false,
+    },
+    {
+      method: 'patch' as const,
+      path: '/api/v1/admin/billing/products/{id}',
+      summary: 'Update a package with version check',
+      body: adminBillingUpdateSchema,
+      params: true,
+    },
+    {
+      method: 'post' as const,
+      path: '/api/v1/admin/billing/products/{id}/availability',
+      summary: 'Change package availability with version check',
+      body: adminBillingAvailabilitySchema,
+      params: true,
+    },
+  ]) {
+    registry.registerPath({
+      method: operation.method,
+      path: operation.path,
+      summary: operation.summary,
+      description: 'ADMIN only. Changes are audited; existing order snapshots remain unchanged.',
+      tags: ['Billing'],
+      security: [{ bearerAuth: [] }],
+      request: {
+        ...(operation.params ? { params: adminBillingProductParamsSchema } : {}),
+        body: { content: json(operation.body) },
+      },
+      responses: {
+        [operation.path.endsWith('/products') ? 201 : 200]: {
+          description: 'Success',
+          content: json(billingEnvelope(adminBillingProductSchema)),
+        },
+        ...errors,
+      },
+    });
+  }
+  for (const operation of [
+    {
+      path: '/api/v1/admin/billing/products',
+      summary: 'Admin: list active and inactive packages',
+      response: billingEnvelope(z.array(adminBillingProductSchema)),
+    },
+    {
+      path: '/api/v1/admin/billing/products/{id}',
+      summary: 'Admin: inspect a package',
+      response: billingEnvelope(adminBillingProductSchema),
+      request: { params: adminBillingProductParamsSchema },
+    },
+  ]) {
+    registry.registerPath({
+      method: 'get',
+      path: operation.path,
+      summary: operation.summary,
+      description: 'Requires ADMIN. Responses are private and not cached.',
+      tags: ['Billing'],
+      security: [{ bearerAuth: [] }],
+      ...(operation.request ? { request: operation.request } : {}),
+      responses: { 200: { description: 'Success', content: json(operation.response) }, ...errors },
+    });
+  }
+  for (const operation of [
+    {
       method: 'get' as const,
       path: '/billing/products',
       summary: 'List packages and payOS checkout availability',
@@ -49,7 +121,7 @@ export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z
     {
       method: 'post' as const,
       path: '/billing/orders',
-      summary: 'Create idempotent package order; server snapshots price and benefits',
+      summary: 'Create idempotent package order; confirm displayed product version for new orders',
       response: schemas.order,
       request: { body: { content: json(createBillingOrderSchema) } },
     },
