@@ -6,10 +6,11 @@ import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { VideoForm } from '@/features/video/components/video-form';
 import { useUpdateVideoMutation, useVideoDetailQuery } from '@/features/video/queries/video.queries';
+import { getSubmitFeedback, getSubmitOutcome } from '@/features/post/utils/submit-outcome';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { useAuthStore } from '@/store/useAuthStore';
 
-/** Sửa video của chính mình — `PATCH /posts/:id` rồi gửi lại duyệt. Author-only. */
+/** Sửa video của chính mình — `PATCH /posts/:id` rồi `POST /posts/:id/submit` (tự xuất bản hoặc chờ duyệt tùy `revision.status`). Author-only. */
 export default function EditVideoScreen() {
   const router = useRouter();
   const currentUserId = useAuthStore((state) => state.user?.id);
@@ -82,7 +83,7 @@ export default function EditVideoScreen() {
           isSubmitting={updateMutation.isPending}
           onSubmit={async (values) => {
             try {
-              await updateMutation.mutateAsync({
+              const updated = await updateMutation.mutateAsync({
                 id: video.id,
                 input: {
                   title: values.title,
@@ -96,7 +97,8 @@ export default function EditVideoScreen() {
                   expectedVersion: video.version,
                 },
               });
-              Alert.alert('Đã lưu', 'Video đã được cập nhật và gửi lại để duyệt.');
+              const feedback = getSubmitFeedback(getSubmitOutcome(updated.revisionStatus), 'video', true);
+              Alert.alert(feedback.title, feedback.message);
               router.replace(`/videos/${video.id}` as Href);
             } catch (error) {
               Alert.alert('Không lưu được', getApiErrorMessage(error, 'Vui lòng kiểm tra dữ liệu và thử lại.'));

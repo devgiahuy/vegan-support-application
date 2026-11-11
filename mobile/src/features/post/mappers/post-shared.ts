@@ -85,3 +85,13 @@ export function authorFromDto(
   const avatar = resolveMediaUrl(safeString(author?.avatarUrl, ''));
   return { id: safeString(author?.id), name, avatarUrl: avatar || null };
 }
+
+/**
+ * Trạng thái của revision hiện tại (`revision.status`), rơi về `status` của bài khi backend không trả.
+ * Khác `status` của bài: bài đã xuất bản vẫn `PUBLISHED` trong lúc bản sửa mới còn chờ duyệt.
+ */
+export function revisionStatusFromDto(dto: BasePostDto | null | undefined): PostStatus {
+  const postStatus = parsePostStatus(safeString(pickField(dto, ['status'], 'DRAFT')));
+  const raw = safeString(dto?.revision?.status);
+  return raw ? parsePostStatus(raw) : postStatus;
+}

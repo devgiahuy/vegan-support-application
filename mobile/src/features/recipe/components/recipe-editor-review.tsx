@@ -84,7 +84,7 @@ export function RecipeEditorReview({
             <Text className="flex-1 text-sm font-semibold text-foreground">Công thức đã đủ thông tin bắt buộc</Text>
           </View>
           <Text className="text-xs leading-5 text-muted-foreground">
-            Sau khi gửi, công thức vào hàng chờ duyệt. Hệ thống tự tính dinh dưỡng từ nguyên liệu.
+            Sau khi gửi, công thức được xuất bản hoặc vào hàng chờ duyệt tùy quyền tài khoản. Hệ thống tự tính dinh dưỡng từ nguyên liệu.
           </Text>
         </View>
       )}

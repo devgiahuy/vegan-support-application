@@ -59,12 +59,12 @@ function RoleBadge({ label }: { label: string }) {
  */
 export function ArticleForm({
   initial,
-  submitLabel = 'Gửi duyệt bài',
+  submitLabel = 'Gửi bài viết',
   isSubmitting,
   onSubmit,
 }: {
   initial?: ArticleFormInitial;
-  /** Nhãn nút gửi duyệt chính. */
+  /** Nhãn nút gửi chính. */
   submitLabel?: string;
   isSubmitting: boolean;
   onSubmit: (values: CreateArticleInput, action: ArticleFormAction) => void;
@@ -149,7 +149,7 @@ export function ArticleForm({
       <View className="flex-row items-center justify-between gap-3 rounded-2xl border border-border bg-card p-3.5">
         <View className="min-w-0 flex-1 flex-row items-center gap-2">
           <RoleBadge label={roleLabel} />
-          <Text numberOfLines={1} className="shrink text-xs text-muted-foreground">Chờ duyệt</Text>
+          <Text numberOfLines={1} className="shrink text-xs text-muted-foreground">Xuất bản hoặc chờ duyệt</Text>
         </View>
         <View className="flex-row items-center gap-2">
           <Pressable
@@ -166,20 +166,20 @@ export function ArticleForm({
             onPress={() => submit('SUBMIT')}
             className={cn('h-9 flex-row items-center gap-1 rounded-xl bg-primary px-3', busy && 'opacity-60')}>
             <Send size={14} color={colors.primaryForeground} />
-            <Text className="text-xs font-semibold text-primary-foreground">Gửi duyệt</Text>
+            <Text className="text-xs font-semibold text-primary-foreground">Gửi bài</Text>
           </Pressable>
         </View>
       </View>
 
-      {/* Thông tin quyền xuất bản: BE đưa mọi bài vào hàng đợi kiểm duyệt, nên không hứa xuất bản trực tiếp. */}
+      {/* Thông tin quyền xuất bản: BE quyết định khi submit (Contributor đã duyệt tự xuất bản, người khác chờ duyệt), nên chỉ nêu quy tắc chung. */}
       <View className="flex-row items-center gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-4">
         <View className="size-9 items-center justify-center rounded-xl bg-primary">
           <Sparkles size={18} color={colors.primaryForeground} />
         </View>
         <View className="min-w-0 flex-1 gap-0.5">
-          <Text className="text-sm font-semibold text-foreground">Bài viết sẽ được kiểm duyệt</Text>
+          <Text className="text-sm font-semibold text-foreground">Xuất bản hoặc kiểm duyệt tùy quyền</Text>
           <Text className="text-xs leading-4 text-muted-foreground">
-            Bài viết được chuyển vào hàng đợi kiểm duyệt trước khi công khai.
+            Cộng tác viên đã được duyệt xuất bản ngay; tài khoản khác vào hàng đợi kiểm duyệt trước khi công khai.
           </Text>
         </View>
         <RoleBadge label={roleLabel} />
@@ -324,7 +324,7 @@ export function ArticleForm({
         <View className="flex-row items-center gap-1.5">
           <Clock size={14} color="#d97706" />
           <Text className="flex-1 text-xs font-medium leading-4 text-amber-600 dark:text-amber-400">
-            Bài viết sẽ gửi tới người kiểm duyệt trước khi công khai.
+            Cộng tác viên đã được duyệt xuất bản ngay; tài khoản khác được kiểm duyệt trước khi công khai.
           </Text>
         </View>
         <PrimaryButton

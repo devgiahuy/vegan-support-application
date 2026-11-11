@@ -18,6 +18,8 @@ export interface Article {
   slug: string;
   status: PostStatus;
   statusLabel: string;
+  /** Trạng thái revision hiện tại — dùng để biết kết quả submit (tự xuất bản hay chờ duyệt). */
+  revisionStatus: PostStatus;
   version: number;
   author: PostAuthorModel;
   category: PostCategoryModel;
