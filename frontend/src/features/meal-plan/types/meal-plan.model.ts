@@ -83,6 +83,13 @@ export interface PlanUserSummary {
   detailLines: string[];
   suggestion: string | null;
   hardConstraintsPreserved: boolean;
+  hardViolations: Array<{
+    itemId: string;
+    name: string;
+    date: string;
+    mealType: string;
+    reasons: Array<{ code: string; detail: string }>;
+  }>;
 }
 
 /** Dòng danh sách đi chợ đã gộp. */

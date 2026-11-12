@@ -53,37 +53,37 @@ export const billingProducts = [
   },
   {
     id: 'combo-1m',
-    name: 'Gói tiện ích 1 tháng',
+    name: 'Gói tiện ích 30 ngày',
     description:
-      'Mỗi 30 ngày: 100 lượt chat, 10 lượt mỗi loại phân tích; thêm 50 ô tủ đồ ăn khi còn hạn.',
+      'Mỗi 30 ngày: 300 lượt chat, 30 lượt mỗi loại phân tích; thêm 50 ô tủ đồ ăn khi còn hạn.',
     priceVnd: 69000,
-    chatCredits: 100,
-    fridgeCredits: 10,
-    receiptCredits: 10,
+    chatCredits: 300,
+    fridgeCredits: 30,
+    receiptCredits: 30,
     pantrySlots: 50,
     durationMonths: 1,
   },
   {
     id: 'combo-3m',
-    name: 'Gói tiện ích 3 tháng',
+    name: 'Gói tiện ích 90 ngày',
     description:
-      'Mỗi 30 ngày: 100 lượt chat, 10 lượt mỗi loại phân tích; thêm 50 ô tủ đồ ăn khi còn hạn.',
+      'Mỗi 30 ngày: 300 lượt chat, 30 lượt mỗi loại phân tích; thêm 50 ô tủ đồ ăn khi còn hạn.',
     priceVnd: 176000,
-    chatCredits: 100,
-    fridgeCredits: 10,
-    receiptCredits: 10,
+    chatCredits: 300,
+    fridgeCredits: 30,
+    receiptCredits: 30,
     pantrySlots: 50,
     durationMonths: 3,
   },
   {
     id: 'combo-12m',
-    name: 'Gói tiện ích 1 năm',
+    name: 'Gói tiện ích 360 ngày',
     description:
-      'Mỗi 30 ngày: 100 lượt chat, 10 lượt mỗi loại phân tích; thêm 50 ô tủ đồ ăn khi còn hạn.',
+      'Mỗi 30 ngày: 300 lượt chat, 30 lượt mỗi loại phân tích; thêm 50 ô tủ đồ ăn khi còn hạn.',
     priceVnd: 580000,
-    chatCredits: 100,
-    fridgeCredits: 10,
-    receiptCredits: 10,
+    chatCredits: 300,
+    fridgeCredits: 30,
+    receiptCredits: 30,
     pantrySlots: 50,
     durationMonths: 12,
   },
@@ -93,12 +93,17 @@ export async function seedBillingProducts(prisma: PrismaClient): Promise<void> {
   for (const product of billingProducts) {
     await prisma.billingProduct.upsert({
       where: { id: product.id },
-      create: { ...product, version: 1, active: true },
+      create: { ...product, version: product.durationMonths ? 2 : 1, active: true },
       update: {},
     });
+    if (product.durationMonths)
+      await prisma.billingProduct.updateMany({
+        where: { id: product.id, version: 1 },
+        data: { ...product, version: 2 },
+      });
   }
   await prisma.billingProduct.updateMany({
-    where: { id: { in: retiredBillingProductIds } },
-    data: { active: false },
+    where: { id: { in: retiredBillingProductIds }, version: 1, active: true },
+    data: { active: false, version: { increment: 1 } },
   });
 }

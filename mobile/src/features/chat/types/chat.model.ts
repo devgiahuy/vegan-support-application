@@ -1,4 +1,9 @@
-import type { ChatMessageStatus, ChatOwnerType, ChatRole, FeedbackValue } from '@/common/enums';
+import type {
+  ChatMessageStatus,
+  ChatOwnerType,
+  ChatRole,
+  FeedbackValue,
+} from "@/common/enums";
 
 export interface ChatSession {
   id: string;
@@ -9,6 +14,10 @@ export interface ChatSession {
   isExpired: boolean;
   createdAt: Date | null;
   updatedAt: Date | null;
+}
+
+export interface DeletedChatSession {
+  id: string;
 }
 
 export interface ChatMessage {
@@ -42,7 +51,13 @@ export interface QuotaState {
 }
 
 export interface StreamEvent {
-  type: 'message_start' | 'content_delta' | 'message_complete' | 'quota' | 'error' | 'unknown';
+  type:
+    | "message_start"
+    | "content_delta"
+    | "message_complete"
+    | "quota"
+    | "error"
+    | "unknown";
   payload: Record<string, unknown>;
 }
 

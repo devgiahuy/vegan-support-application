@@ -123,6 +123,7 @@ export interface MealPlanDto {
     detail?: string;
     suggestion?: string | null;
     hardConstraintsPreserved?: boolean;
+    hardViolations?: { itemId?: string; name?: string; date?: string; mealType?: string; reasons?: { code?: string; detail?: string }[] }[];
   } | null;
   nutritionDataQuality?: string;
   nutrition_data_quality?: string;

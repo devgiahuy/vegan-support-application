@@ -213,6 +213,9 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
     const revisionId = safeString(revision?.id);
     const version = safeNumber(pickField(dto, ['version'], 1));
     const revisionVersion = safeNumber(revision?.version, version);
+    const revisionStatus = revision?.status
+      ? parsePostStatus(safeString(revision.status))
+      : undefined;
     const publishedRevisionVersion = pickField<number | null>(
       dto,
       ['publishedRevisionVersion'],
@@ -228,12 +231,13 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       version,
       revisionId: revisionId || undefined,
       revisionVersion,
+      revisionStatus,
       publishedRevisionVersion,
       author: {
         id: author.id,
         name: author.name,
         avatarUrl: author.avatarUrl,
-        avatar: author.avatarUrl || 'https://i.pravatar.cc/80?img=32',
+        avatar: author.avatarUrl || undefined,
         verified: authorVerified,
         role: authorRole,
         roleTitle:

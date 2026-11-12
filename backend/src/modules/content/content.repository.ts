@@ -11,6 +11,7 @@ import {
   ModerationTargetType,
   PostRevisionStatus,
   PostStatus,
+  Role,
   type DietPattern,
   type IngredientResolutionStatus,
   type Post,
@@ -705,10 +706,17 @@ export class ContentRepository {
       });
       if (!locked) throw new ContentVersionConflictError();
       const now = new Date();
+      // The database, not the request's role claim, is authoritative at publication time.
+      const author = await transaction.user.findUniqueOrThrow({
+        where: { id: actorId },
+        select: { role: true, contributorProfile: { select: { revokedAt: true } } },
+      });
+      const autoPublish = author.role === Role.CONTRIBUTOR &&
+        author.contributorProfile !== null && author.contributorProfile.revokedAt === null;
       await transaction.postRevision.update({
         where: { id: revisionId },
         data: {
-          status: decision.revisionStatus,
+          status: autoPublish ? PostRevisionStatus.PUBLISHED : decision.revisionStatus,
           submittedAt: now,
           reviewNote: null,
           reviewedById: null,
@@ -737,8 +745,22 @@ export class ContentRepository {
       const current = await transaction.post.findUniqueOrThrow({ where: { id: postId } });
       await transaction.post.update({
         where: { id: postId },
-        data: { status: current.publishedRevisionId ? PostStatus.PUBLISHED : decision.postStatus },
+        data: autoPublish
+          ? { status: PostStatus.PUBLISHED, publishedRevisionId: revisionId, publishedAt: now }
+          : { status: current.publishedRevisionId ? PostStatus.PUBLISHED : decision.postStatus },
       });
+      if (autoPublish) {
+        await transaction.moderationAction.create({
+          data: {
+            actorId,
+            decision: ModerationDecision.APPROVE,
+            targetType: ModerationTargetType.POST,
+            targetId: postId,
+            reason: 'CONTRIBUTOR_AUTO_PUBLICATION',
+            metadata: { automated: true, revisionId, revisionVersion: expectedVersion },
+          },
+        });
+      }
       return {
         post: await transaction.post.findUniqueOrThrow({
           where: { id: postId },

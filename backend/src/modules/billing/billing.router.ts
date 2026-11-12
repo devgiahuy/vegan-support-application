@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { Role } from '@prisma/client';
+import { requireRole } from '../../common/auth/authorization.js';
 import {
   getValidatedBody,
   getValidatedParams,
@@ -13,6 +15,13 @@ import {
   billingIdSchema,
   billingListQuerySchema,
   createBillingOrderSchema,
+  adminBillingProductParamsSchema,
+  adminBillingCreateSchema,
+  adminBillingUpdateSchema,
+  adminBillingAvailabilitySchema,
+  type AdminBillingCreate,
+  type AdminBillingUpdate,
+  type AdminBillingAvailability,
 } from './billing.schemas.js';
 
 export function createBillingRouter(
@@ -20,6 +29,78 @@ export function createBillingRouter(
   authentication: AuthenticationMiddleware,
 ): Router {
   const router = Router();
+  router.post(
+    '/admin/billing/products',
+    authentication.authenticate,
+    requireRole(Role.ADMIN),
+    validateBody(adminBillingCreateSchema),
+    async (req, res) => {
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.status(201).json({
+        success: true,
+        data: await service.adminCreateProduct(
+          req.auth!.userId,
+          getValidatedBody<AdminBillingCreate>(req),
+        ),
+      });
+    },
+  );
+  router.patch(
+    '/admin/billing/products/:id',
+    authentication.authenticate,
+    requireRole(Role.ADMIN),
+    validateParams(adminBillingProductParamsSchema),
+    validateBody(adminBillingUpdateSchema),
+    async (req, res) => {
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.json({
+        success: true,
+        data: await service.adminUpdateProduct(
+          req.auth!.userId,
+          getValidatedParams<{ id: string }>(req).id,
+          getValidatedBody<AdminBillingUpdate>(req),
+        ),
+      });
+    },
+  );
+  router.post(
+    '/admin/billing/products/:id/availability',
+    authentication.authenticate,
+    requireRole(Role.ADMIN),
+    validateParams(adminBillingProductParamsSchema),
+    validateBody(adminBillingAvailabilitySchema),
+    async (req, res) => {
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.json({
+        success: true,
+        data: await service.adminSetProductAvailability(
+          req.auth!.userId,
+          getValidatedParams<{ id: string }>(req).id,
+          getValidatedBody<AdminBillingAvailability>(req),
+        ),
+      });
+    },
+  );
+  router.get(
+    '/admin/billing/products',
+    authentication.authenticate,
+    requireRole(Role.ADMIN),
+    async (_req, res) => {
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.json({ success: true, data: await service.adminProducts() });
+    },
+  );
+  router.get(
+    '/admin/billing/products/:id',
+    authentication.authenticate,
+    requireRole(Role.ADMIN),
+    validateParams(adminBillingProductParamsSchema),
+    async (req, res) => {
+      res.setHeader('Cache-Control', 'private, no-store');
+      const { id } = getValidatedParams<{ id: string }>(req);
+      res.json({ success: true, data: await service.adminProductById(id) });
+    },
+  );
   router.get('/billing/products', authentication.authenticate, async (_req, res) => {
     res.json({ success: true, data: await service.products() });
   });
@@ -31,7 +112,11 @@ export function createBillingRouter(
     authentication.authenticate,
     validateBody(createBillingOrderSchema),
     async (req, res) => {
-      const input = getValidatedBody<{ productId: string; idempotencyKey: string }>(req);
+      const input = getValidatedBody<{
+        productId: string;
+        idempotencyKey: string;
+        expectedProductVersion?: number;
+      }>(req);
       res
         .status(201)
         .json({ success: true, data: await service.create(req.auth!.userId, input, req.ip ?? '') });

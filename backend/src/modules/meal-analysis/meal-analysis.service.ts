@@ -28,6 +28,7 @@ import {
 } from './meal-analysis.repository.js';
 import {
   MEAL_ANALYSIS_ALGORITHM_VERSION,
+  hardViolationSchema,
   type MealAnalysisInput,
   type MealAnalysisWarning,
 } from './meal-analysis.schemas.js';
@@ -66,7 +67,13 @@ interface AnalysisContext {
   profileSnapshot: Prisma.InputJsonObject;
   ruleVersions: string[];
   fingerprint: string;
-  hardViolations: Array<{ itemId: string; name: string; reasons: string[] }>;
+  hardViolations: Array<{
+    itemId: string;
+    name: string;
+    date: string;
+    mealType: AnalysisPlanRecord['items'][number]['mealType'];
+    reasons: Array<{ code: string; detail: string }>;
+  }>;
 }
 
 function sha256(value: unknown): string {
@@ -198,14 +205,15 @@ export class MealAnalysisService {
       advisoryCount,
       hardConstraintViolationCount: context.hardViolations.length,
       hardConstraintsPreserved: context.hardViolations.length === 0,
+      hardViolations: context.hardViolations,
       estimatedNutrition,
     };
     if (context.hardViolations.length) {
       summary.userStatus = 'HARD_CONSTRAINT_VIOLATION';
       summary.title = 'Có món chưa đáp ứng yêu cầu ăn uống bắt buộc';
       summary.detail = context.hardViolations
-        .map((entry) => `${entry.name}: ${describeIngredientSafetyReasons(entry.reasons)}`)
-        .join('; ');
+        .map((entry) => `${entry.name}: ${entry.reasons.map((reason) => reason.detail).join(', ')}`)
+        .join('\n');
     }
     const saved = await this.repository.save({
       mealPlanId,
@@ -396,7 +404,54 @@ export class MealAnalysisService {
       if (!reasons.length) return [];
       const name = item.customMeal?.name ?? item.recipeRevision?.title ?? 'Món ăn';
       incomplete.push(`${name}: ${describeIngredientSafetyReasons(reasons)}.`);
-      return [{ itemId: item.id, name, reasons }];
+      const matchedNames = new Set<string>();
+      const matchedCodes = new Set<string>();
+      for (const ingredient of ingredients) {
+        if (!ingredient.ingredientId) continue;
+        for (const node of safetyCatalog.closure(ingredient.ingredientId).nodes) {
+          const matchesIngredient = constraints.allergicIngredientIds?.includes(node.id);
+          const codes = node.allergens
+            .map((entry) => entry.allergenCode)
+            .filter((code) => constraints.allergenCodes.includes(code));
+          if (matchesIngredient || codes.length) {
+            matchedNames.add(
+              node.id === ingredient.ingredientId
+                ? ingredient.displayName
+                : `${ingredient.displayName} (thành phần ${node.canonicalName})`,
+            );
+            for (const code of codes) matchedCodes.add(code);
+          }
+        }
+      }
+      const snapshotOnly = constraints.allergenCodes.filter(
+        (code) => Array.isArray(snapshot) && snapshot.includes(code) && !matchedCodes.has(code),
+      );
+      const labels = snapshotOnly.map(
+        (code) => profile.allergies.find((allergy) => allergy.allergenCode === code)?.label || code,
+      );
+      const allergyDetails = [
+        matchedNames.size ? `có ${[...matchedNames].join(', ')} khớp dị ứng đã khai báo` : '',
+        labels.length
+          ? `công thức khai báo dị ứng ${labels.join(', ')}; chưa xác định nguyên liệu cụ thể`
+          : '',
+      ]
+        .filter(Boolean)
+        .join('. ');
+      return [
+        {
+          itemId: item.id,
+          name,
+          date: dateOnly(item.date),
+          mealType: item.mealType,
+          reasons: [...new Set(reasons)].map((code) => ({
+            code,
+            detail:
+              code === 'ALLERGY' && allergyDetails
+                ? allergyDetails
+                : describeIngredientSafetyReasons([code]),
+          })),
+        },
+      ];
     });
     const requestSnapshot = {
       expectedPlanVersion: plan.lockVersion,
@@ -1031,6 +1086,9 @@ export class MealAnalysisService {
             ? summary.hardConstraintViolationCount
             : 0,
         hardConstraintsPreserved: summary.hardConstraintsPreserved !== false,
+        hardViolations: hardViolationSchema.array().safeParse(summary.hardViolations).success
+          ? hardViolationSchema.array().parse(summary.hardViolations)
+          : [],
       },
       confidence: Number(record.confidence),
       incompleteData,

@@ -16,6 +16,7 @@ import type {
   ContentReviewHistoryResponseDto,
   ReviewQueueItemDto,
   ReviewQueueListResponseDto,
+  SubmitPostResponseDataDto,
 } from '../types/content-review.dto';
 
 describe('ContentReviewMapper', () => {
@@ -338,5 +339,111 @@ describe('ContentReviewMapper', () => {
       decision: 'REJECT',
       reason: 'Nội dung chưa đủ nguyên liệu.',
     });
+  });
+
+  // Test 12: Map kết quả submitPost tự động xuất bản (Contributor)
+  it('12. maps auto-published submit post result when Contributor publishes cleanly', () => {
+    const dto: SubmitPostResponseDataDto = {
+      id: 'post-recipe-9',
+      type: 'RECIPE',
+      slug: 'dau-hu-xao-nam-rom',
+      status: 'PUBLISHED',
+      version: 1,
+      publishedRevisionVersion: 1,
+      publishedAt: '2026-11-10T04:15:00.000Z',
+      revision: {
+        id: 'rev-recipe-9',
+        version: 1,
+        status: 'PUBLISHED',
+        title: 'Đậu hũ xào nấm rơm',
+        submittedAt: '2026-11-10T04:15:00.000Z',
+      },
+    };
+
+    const result = contentReviewMapper.toSubmitResult(dto);
+
+    expect(result.postId).toBe('post-recipe-9');
+    expect(result.type).toBe(PostType.RECIPE);
+    expect(result.slug).toBe('dau-hu-xao-nam-rom');
+    expect(result.title).toBe('Đậu hũ xào nấm rơm');
+    expect(result.postStatus).toBe(PostReviewStatus.PUBLISHED);
+    expect(result.postStatusLabel).toBe('Đã xuất bản');
+    expect(result.revisionStatus).toBe(PostReviewStatus.PUBLISHED);
+    expect(result.revisionStatusLabel).toBe('Đã xuất bản');
+    expect(result.revisionId).toBe('rev-recipe-9');
+    expect(result.revisionVersion).toBe(1);
+    expect(result.publishedRevisionVersion).toBe(1);
+    expect(result.publishedAt).toBeInstanceOf(Date);
+    expect(result.isAutoPublished).toBe(true);
+  });
+
+  // Test 13: Dual-revision không tự động xuất bản (ví dụ Member/Admin gửi bản sửa v2)
+  it('13. maps dual-revision submit post result without marking isAutoPublished', () => {
+    const dto: SubmitPostResponseDataDto = {
+      id: 'post-recipe-10',
+      type: 'RECIPE',
+      slug: 'canh-chua',
+      status: 'PUBLISHED',
+      version: 2,
+      publishedRevisionVersion: 1,
+      publishedAt: '2026-10-01T00:00:00.000Z',
+      revision: {
+        id: 'rev-recipe-10-v2',
+        version: 2,
+        status: 'PENDING_REVIEW',
+        title: 'Canh chua chay v2',
+      },
+    };
+
+    const result = contentReviewMapper.toSubmitResult(dto);
+
+    expect(result.postStatus).toBe(PostReviewStatus.PUBLISHED);
+    expect(result.revisionStatus).toBe(PostReviewStatus.PENDING_REVIEW);
+    expect(result.revisionStatusLabel).toBe('Đang chờ duyệt');
+    expect(result.publishedRevisionVersion).toBe(1);
+    expect(result.isAutoPublished).toBe(false);
+  });
+
+  // Test 14: Nội dung bị gắn cờ / tạm giữ khi submit không được đánh dấu isAutoPublished
+  it('14. maps flagged or quarantined submit post result with isAutoPublished = false', () => {
+    const dto: SubmitPostResponseDataDto = {
+      id: 'post-blog-5',
+      type: 'BLOG',
+      status: 'QUARANTINED',
+      version: 1,
+      publishedRevisionVersion: null,
+      revision: {
+        id: 'rev-blog-5',
+        version: 1,
+        status: 'FLAGGED',
+        title: 'Bài cần rà soát',
+      },
+    };
+
+    const result = contentReviewMapper.toSubmitResult(dto);
+
+    expect(result.postStatus).toBe(PostReviewStatus.QUARANTINED);
+    expect(result.revisionStatus).toBe(PostReviewStatus.FLAGGED);
+    expect(result.publishedRevisionVersion).toBeNull();
+    expect(result.isAutoPublished).toBe(false);
+  });
+
+  // Test 15: Fallback an toàn khi dto null hoặc thiếu revision
+  it('15. maps null or missing submit post revision safely using fallback status', () => {
+    const nullResult = contentReviewMapper.toSubmitResult(null);
+    expect(nullResult.postId).toBe('');
+    expect(nullResult.postStatus).toBe(PostReviewStatus.DRAFT);
+    expect(nullResult.revisionStatus).toBe(PostReviewStatus.DRAFT);
+    expect(nullResult.publishedRevisionVersion).toBeNull();
+    expect(nullResult.isAutoPublished).toBe(false);
+
+    const noRevisionResult = contentReviewMapper.toSubmitResult({
+      id: 'post-v1',
+      status: 'PENDING_REVIEW',
+      version: 1,
+    });
+    expect(noRevisionResult.revisionStatus).toBe(PostReviewStatus.PENDING_REVIEW);
+    expect(noRevisionResult.revisionVersion).toBe(1);
+    expect(noRevisionResult.isAutoPublished).toBe(false);
   });
 });

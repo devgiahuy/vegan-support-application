@@ -109,7 +109,7 @@ function ContributorDashboardContent() {
         </div>
 
         {/* Quick Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="rounded-2xl border border-border/80 shadow-sm transition-all hover:shadow-md">
             <CardContent className="p-5 flex items-center gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">

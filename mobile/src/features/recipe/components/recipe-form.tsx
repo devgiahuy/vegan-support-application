@@ -14,11 +14,14 @@ import type { RecipeDraftSuggestion } from '../types/recipe-draft.model';
 import {
   CONTENT_STEPS,
   RECIPE_EDITOR_STEPS,
+  applyDraftBasics,
   buildRecipeInput,
   emptyIngredient,
   emptyStep,
   hasUserContent,
   issueLocation,
+  linkedIngredientIds,
+  parseAmount,
   stepTitle,
   toEditorValues,
   validateRecipeEditor,
@@ -36,6 +39,12 @@ import { BasicsSection, ClassifySection, IngredientsSection, StepsSection } from
 import { RecipeEditorStepper } from './recipe-editor-stepper';
 
 export type { RecipeFormInitial } from '../utils/recipe-editor';
+
+/** Ô số còn trống hoặc không hợp lệ → `undefined` để AI tự gợi ý. */
+const seedNumber = (text: string) => {
+  const value = parseAmount(text);
+  return Number.isNaN(value) ? undefined : value;
+};
 
 const INGREDIENT_ERROR_CODES = new Set(['INGREDIENT_ID_NAME_MISMATCH', 'INVALID_INGREDIENT_REFERENCE']);
 
@@ -112,6 +121,9 @@ export function RecipeForm({
 
   const handleNext = () => {
     if (step === 'review' || !next) return;
+    // Bước cơ bản không chặn: tên món, mô tả, khẩu phần và thời gian có thể để trống cho AI gợi ý;
+    // thiếu gì vẫn bị báo khi xem lại và gửi.
+    if (step === 'basics') return goTo(next.id);
     const stepIssues = issues.filter((issue) => issue.step === step);
     if (stepIssues.length > 0) {
       markAttempted([step as RecipeContentStep]);
@@ -152,9 +164,10 @@ export function RecipeForm({
 
   const applyDraft = (draft: RecipeDraftSuggestion) => {
     const stamp = nextKey('ai');
+    const linked = linkedIngredientIds(values.ingredients);
     const ingredients: EditorIngredient[] = draft.ingredients.map((item, index) => ({
       key: `${stamp}-ing-${index}`,
-      ingredientId: null,
+      ingredientId: linked.get(item.name.trim().toLocaleLowerCase('vi')) ?? null,
       name: item.name,
       amount: String(item.amount),
       unit: item.unit,
@@ -163,11 +176,9 @@ export function RecipeForm({
       originalPosition: index,
     }));
     const run = () => {
-      // Tên món và mô tả là đầu vào của AI nên giữ bản người dùng đã nhập; danh mục không do AI điền.
+      // Chỉ điền những thông tin cơ bản còn trống; giá trị người dùng đã nhập được giữ nguyên. Danh mục không do AI điền.
       patch({
-        servings: String(draft.servings),
-        prepTime: String(draft.prepTimeMinutes),
-        cookTime: String(draft.cookTimeMinutes),
+        ...applyDraftBasics(values, draft),
         difficulty: draft.difficulty,
         ingredients,
         steps: draft.steps.map((item, index) => ({
@@ -178,10 +189,10 @@ export function RecipeForm({
         })),
       });
       setSubmitError('');
-      Alert.alert('Đã điền gợi ý AI', 'Đã điền nguyên liệu và các bước nấu. Kiểm tra lại định lượng, liên kết nguyên liệu chuẩn rồi chọn danh mục.');
+      Alert.alert('Đã điền gợi ý AI', 'Đã điền thông tin còn trống, nguyên liệu và các bước nấu. Kiểm tra lại định lượng, liên kết nguyên liệu chuẩn rồi chọn danh mục.');
     };
     if (!hasUserContent(values)) return run();
-    Alert.alert('Thay nội dung hiện có?', 'Nguyên liệu, các bước, khẩu phần và thời gian hiện tại sẽ được thay bằng bản nháp AI. Tên món và mô tả của bạn được giữ nguyên.', [
+    Alert.alert('Thay nội dung hiện có?', 'Nguyên liệu và các bước hiện tại sẽ được thay bằng bản nháp AI. Thông tin cơ bản bạn đã nhập (tên món, mô tả, khẩu phần, thời gian) được giữ nguyên.', [
       { text: 'Giữ nguyên', style: 'cancel' },
       { text: 'Thay bằng bản nháp', style: 'destructive', onPress: run },
     ]);
@@ -240,6 +251,9 @@ export function RecipeForm({
                   seed={{
                     title: values.title,
                     description: values.description,
+                    servings: seedNumber(values.servings),
+                    prepTimeMinutes: seedNumber(values.prepTime),
+                    cookTimeMinutes: seedNumber(values.cookTime),
                     ingredientNames: values.ingredients.map((item) => item.name.trim()).filter(Boolean),
                   }}
                   onApply={applyDraft}

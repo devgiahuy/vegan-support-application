@@ -1,9 +1,15 @@
 /** `POST /recipe-drafts/generate` request (đồng bộ backend `generateRecipeDraftRequestSchema`). */
 export interface GenerateRecipeDraftRequestDto {
-  /** 3–200 ký tự. */
+  /** Rỗng để AI gợi ý; nếu có thì 3–200 ký tự. */
   title: string;
-  /** 1–500 ký tự. */
+  /** Rỗng để AI gợi ý; tối đa 500 ký tự. */
   description: string;
+  /** Giá trị người dùng đã nhập được BE giữ nguyên (1–100 người). */
+  servings?: number;
+  /** 0–10080 phút. */
+  prepTimeMinutes?: number;
+  /** 0–10080 phút. */
+  cookTimeMinutes?: number;
   /** 1–50 tên nguyên liệu, mỗi tên tối đa 160 ký tự. */
   ingredientNames: string[];
 }

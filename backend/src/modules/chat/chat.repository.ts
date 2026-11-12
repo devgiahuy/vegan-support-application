@@ -88,6 +88,30 @@ export class ChatRepository {
     });
   }
 
+  async deleteSession(userId: string, id: string, staleBefore: Date) {
+    return this.prisma.$transaction(async (transaction) => {
+      const where = { id, userId, deletedAt: null };
+      if (!(await transaction.chatSession.findFirst({ where, select: { id: true } })))
+        return 'NOT_FOUND' as const;
+      await lockDocument(transaction, 'chatSession', { id });
+      const busy = await transaction.chatMessage.findFirst({
+        where: {
+          sessionId: id,
+          role: ChatMessageRole.ASSISTANT,
+          status: ChatMessageStatus.PENDING,
+          updatedAt: { gt: staleBefore },
+        },
+        select: { id: true },
+      });
+      if (busy) return 'BUSY' as const;
+      const result = await transaction.chatSession.updateMany({
+        where,
+        data: { deletedAt: new Date() },
+      });
+      return result.count ? ('DELETED' as const) : ('NOT_FOUND' as const);
+    });
+  }
+
   async listMessages(identity: ChatIdentity, sessionId: string, page: number, limit: number) {
     const session = await this.findOwnedSession(identity, sessionId);
     if (!session) return null;

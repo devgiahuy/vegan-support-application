@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
   ArrowLeft,
+  AlertTriangle,
   CalendarDays,
   CheckCircle2,
   Droplets,
@@ -32,6 +33,7 @@ import {
 } from '@/features/meal-plan/queries/meal-plan.queries';
 import { DayGrid, formatDayLabel } from '@/features/meal-plan/components/day-grid';
 import { WarningsBanner } from '@/features/meal-plan/components/warnings-banner';
+import { groupConstraintDetails } from '@/features/meal-plan/lib/constraint-details';
 import { SwapMealItemDialog } from '@/features/meal-plan/components/swap-dialog';
 import { DeleteMealPlanDialog } from '@/features/meal-plan/components/delete-dialog';
 import {
@@ -210,17 +212,36 @@ function MealPlanDetailContent({ id }: { id: string }) {
 
           {/* 2. TÓM TẮT KẾ HOẠCH & BẢO TOÀN RÀNG BUỘC ĂN KIÊNG */}
           {plan.userSummary && (
-            <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-teal-500/10 p-5 dark:from-emerald-950/40 dark:via-emerald-950/20 dark:to-teal-950/30 shadow-2xs">
+            <div
+              className={`relative overflow-hidden rounded-2xl border p-5 shadow-2xs ${!plan.userSummary.hardConstraintsPreserved ? 'border-amber-500/40 bg-amber-500/5' : 'border-emerald-500/30 bg-emerald-500/10'}`}
+            >
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                 <div className="flex items-start gap-3 min-w-0">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 shadow-2xs mt-0.5">
-                    <ShieldCheck className="h-5 w-5" />
+                    {plan.userSummary.hardConstraintsPreserved ? (
+                      <ShieldCheck className="h-5 w-5" />
+                    ) : (
+                      <AlertTriangle className="h-5 w-5 text-amber-700" />
+                    )}
                   </div>
                   <div className="min-w-0 space-y-1">
                     <h3 className="text-sm sm:text-base font-bold text-foreground">
                       {plan.userSummary.title || 'Tóm tắt kế hoạch thực đơn'}
                     </h3>
-                    {plan.userSummary.detailLines.length > 1 ? (
+                    {plan.userSummary.hardViolations.length > 0 ? (
+                      <ul className="mt-2 space-y-2 text-xs sm:text-sm text-foreground/85 leading-relaxed">
+                        {groupConstraintDetails(plan.userSummary.hardViolations).map((group) => (
+                          <li key={JSON.stringify([group.name, group.details])}>
+                            <span className="font-semibold">{group.name}</span>
+                            {group.locations.length > 0 && (
+                              <span> ({group.locations.join(', ')})</span>
+                            )}
+                            {': '}
+                            {group.details.join('. ')}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : plan.userSummary.detailLines.length > 1 ? (
                       <ul className="list-disc space-y-1 pl-5 text-xs leading-relaxed text-foreground/85 sm:text-sm">
                         {plan.userSummary.detailLines.map((line, index) => (
                           <li key={`${index}-${line}`} className="break-words">
@@ -229,8 +250,8 @@ function MealPlanDetailContent({ id }: { id: string }) {
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-xs leading-relaxed text-foreground/85 sm:text-sm">
-                        {plan.userSummary.detailLines[0]}
+                      <p className="whitespace-pre-line text-xs sm:text-sm text-foreground/85 leading-relaxed">
+                        {plan.userSummary.detailLines.join('\n')}
                       </p>
                     )}
                   </div>

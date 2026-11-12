@@ -6,13 +6,20 @@ import type {
   ChatMessageListResponseDto,
   ChatSessionListResponseDto,
   ChatSessionResponseDto,
+  DeleteChatSessionRequestDto,
+  DeleteChatSessionResponseDto,
 } from '../types/chat.dto';
-import type { ChatMessage, ChatSession, MessageFeedback } from '../types/chat.model';
+import type {
+  ChatMessage,
+  ChatSession,
+  DeletedChatSession,
+  MessageFeedback,
+} from '../types/chat.model';
 import type { FeedbackValue } from '@/common/enums';
 import { chatMapper } from '../mappers/chat.mapper';
 
 /**
- * Consumer 4/5 endpoint chat private qua axios.
+ * Consumer endpoint chat private qua axios.
  * Riêng gửi câu hỏi (SSE stream) nằm ở `chat-stream.ts` — KHÔNG qua interceptor.
  * API đọc data và metadata từ envelope trước khi gọi mapper.
  */
@@ -37,6 +44,14 @@ export const chatApi = {
       silent: true,
     });
     return chatMapper.toSessionList(res.data?.data, res.data?.meta);
+  },
+
+  /** `DELETE /chat/sessions/:id` — ẩn phiên của tài khoản khỏi lịch sử. */
+  deleteSession: async (input: DeleteChatSessionRequestDto): Promise<DeletedChatSession> => {
+    const res = await api.delete<DeleteChatSessionResponseDto>(CHAT_ENDPOINTS.SESSION(input.id), {
+      silent: true,
+    });
+    return chatMapper.toDeletedSession(res.data);
   },
 
   /** `GET /chat/sessions/:id/messages` — lịch sử theo ownership. */

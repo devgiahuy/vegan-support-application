@@ -87,7 +87,24 @@ export const videoApi = {
     const res = await api.post<VideoDetailResponseDto>(API_ENDPOINTS.POSTS.LIST, payload, {
       silent: true,
     });
-    return videoMapper.toModel(res.data.data);
+    const created = res.data.data;
+    const revisionId = created.revision?.id;
+    const expectedVersion = created.version;
+
+    // `POST /posts` luôn tạo draft revision: phải submit để Contributor tự xuất bản hoặc Member vào hàng chờ duyệt.
+    if (created.id && revisionId && expectedVersion) {
+      try {
+        const submitRes = await api.post<VideoDetailResponseDto>(
+          API_ENDPOINTS.POSTS.SUBMIT(created.id),
+          { revisionId, expectedVersion }
+        );
+        return videoMapper.toModel(submitRes.data.data);
+      } catch {
+        // Tạo được nhưng gửi thất bại: trả bản draft để màn hình báo "chưa gửi được" và cho sửa/gửi lại.
+        return videoMapper.toModel(created);
+      }
+    }
+    return videoMapper.toModel(created);
   },
 
   /**

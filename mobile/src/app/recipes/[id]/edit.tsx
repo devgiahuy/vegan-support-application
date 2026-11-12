@@ -6,11 +6,11 @@ import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { RecipeForm } from '@/features/recipe/components/recipe-form';
 import { useRecipeDetailQuery, useUpdateRecipeMutation } from '@/features/recipe/queries/recipe.queries';
-import { PostStatus } from '@/common/enums';
+import { getSubmitFeedback, getSubmitOutcome } from '@/features/post/utils/submit-outcome';
 import { FALLBACK_RECIPE_COVER_URL } from '@/lib/env';
 import { useAuthStore } from '@/store/useAuthStore';
 
-/** Sửa công thức của chính mình — `PATCH /posts/:id` rồi gửi lại duyệt. Author-only. */
+/** Sửa công thức của chính mình — `PATCH /posts/:id` rồi `POST /posts/:id/submit` (tự xuất bản hoặc chờ duyệt tùy `revision.status`). Author-only. */
 export default function EditRecipeScreen() {
   const router = useRouter();
   const currentUserId = useAuthStore((state) => state.user?.id);
@@ -109,11 +109,8 @@ export default function EditRecipeScreen() {
               id: recipe.id,
               input: { ...values, expectedVersion: recipe.version },
             });
-            if (updated.status === PostStatus.DRAFT) {
-              Alert.alert('Đã lưu bản nháp', 'Thay đổi đã được lưu nhưng chưa gửi duyệt được. Hãy sửa và gửi lại.');
-            } else {
-              Alert.alert('Đã lưu', 'Công thức đã được cập nhật và gửi lại để duyệt.');
-            }
+            const feedback = getSubmitFeedback(getSubmitOutcome(updated.revisionStatus), 'công thức', true);
+            Alert.alert(feedback.title, feedback.message);
             router.replace(`/recipes/${recipe.id}` as Href);
           }}
         />

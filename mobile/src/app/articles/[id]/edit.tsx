@@ -6,11 +6,12 @@ import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { ArticleForm } from '@/features/post/components/article-form';
 import { useArticleDetailQuery, useUpdateArticleMutation } from '@/features/post/queries/post.queries';
+import { getSubmitFeedback, getSubmitOutcome } from '@/features/post/utils/submit-outcome';
 import { getApiErrorDetail } from '@/lib/api-error';
 import { FALLBACK_ARTICLE_COVER_URL } from '@/lib/env';
 import { useAuthStore } from '@/store/useAuthStore';
 
-/** Sửa bài viết của chính mình — `PATCH /posts/:id` rồi gửi lại duyệt. Author-only. */
+/** Sửa bài viết của chính mình — `PATCH /posts/:id` rồi `POST /posts/:id/submit` (tự xuất bản hoặc chờ duyệt tùy `revision.status`). Author-only. */
 export default function EditArticleScreen() {
   const router = useRouter();
   const currentUserId = useAuthStore((state) => state.user?.id);
@@ -78,18 +79,20 @@ export default function EditArticleScreen() {
             tags: article.tags,
             categoryId: article.category.id || null,
           }}
-          submitLabel="Lưu & gửi duyệt lại"
+          submitLabel="Lưu & gửi lại"
           isSubmitting={updateMutation.isPending}
           onSubmit={async (values, action) => {
             try {
-              await updateMutation.mutateAsync({
+              const updated = await updateMutation.mutateAsync({
                 id: article.id,
                 input: { ...values, expectedVersion: article.version },
               });
-              Alert.alert(
-                'Đã lưu',
-                action === 'DRAFT' ? 'Đã cập nhật bản nháp bài viết.' : 'Bài viết đã được cập nhật và gửi lại để duyệt.'
-              );
+              if (action === 'DRAFT') {
+                Alert.alert('Đã lưu', 'Đã cập nhật bản nháp bài viết.');
+              } else {
+                const feedback = getSubmitFeedback(getSubmitOutcome(updated.revisionStatus), 'bài viết', true);
+                Alert.alert(feedback.title, feedback.message);
+              }
               router.replace(`/articles/${article.id}` as Href);
             } catch (error) {
               Alert.alert('Không lưu được', getApiErrorDetail(error, 'Vui lòng kiểm tra dữ liệu và thử lại.'));

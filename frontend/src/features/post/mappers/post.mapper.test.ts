@@ -225,4 +225,32 @@ describe('PostMapper', () => {
       })
     ).toEqual({ recipes: [], blogs: [], videos: [] });
   });
+
+  it('maps revisionStatus independently from post status for dual-revision articles', () => {
+    const dto = backendBlogDto();
+    dto.status = 'PUBLISHED';
+    dto.version = 3;
+    dto.publishedRevisionVersion = 2;
+    dto.revision = {
+      ...dto.revision,
+      id: 'rev-124',
+      version: 3,
+      status: 'DRAFT',
+    };
+
+    const model = postMapper.toModel(dto);
+    expect(model.status).toBe(PostStatus.PUBLISHED);
+    expect(model.revisionStatus).toBe(PostStatus.DRAFT);
+    expect(model.publishedRevisionVersion).toBe(2);
+    expect(model.version).toBe(3);
+    expect(model.revisionVersion).toBe(3);
+  });
+
+  it('leaves revisionStatus undefined when revision.status is absent', () => {
+    const dto = backendBlogDto();
+    dto.revision = { ...dto.revision, status: undefined };
+
+    const model = postMapper.toModel(dto);
+    expect(model.revisionStatus).toBeUndefined();
+  });
 });

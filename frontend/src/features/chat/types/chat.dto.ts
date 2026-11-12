@@ -26,12 +26,7 @@ export interface ChatMessageDto {
   role?: string;
   status?: string;
   content?: string | null;
-  provider?: string | null;
-  modelId?: string | null;
-  model_id?: string | null;
   fallback?: boolean;
-  topicCodes?: (string | null)[] | null;
-  topic_codes?: (string | null)[] | null;
   disclaimer?: string | null;
   feedback?: { value?: string } | null;
   completedAt?: string | null;
@@ -43,6 +38,17 @@ export interface ChatMessageDto {
 /** `POST /chat/sessions` — `title` optional, KHÔNG gửi `guestId`. */
 export interface CreateChatSessionRequestDto {
   title?: string;
+}
+
+/** `DELETE /chat/sessions/:id` — id nằm trên path. */
+export interface DeleteChatSessionRequestDto {
+  id: string;
+}
+
+export interface DeleteChatSessionResponseDto {
+  success?: boolean;
+  data?: { id?: string } | null;
+  meta?: null;
 }
 
 /** `POST /chat/sessions/:id/messages` — `content` + `idempotencyKey` bắt buộc. */
@@ -95,20 +101,4 @@ export interface ChatFeedbackResponseDto {
   success?: boolean;
   data?: { messageId?: string; value?: string; reason?: string | null; updatedAt?: string } | null;
   meta?: null;
-}
-
-/** Payload `data:` của 1 SSE event (đã parse JSON). */
-export interface ChatStreamEventPayload {
-  content?: string;
-  delta?: string;
-  text?: string;
-  messageId?: string;
-  message_id?: string;
-  used?: number | string;
-  limit?: number | string;
-  remaining?: number | string;
-  paidRemaining?: number | string;
-  resetAt?: string | null;
-  code?: string;
-  message?: string;
 }

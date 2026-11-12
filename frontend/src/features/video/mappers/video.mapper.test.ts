@@ -154,4 +154,32 @@ describe('VideoMapper', () => {
       assetId: 'a1b2c3d4-0000-0000-0000-000000000000',
     });
   });
+
+  it('maps revisionStatus independently from post status for dual-revision videos', () => {
+    const dto = youtubeDto();
+    dto.status = 'PUBLISHED';
+    dto.version = 2;
+    dto.publishedRevisionVersion = 1;
+    dto.revision = {
+      ...dto.revision,
+      id: 'rev-v2',
+      version: 2,
+      status: 'PENDING_REVIEW',
+    };
+
+    const model = videoMapper.toModel(dto);
+    expect(model.status).toBe(PostStatus.PUBLISHED);
+    expect(model.revisionStatus).toBe(PostStatus.PENDING_REVIEW);
+    expect(model.publishedRevisionVersion).toBe(1);
+    expect(model.version).toBe(2);
+    expect(model.revisionVersion).toBe(2);
+  });
+
+  it('leaves revisionStatus undefined when revision.status is absent', () => {
+    const dto = youtubeDto();
+    dto.revision = { ...dto.revision, status: undefined };
+
+    const model = videoMapper.toModel(dto);
+    expect(model.revisionStatus).toBeUndefined();
+  });
 });

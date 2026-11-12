@@ -1,6 +1,6 @@
 # Bộ chạy test tay 16 luồng nghiệp vụ
 
-**Ngày đối chiếu source/registry:** 24/10/2026; bổ sung luồng hóa đơn 25/10/2026. Đây là **kịch bản để tự chạy**, chưa phải biên bản PASS. Luồng L01–L16 khớp [danh mục nghiệp vụ](02_LUONG_NGHIEP_VU.md). Sau mỗi lần checkout/seed lại, kiểm tra [registry](../../frontend/docs/BACKEND_INTEGRATION.md) và [phase gate](../../backend/docs/IMPLEMENTATION_PHASES.md).
+**Ngày đối chiếu tĩnh:** 08/11/2026, `dev` tại `0feaca2`. Đây là **kịch bản để tự chạy**, chưa phải biên bản PASS. Luồng L01–L16 khớp [danh mục nghiệp vụ](02_LUONG_NGHIEP_VU.md). Sau mỗi lần checkout/seed lại, kiểm tra [registry](../../frontend/docs/BACKEND_INTEGRATION.md) và [phase gate](../../backend/docs/IMPLEMENTATION_PHASES.md).
 
 ## 1. Chuẩn bị môi trường và cách ghi kết quả
 
@@ -24,6 +24,8 @@ Thay `R` bằng mã riêng mỗi lần chạy, ví dụ `MT2410A`. Tạo hai tà
 | S | `SEED_MEMBER_EMAIL` (mặc định `member@example.com`) | Fixture có sẵn health, diet `VEGAN`, dị ứng `PEANUT`, Pantry và meal plan 21 slot; tránh sửa dữ liệu này khi muốn demo seed nguyên vẹn. |
 
 **Input cố định cho A:** cao 170 cm, nặng 68 kg, tuổi 27, giới tính nam, vận động `MODERATELY_ACTIVE`; diet `VEGAN`, lịch `PERMANENT`, tradition `NONE`, dị ứng `PEANUT`, loại trừ `Đậu phộng rang`; mục tiêu plan `MAINTAIN`, tuần bắt đầu **thứ Hai 26/10/2026**. Nếu UI đòi ngày sinh thay tuổi, chọn ngày cho ra tuổi phù hợp rồi ghi tuổi backend thực tế. Những giá trị này là dữ liệu test, không là khuyến nghị sức khỏe.
+
+Các ngày 26/10 và 02/11 bên dưới là ví dụ lịch sử. Khi chạy mới, chọn các ngày/tuần hợp lệ theo validation của bản đang demo và ghi lại ngày thực tế; không giả định một ngày trong quá khứ vẫn được chấp nhận.
 
 **Catalog seed để đối chứng:** `goi-cuon-chay-ngu-sac` và `yen-mach-qua-dem-chuoi-chia` có `PEANUT`; `sup-bi-do-kem-dua`, `salad-bo-dau-ga`, `chao-quinoa-bi-do-hat-bi` không khai báo allergen. Chọn theo **slug/tên và response hiện có**; seed có thể đổi. Nguyên liệu seed: `Gạo lứt huyết rồng`, `Đậu hũ trắng`, `Nấm bào ngư xám`, `Đậu phộng rang`. Gạo lứt của S có sẵn 2.000 g, nên bài toán số lượng độc lập hãy dùng A.
 
@@ -51,8 +53,9 @@ Thay `R` bằng mã riêng mỗi lần chạy, ví dụ `MT2410A`. Tạo hai tà
 
 - **Dữ liệu:** A tạo recipe `R - Cơm gạo lứt bí đỏ`, mô tả `Bài test duyệt`, 2 servings, nguyên liệu seed `Gạo lứt huyết rồng 200 g`, `Bí đỏ hồ lô 150 g`; ảnh chỉ thêm nếu upload hoạt động. Bài blog/video có thể làm vòng lặp riêng nếu đủ thời gian.
 - **Chạy:** `/recipes/new` → lưu nháp → ghi post ID/revision/version → submit. ADM mở `/admin` hoặc queue review (Swagger `GET /admin/content-review` nếu UI không lộ) → mở đúng revision, approve kèm lý do `Đã xem dữ liệu test R`. Guest mở `/recipes/[id]`. A sửa tiêu đề thành `R - Cơm gạo lứt bí đỏ bản 2`, lưu/submit revision mới; guest xem trước và sau khi ADM duyệt lần hai.
-- **Đạt:** draft/pending không công khai; sau approve bản 1 public; lúc bản 2 chờ, guest vẫn thấy bản 1; sau approve mới thấy bản 2. Contributor C submit cũng đi `PENDING_REVIEW`, không auto publish.
-- **Ca lỗi:** A dùng version cũ → `CONTENT_VERSION_CONFLICT`; A/ADM tự duyệt bài của chính mình phải bị chặn. AI flag chỉ là tín hiệu, không tự xóa bài.
+- **Đạt:** draft/pending không công khai; sau approve bản 1 public; lúc bản 2 chờ, guest vẫn thấy bản 1; sau approve mới thấy bản 2. Contributor C submit cũng đi `PENDING_REVIEW`, không auto publish. C có thể review bài Member của A nếu không tự duyệt, không có flag mở/báo cáo ưu tiên cao và thỏa điều kiện. Với recipe, trước approve kiểm tra bảng 5 chỉ số cuối cùng và nguồn/override; nếu thiếu thì không approve.
+- **Ca lỗi:** A dùng version cũ → `CONTENT_VERSION_CONFLICT`; A/ADM tự duyệt bài của chính mình → `SELF_APPROVAL_FORBIDDEN`; Contributor gặp ca leo thang → `ADMIN_REVIEW_REQUIRED`; approve thiếu dinh dưỡng → `RECIPE_NUTRITION_INCOMPLETE`. AI flag chỉ là tín hiệu, không tự xóa bài. Chưa khẳng định Contributor được review bài Contributor khác: có sai lệch giữa SRS và source cần audit.
+- **AI draft tùy chọn:** nếu tính năng/provider được bật, kiểm tra theo registry `IN_PROGRESS`: nhập tên, mô tả và ít nhất một nguyên liệu, yêu cầu preview, xem/chỉnh gợi ý rồi mới lưu/submit qua luồng thường. Preview không tự tạo bài. Thiếu provider hoặc gate chưa sẵn sàng thì đánh `BLOCKED`, không gọi là `READY`.
 
 ### L04 — Bình luận, vote/rating/bookmark, report
 
@@ -79,7 +82,7 @@ Thay `R` bằng mã riêng mỗi lần chạy, ví dụ `MT2410A`. Tạo hai tà
 
 - **Dữ liệu:** `Gạo lứt huyết rồng`, recipe L03 và recipe seed `sup-bi-do-kem-dua`.
 - **Chạy:** xem `/recipes/[id]` và chi tiết nguyên liệu; trong Swagger gọi `GET /food-data/ingredients/{ingredientId}/nutrients`, `GET /food-data/cooking-methods` (lấy ID ingredient từ catalog), rồi `GET /posts/{id}/nutrition/current` và `POST /posts/{id}/nutrition/preview`. Ghi `source`, `version`, `confidence`, `coverage`, `assumptions`, calories/macro và servings trước/sau đổi lượng/phương pháp nếu UI hỗ trợ. ADM xem record staging/canonical tại `/admin`.
-- **Đạt:** các endpoint này đang `READY` trong registry; số liệu có provenance và độ phủ; thiếu nutrient/conversion hiện là thiếu/chưa rõ, không được đổi thành số 0 chắc chắn. Dữ liệu AI đề xuất không tự biến thành canonical.
+- **Đạt:** các endpoint này đang `READY` trong registry; số liệu có provenance và độ phủ; thiếu nutrient/conversion là thiếu/chưa rõ, không được kết luận chắc chắn là 0. Mapper web recipe hiện có fallback một số macro null thành 0, nên đối chiếu response nutrition/coverage trước khi dùng card làm bằng chứng. Dữ liệu AI đề xuất không tự biến thành canonical.
 - **Ca lỗi:** dùng ingredient không có quy đổi hoặc một đơn vị không hỗ trợ; ghi `uncovered`/confidence hoặc error thay vì khẳng định chính xác.
 
 ### L08 — Kế hoạch tuần và phân tích bữa ăn
@@ -93,7 +96,7 @@ Thay `R` bằng mã riêng mỗi lần chạy, ví dụ `MT2410A`. Tạo hai tà
 
 - **Dữ liệu:** A tạo `R - Cháo bí đỏ cá nhân`, nguyên liệu `Gạo lứt huyết rồng 100 g`, `Bí đỏ hồ lô 200 g`, 2 servings, tag `shopee` chỉ là nhãn. Chương trình tên `R - Hai tuần thử nghiệm`, tuần bắt đầu `2026-10-26` và `2026-11-02`.
 - **Chạy:** `/custom-meals/new` → lưu, reload detail, sửa servings/tag, kiểm tra private bằng B. Thêm món vào plan của A. Tạo chương trình 2 tuần tại `/meal-programs/new` **nếu UI/contract hiện hỗ trợ**; nếu trang không có thao tác đầy đủ, chạy `POST /meal-programs` qua Swagger theo schema đang phục vụ; chọn phương án, xác nhận, reload.
-- **Đạt:** custom meal chỉ owner thấy/sửa; tag `shopee` không tạo đơn mua hay gọi Shopee. Program 2–12 tuần lưu snapshot/version; sau confirm, hành động không hợp lệ bị chặn. Ghi `FE integrated = No` cho program nếu registry vẫn vậy: API PASS không đồng nghĩa web PASS.
+- **Đạt:** custom meal chỉ owner thấy/sửa; tag `shopee` không tạo đơn mua hay gọi Shopee. Program 2–12 tuần lưu snapshot/version; sau confirm, hành động không hợp lệ bị chặn. Registry hiện ghi web program `Yes`; ghi kết quả web và API riêng, API PASS không tự chứng minh UI PASS.
 - **Ca lỗi:** B mở/sửa món của A → 403/404 theo contract; thử xóa món đang được plan dùng để xem policy bảo toàn; version cũ của program → conflict.
 
 ### L10 — Upload media và quota
@@ -138,15 +141,15 @@ Thay `R` bằng mã riêng mỗi lần chạy, ví dụ `MT2410A`. Tạo hai tà
 
 - **Dữ liệu:** địa chỉ thử `Quận 1, Thành phố Hồ Chí Minh` hoặc tọa độ do người dùng nhập; submission `R - Quán chay kiểm thử`, địa chỉ giả rõ ràng, không đưa số điện thoại thật.
 - **Chạy nhà hàng:** `/restaurants` tìm bằng địa chỉ nhập tay trước, sau đó thử cấp/từ chối vị trí trình duyệt; ghi provider label/source. A đề xuất quán; ADM duyệt có lý do; B kiểm tra chỉ bản approved public. Nếu provider fake, đánh giá luồng truy vấn/UI, không khẳng định địa điểm ngoài đời có thật.
-- **Đạt:** từ chối vị trí vẫn có thể nhập địa chỉ; submission chờ duyệt, không tự public; nhãn provider/diet không được diễn giải thành đảm bảo an toàn dị ứng.
+- **Đạt:** từ chối vị trí vẫn có thể nhập địa chỉ; submission chờ duyệt, không tự public. Với cùng vị trí/bộ lọc, đổi hồ sơ ăn uống không tự thay kết quả discovery; chọn `dietPattern` tường minh chỉ trả claim nội bộ đã rà soát và loại kết quả provider chưa xác minh. Nhãn provider không đảm bảo an toàn dị ứng.
 - **Chạy thông báo:** sau L03/L05/L15 mở chuông hoặc `GET /notifications`, ghi unread count; mark một item read, reload; `read-all`, reload. Đối chiếu owner A/B và payload.
-- **Đạt thông báo:** chỉ owner thấy; unread count đổi đúng; payload không chứa nội dung health/receipt/prompt; đây là **in-app**, không kỳ vọng email/push. Nếu chuông web còn fixture theo registry, dùng Swagger để xác nhận backend và đánh web `BLOCKED`/`FAIL` riêng.
+- **Đạt thông báo:** chỉ owner thấy; unread count đổi đúng; payload không chứa nội dung health/receipt/prompt; đây là **in-app**, không kỳ vọng email/push. Registry có bảng `Yes` và ghi chú mock cũ mâu thuẫn; kiểm tra Network/source trên bản demo, tách kết quả web và backend.
 
 ### L16 — Gói payOS và entitlement
 
 - **Dữ liệu:** A; ghi `GET /billing/products`, `GET /entitlements/me`, `GET /billing/orders` trước thử. Chọn một gói nhỏ **chỉ khi** môi trường merchant được cấu hình và bạn chủ động chấp nhận giao dịch tiền thật.
 - **Chạy an toàn trước:** `/billing` xem catalog, số dư, lịch sử. Khi `BILLING_ENABLED=false`/thiếu khóa, thử tạo order theo UI và ghi trạng thái purchase disabled. Nếu có merchant hợp lệ, tạo **một** order với idempotency key, ghi order ID/amount/benefit snapshot; mở checkout rồi quay về không trả tiền, reload entitlement. Chỉ trong buổi test thanh toán có chủ đích mới chuyển khoản đủ tiền; sau đó chờ webhook/query xác thực, reload order và balance.
-- **Đạt:** return URL/hình QR không tự cộng quyền; chỉ settlement ký hợp lệ, đúng tiền mới grant một lần. Retry cùng key không tạo quyền hai lần. Underpaid/pending vẫn chưa grant. Gói không tăng storage quota, không cấp Contributor/Admin, không bỏ xác nhận scan hay hard diet rule.
+- **Đạt:** return URL/hình QR không tự cộng quyền; chỉ settlement ký hợp lệ, đúng tiền mới grant một lần. Retry cùng key không tạo quyền hai lần. Underpaid/pending vẫn chưa grant. Gói lẻ cộng dồn không hết hạn; combo 1/3/12 tháng cấp credit theo chu kỳ 30 ngày, credit kỳ hết hạn và không tự gia hạn. Gói không tăng storage quota, không cấp Contributor/Admin, không bỏ xác nhận scan hay hard diet rule.
 - **Ca lỗi và giới hạn:** payOS **không có sandbox**, kể cả app development có thể chuyển tiền thật. Không tự bắn webhook giả để gọi là đã test provider; thiếu merchant credentials thì đánh full settlement `BLOCKED`. Nếu thử reconcile, tôn trọng cooldown 30 giây và kiểm tra balance trước/sau.
 
 ## 3. Mẫu biên bản có thể copy cho từng ca

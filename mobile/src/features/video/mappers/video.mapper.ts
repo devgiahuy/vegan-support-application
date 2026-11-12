@@ -1,7 +1,7 @@
 import { buildYoutubeThumbnailUrl, FALLBACK_VIDEO_THUMBNAIL_URL } from '@/lib/env';
 import { BaseMapper, pickField, safeArray, safeDate, safeNumber, safeString } from '@/lib/mapper';
 import { formatDate } from '@/lib/utils';
-import { authorFromDto, coverUrlFromMedia, firstCategory, getPostStatusLabel, parsePostStatus } from '@/features/post/mappers/post-shared';
+import { authorFromDto, coverUrlFromMedia, firstCategory, getPostStatusLabel, parsePostStatus, revisionStatusFromDto } from '@/features/post/mappers/post-shared';
 import type { PostMediaDto, PostRevisionDto } from '@/features/post/types/post.dto';
 import type { VideoDetailDto } from '../types/video.dto';
 import type { CookingVideo, VideoPaginationResult } from '../types/video.model';
@@ -70,6 +70,7 @@ export class VideoMapper extends BaseMapper<VideoDetailDto, CookingVideo> {
       slug: safeString(pickField(dto, ['slug'], '')),
       status,
       statusLabel: getPostStatusLabel(status),
+      revisionStatus: revisionStatusFromDto(dto),
       version: safeNumber(pickField(dto, ['version'], 1)),
       author: authorFromDto(dto, 'Bếp VeggieConnect'),
       category: firstCategory(dto),

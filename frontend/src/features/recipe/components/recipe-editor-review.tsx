@@ -159,12 +159,14 @@ export function RecipeEditorReview({
   values,
   issues,
   categoryName,
+  autoPublishEligible = false,
   onEdit,
   onFixIssue,
 }: {
   values: RecipeFormValues;
   issues: RecipeFieldIssue[];
   categoryName?: string;
+  autoPublishEligible?: boolean;
   onEdit: (step: RecipeContentStep) => void;
   onFixIssue: (issue: RecipeFieldIssue) => void;
 }) {
@@ -205,7 +207,9 @@ export function RecipeEditorReview({
           <Check aria-hidden />
           <AlertTitle>Công thức đã đủ thông tin bắt buộc</AlertTitle>
           <AlertDescription>
-            Sau khi gửi, công thức vào hàng chờ duyệt. Hệ thống tự tính dinh dưỡng từ nguyên liệu.
+            {autoPublishEligible
+              ? 'Với vai trò Người đóng góp, công thức sẽ được xuất bản công khai ngay sau khi đăng. Hệ thống đối chiếu nguyên liệu để hỗ trợ nhận diện dị ứng và chế độ ăn phù hợp.'
+              : 'Sau khi gửi, công thức vào hàng chờ duyệt. Hệ thống tự tính dinh dưỡng từ nguyên liệu.'}
           </AlertDescription>
         </Alert>
       )}

@@ -1,5 +1,154 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-10] — Sửa lỗi hiển thị lặp `30 ngày`, `90 ngày`, `360 ngày` trên card gói tiện ích ở `/billing`
+
+- **Mục tiêu**: khắc phục lỗi trên card `Gói tiện ích theo thời hạn` tại `/billing` hiển thị lặp thời hạn ở các nút chọn gói (`Gói tiện ích 30 ngày · 30 ngày`, `Gói tiện ích 90 ngày · 90 ngày`, `Gói tiện ích 360 ngày · 360 ngày`), đồng thời giữ hiển thị đầy đủ tên + thời hạn khi có gói tùy chỉnh không chứa thời hạn trong tên.
+- **Nguyên nhân**: tên các gói seed trong backend đã chứa sẵn `30 ngày` / `90 ngày` / `360 ngày` (`Gói tiện ích 30 ngày`, `Gói tiện ích 90 ngày`, `Gói tiện ích 360 ngày`), nhưng `DurationPlanCard` và `OrderRow` trong `src/features/billing/components/billing-view.tsx` nối cứng `{item.name} · {item.durationLabel}` / `{order.productName} · {order.durationLabel}` mà không kiểm tra trùng lặp ở tầng mapper.
+- **Thay đổi**:
+  - `src/features/billing/types/billing.model.ts`: bổ sung `displayName` vào `BillingProduct` và `durationSuffixLabel` vào `BillingOrder`.
+  - `src/features/billing/mappers/billing.mapper.ts`: thêm helper `hasDurationInName` (so khớp ranh giới ký tự chữ/số không phân biệt hoa thường, tránh khớp nhầm kiểu `130 ngày` với `30 ngày`), tính `displayName` trong `ProductMapper` và `durationSuffixLabel` trong `OrderMapper` để chỉ nối thời hạn khi tên gói chưa chứa sẵn thời hạn đó.
+  - `src/features/billing/components/billing-view.tsx`: `DurationPlanCard` hiển thị `{item.displayName}` và dùng `spacing={plans.length > 3 ? 2 : 0}` với `cn(...)` để giữ viền/bo góc sạch khi có nhiều gói; `OrderRow` chỉ hiển thị ` · {order.durationSuffixLabel}` khi khác rỗng.
+  - `src/features/billing/mappers/billing.mapper.test.ts` & `src/features/billing/components/billing-view.test.ts`: bổ sung unit test mapper (kèm case `Gói Tiết Kiệm · 30 ngày`, `Gói 130 ngày · 30 ngày`) và SSR render test cho `DurationPlanCard` và `OrderRow`.
+- **Kiểm chứng**:
+  - `node node_modules/typescript/bin/tsc --noEmit`: 0 lỗi.
+  - `npx eslint` trên 5 file sửa/tạo mới: 0 lỗi, 0 cảnh báo.
+  - `npx prettier --check` trên 5 file sửa/tạo mới: đạt chuẩn 100%.
+  - `npm test`: `105 passed (105)` test files, `831 passed (831)` tests (bao gồm 13 tests trong `billing.mapper.test.ts` và 2 tests trong `billing-view.test.ts`).
+  - `npm run build`: build thành công 47/47 routes (có cảnh báo có sẵn `middleware` deprecated); đã khởi động lại server `next start` cục bộ cổng 3000 và xác nhận 140/140 JS chunks trên `/billing` khớp `.next/`. Chưa kiểm thử đăng nhập trực tiếp màn `/billing` trên trình duyệt tương tác.
+  - `git diff --check -- src/ docs/`: pass.
+- **PROGRESS**: giữ nguyên tỷ lệ hoàn thành tính năng.
+
+## [2026-11-10] — Sửa lỗi sidebar/topbar bị lệch và cắt khuất khi cuộn trang và mở popup ở `/admin/dashboard?tab=billing-catalog`
+
+- **Mục tiêu**: khắc phục lỗi khi cuộn xuống trên `/admin/dashboard?tab=billing-catalog` rồi mở popup (`Chi tiết`, `Chỉnh sửa`, `Tạo gói nháp`, `Mở bán`/`Ngừng bán`), sidebar bên trái (và topbar) bị trượt lên trên làm mất logo/nhóm menu đầu và kết thúc lơ lửng giữa màn hình.
+- **Nguyên nhân**: rule `body[data-scroll-locked]` (độ ưu tiên `0,1,1`) trong `src/app/globals.css` bị thẻ `<style>` cùng selector `(0,1,1)` do `react-remove-scroll-bar` chèn động sau vào `<head>` ghi đè lại bằng `overflow: hidden !important` và `margin-right: 15px !important`, khiến `body` trở thành scroll container tại `scrollTop = 0` và làm hỏng `position: sticky` của `<aside>` và `<header>` trong `AdminLayout`.
+- **Thay đổi**:
+  - `src/app/globals.css`: đổi selector sang `html body[data-scroll-locked]` (độ ưu tiên `0,1,2`) và đặt `overflow-x: clip !important; overflow-y: visible !important; margin-right: 0px !important;` (kèm `html body[data-scroll-locked]:has([data-restaurant-cluster-dialog]) { overflow: clip !important; }`) để bảo toàn `position: sticky` của sidebar, topbar và các vùng sticky khác khi mở bất kỳ Radix Dialog/Sheet/Select/DropdownMenu nào.
+  - `src/app/(admin)/admin/layout.tsx`: đổi `min-h-screen` / `h-screen` sang `min-h-dvh` / `h-dvh` trên shell và `<aside>` cho khớp viewport động.
+- **Kiểm chứng**:
+  - `node node_modules/typescript/bin/tsc --noEmit`: 0 lỗi.
+  - `npx eslint "src/app/(admin)/admin/layout.tsx"`: 0 lỗi (còn 2 cảnh báo có sẵn `Bell`, `ShieldCheck` chưa dùng).
+  - `npm test`: `104 passed (104)` files, `828 passed (828)` tests.
+  - `npm run build`: build thành công 47/47 routes (có cảnh báo có sẵn `middleware` deprecated); đã đối chiếu CSS bundle sau build và xác nhận hành vi `sticky` trong Microsoft Edge headless (`asideTop: 0`, `headerTop: 0`, `margin-right: 0px` khi cuộn 600px và kích hoạt `[data-scroll-locked]`).
+  - `git diff --check`: pass. Chưa kiểm thử đăng nhập trực tiếp màn hình admin bằng trình duyệt tương tác.
+- **PROGRESS**: giữ nguyên tỷ lệ hoàn thành tính năng.
+
+## [2026-11-10] — Chuẩn bị danh mục gói quản trị (IN_PROGRESS)
+
+- Biểu mẫu sửa gói cho phép bỏ trống lý do; API và audit hỗ trợ lý do không được cung cấp. Lý do vẫn bắt buộc khi tạo hoặc thay đổi trạng thái bán.
+- Sửa component dashboard còn khóa nút: chỉnh sửa dùng được cho gói đang bán; mở/ngừng bán gọi mutation có phiên bản, lý do và xác nhận. Đã đồng bộ Swagger, chạy typecheck, lint, 828 tests và build; khởi động lại frontend local cổng 3000. Chưa kiểm thử thao tác trực tiếp bằng tài khoản admin.
+- Hoàn thiện API và dashboard sửa gói đang bán, mở/ngừng bán có lý do và audit; web/mobile xác nhận phiên bản gói khi tạo đơn. Smoke HTTP cô lập đạt cho thay đổi trạng thái, sửa và từ chối phiên bản cũ; acceptance billing đầy đủ dừng do thiếu hai fixture ảnh của database cô lập.
+- Đưa nút chỉnh sửa gói nháp ra danh sách; nút sửa gói đang bán và ngừng bán hiển thị trạng thái chưa khả dụng theo hợp đồng backend.
+- Tích hợp API quản trị `READY` cho danh sách, chi tiết, tạo và sửa gói nháp; kiểm tra HTTP backend cô lập cho phân quyền, xung đột phiên bản và audit. Trạng thái bán chưa kết nối vì endpoint vẫn `IN_PROGRESS`.
+- Dashboard admin có tab Gói tiện ích với danh sách và chi tiết gói đang bán lấy từ query catalog hiện có; giao diện nêu rõ CRUD chưa khả dụng. Không tích hợp API quản trị chưa `READY`.
+- Web và mobile bỏ phép tính tiết kiệm dựa trên gói một tháng, hiển thị tên để phân biệt các lựa chọn cùng thời hạn; cập nhật kiểm thử mapper tương ứng.
+- Mapper tests billing: web 12/12 và mobile 12/12 đạt. CRUD quản trị, kiểm tra phiên bản khi tạo đơn và các cổng phát hành đầy đủ vẫn chưa hoàn tất.
+
+## [2026-11-10] — Tự động duyệt & cập nhật popup/trạng thái đăng công thức, cẩm nang, video cho Contributor
+
+- **Mục tiêu**: điều chỉnh popup thành công của Contributor khi tạo công thức ở `/recipes/new` và đồng bộ luồng tạo/sửa/nộp nội dung cho công thức, cẩm nang (`/articles/new`, `/articles/[id]/edit`) và video (`/videos/new`) theo rule backend mới (Contributor hợp lệ tự động xuất bản; Member, Admin duyệt chéo và bài `FLAGGED`/`QUARANTINED` vẫn vào kiểm duyệt).
+- **Thay đổi**:
+  - `src/features/review/`:
+    - Mở rộng `SubmitPostResponseDataDto` / `SubmitPostResult` và `ContentReviewMapper.toSubmitResult` đọc `postStatus`, `revisionStatus`, `publishedRevisionVersion`, `publishedAt`, `isAutoPublished`.
+    - `reviewApi.submitPost` trả về `SubmitPostResult` đã map qua mapper; `useSubmitPostMutation` toast theo `isAutoPublished` / `FLAGGED`/`QUARANTINED` / `PENDING_REVIEW`, invalidate thêm cache `POST_QUERY_KEYS`, `RECIPE_QUERY_KEYS`, `VIDEO_QUERY_KEYS` và xử lý lỗi xung đột `409`.
+    - `SubmitReviewDialog` và `ReviewStatusBanner` đổi nhãn hành động sang `"Xuất bản nội dung"` / `"Xuất bản ngay"` / `"Xuất bản lại"` cho Contributor và truyền `SubmitPostResult` về caller.
+  - Công thức (`src/features/recipe/` & `src/app/(site)/recipes/`):
+    - Thêm `revisionStatus` vào `Recipe` và `RecipeMapper.toModel`; `submitSavedRecipe` dùng `SubmitPostResult` để cập nhật `status`, `revisionStatus`, `publishedRevisionVersion`, `publishedAt`; `useCreateAndSubmitRecipeMutation` / `useUpdateAndSubmitRecipeMutation` toast theo trạng thái thực tế.
+    - `/recipes/new`: modal thành công phân nhánh theo `revisionStatus ?? status` (`PUBLISHED` hiển thị icon `CheckCircle2`, tiêu đề `"Đăng công thức thành công!"`, badge `"Đã xuất bản"`, hộp thông tin tự động xuất bản công khai và 2 nút `"Về kho công thức"` / `"Xem bài viết của bạn"`, bỏ hẳn khối Ban biên tập pending và nút `"Phê duyệt ngay"`; `FLAGGED`/`QUARANTINED` hiện `"Đã ghi nhận công thức!"` / `"Cần rà soát"`; `PENDING_REVIEW` hiện `"Gửi công thức thành công!"` / `"Chờ kiểm duyệt"`).
+    - `RecipeEditorForm`, `RecipeEditorReview`, `/recipes/[id]/edit`, `RecipeDetailView`: truyền `autoPublishEligible={isContributor}` và ưu tiên `revisionStatus ?? status` cho `ReviewStatusBanner`.
+  - Cẩm nang (`src/features/post/` & `src/app/(site)/articles/[id]/edit/page.tsx`):
+    - Thêm `revisionStatus` vào `Article` và `PostMapper.toModel`; bổ sung `ArticleSubmitForReviewError`, `submitSavedArticle`, `useCreateAndSubmitArticleMutation`, `useUpdateAndSubmitArticleMutation`.
+    - `PostEditorForm`: tách rõ `isContributor` vs `isAdmin` (Admin cần duyệt chéo, không hiển thị "Tự động xuất bản"), gắn luồng `'SUBMIT'` gọi mutation create/update + submit thực tế, lỗi submit chuyển về `/articles/:id/edit` để giữ bản nháp; `PostDetailView` và `/articles/[id]/edit` gắn `ReviewStatusBanner` + `ReviewHistoryDialog` với `revisionStatus ?? status`.
+  - Video (`src/features/video/` & `src/app/(site)/videos/new/page.tsx`):
+    - Thêm `revisionStatus` vào `Video` và `VideoMapper.toModel`; bổ sung `VideoSubmitForReviewError`, `submitSavedVideo`, `useCreateAndSubmitVideoMutation`; dọn double toast và lời gọi `reviewApi` trực tiếp khỏi `app/(site)/videos/new/page.tsx`; `VideoDetailView` dùng `revisionStatus ?? status` cho banner và badge trạng thái.
+  - Unit tests: mở rộng `content-review.mapper.test.ts`, `review.api.test.ts`, `recipe.mapper.test.ts`, `post.mapper.test.ts`, `video.mapper.test.ts`; thêm mới `recipe.queries.test.ts`, `post.queries.test.ts`, `video.queries.test.ts`.
+- **Kiểm chứng**:
+  - `node node_modules/typescript/bin/tsc --noEmit`: 0 lỗi.
+  - `npx eslint` trên toàn bộ 34 file sửa/tạo mới: 0 lỗi (23 cảnh báo có sẵn trước đó ở `videos/new/page.tsx`, `post-detail-view.tsx`, `recipe-detail-view.tsx`, `video-detail-view.tsx`).
+  - `npx prettier --check` trên 34 file sửa/tạo mới: đạt chuẩn Prettier 100%.
+  - `npm test`: `103 passed (103)` test files, `827 passed (827)` tests.
+  - `npm run build`: build thành công 47/47 routes (chỉ có cảnh báo có sẵn `middleware` deprecated).
+  - `git diff --check -- src/`: exit code 0.
+  - Lưu ý: chưa chạy kiểm thử tương tác trực tiếp trên trình duyệt thực; cập nhật `docs/BACKEND_INTEGRATION.md` giữ `POST /posts/{id}/submit` ở `CHANGING` vì mobile và backend release gates chưa hoàn tất.
+- **PROGRESS**: giữ nguyên tỷ lệ hoàn thành tính năng.
+
+## [2026-11-10] — Đồng bộ ảnh đại diện tài khoản trên `/recipes/:id`, `/videos/:id`, `/articles/:id`
+
+- **Mục tiêu**: khắc phục lỗi `/recipes/:id` hiển thị ảnh đại diện giả mặc định (`i.pravatar.cc/80?img=32`) thay vì ảnh tài khoản thật (hoặc chữ cái viết tắt khi chưa có/đã xóa ảnh), đồng thời đảm bảo mọi màn hình `/recipes/:id`, `/videos/:id`, `/articles/:id`, thẻ nội dung và bình luận luôn đồng bộ tức thì với ảnh đại diện của tài khoản.
+- **Thay đổi**:
+  - `src/features/recipe/mappers/recipe.mapper.ts` & `recipe.mapper.test.ts`: bỏ fallback cứng `'https://i.pravatar.cc/80?img=32'`, giữ `author.avatarUrl` thật (`undefined` nếu rỗng/null).
+  - `src/lib/author-display.ts` & `author-display.test.ts`: thêm `getAuthorInitials` và `resolveAuthorDisplay` ưu tiên `displayName`, `avatarUrl` (kể cả rỗng khi vừa xóa ảnh) và `initials` từ `useAuthStore.user` khi tài khoản hiện tại là tác giả hoặc chủ bình luận (`assumeOwnerIfMeId`).
+  - `src/features/profile/queries/profile.queries.ts`, `profile.queries.test.ts` & `src/app/(site)/profile/page.tsx`: xuất hàm `syncProfileUpdateCaches` cập nhật `useAuthStore`, `PROFILE_QUERY_KEYS.detail()`, `AUTH_QUERY_KEYS.me()` và invalidate cache `PROFILE`, `RECIPE`, `VIDEO`, `POST`, `COMMUNITY`, `ADMIN_CONTENT`, `CONTENT_REVIEW` khi `PATCH /users/me` thành công; đồng bộ lại `useAuthStore` ở `/profile` khi `id`/`avatarUrl`/`displayName`/`role` thay đổi.
+  - Cập nhật `RecipeDetailView`, `RecipeCard`, `VideoDetailView`, `VideoCard`, `PostDetailView`, `PostCard`, `CommentItem` dùng `resolveAuthorDisplay`, không render `<AvatarImage>` khi `avatarUrl` rỗng để fallback `initials` hiển thị sạch.
+  - `src/lib/author-avatar-sync.test.ts`: bổ sung kiểm thử render SSR cho `RecipeDetailView`, `RecipeCard`, `VideoDetailView`, `VideoCard`, `PostDetailView`, `PostCard` và `CommentItem`.
+- **Kiểm chứng**: `node node_modules/typescript/bin/tsc --noEmit` (0 lỗi), ESLint các file thêm/sửa (0 lỗi; còn 32 cảnh báo có sẵn trước đó), `npm test` (100 files / 806 tests pass, gồm `author-display.test.ts`, `author-avatar-sync.test.ts`, `profile.queries.test.ts`, `recipe.mapper.test.ts`), `npm run build` (47 trang pass, có cảnh báo có sẵn `middleware` deprecated) và `git diff --check` pass. Chưa kiểm thử tương tác trực tiếp trên trình duyệt.
+- **PROGRESS**: giữ nguyên tỷ lệ hoàn thành tính năng.
+
+## [2026-11-10] — Sửa lỗi double toast khi bấm mũi tên vote ở `/articles/[id]`
+
+- **Mục tiêu**: khắc phục tình trạng bấm mũi tên upvote/downvote trên trang chi tiết bài viết (`/articles/[id]`) bị hiển thị 2 toast cùng lúc (toast trạng thái từ `VoteControl` kèm toast `"Đã ghi nhận đánh giá của bạn!"` từ `PostDetailView`).
+- **Thay đổi**:
+  - `src/features/post/components/post-detail-view.tsx`: gỡ `handleVoteChange` và prop `onVoteChange={handleVoteChange}` ở cả `VoteControl` desktop (cột trái) và mobile (banner), đồng bộ với `RecipeDetailView` và `VideoDetailView` để chỉ giữ 1 toast mô tả đúng thao tác từ `VoteControl`.
+- **File chính**: `src/features/post/components/post-detail-view.tsx`.
+- **Kiểm chứng**: `npx eslint src/features/post/components/post-detail-view.tsx` (0 lỗi, 6 cảnh báo unused import có sẵn từ trước), `node node_modules/typescript/bin/tsc --noEmit` (0 lỗi), `npm test` (97 files / 793 tests pass), `npm run build` (47 trang pass, có cảnh báo có sẵn `middleware` deprecated) và `git diff --check` pass. Chưa kiểm tra trực tiếp trên trình duyệt.
+- **PROGRESS**: giữ nguyên tỷ lệ hoàn thành tính năng.
+
+## [2026-11-10] — Ẩn thanh dung lượng khi tải ảnh, chỉ hiển thị khi tải video
+
+- **Mục tiêu**: ẩn thanh hạn ngạch dung lượng lưu trữ khi người dùng tải ảnh trên các trang tạo/sửa nội dung và món ăn riêng, chỉ giữ hiển thị thanh dung lượng khi tải video (và tại trang quản lý lưu trữ).
+- **Thay đổi**:
+  - `src/features/post/components/image-uploader.tsx`: bỏ import và hiển thị `<StorageQuotaWidget variant="compact" className="pt-2" />` khỏi trình tải ảnh bìa (áp dụng cho tạo/sửa công thức, bài viết, ảnh bìa video và trình soạn nội dung admin).
+  - `src/features/admin-content/components/admin-content-editor-dialog.tsx`: bỏ `<StorageQuotaWidget variant="compact" className="mx-6 -mb-2" />` đặt cố định trên đầu hộp thoại soạn thảo để không hiện ở bước chọn loại, tạo công thức, tạo bài viết và không bị lặp ở nhánh video.
+  - `src/features/custom-meal/components/custom-meal-photo-uploader.tsx`: bỏ icon `HardDrive` và khối hiển thị `Dung lượng khả dụng: ...`; giữ lại `useStorageUsageQuery()` và kiểm tra `isStorageExceeded` để vẫn ngăn tải ảnh mới khi tài khoản hết hạn ngạch.
+  - Giữ nguyên `<StorageQuotaWidget variant="compact" className="pt-2" />` trong `src/features/video/components/video-uploader.tsx` và các trang quản lý lưu trữ (`/profile?tab=storage`, `/admin/storage`).
+- **Kiểm chứng**: `node node_modules/typescript/bin/tsc --noEmit` (0 lỗi), ESLint các file sửa (0 lỗi; còn 1 cảnh báo có sẵn `Button` chưa dùng tại `custom-meal-photo-uploader.tsx`), `npm test` (98 files / 799 tests pass), `npm run build` (47 trang pass, có cảnh báo có sẵn `middleware` deprecated) và `git diff --check` pass. Chưa kiểm tra trực tiếp trên trình duyệt.
+- **PROGRESS**: giữ nguyên tỷ lệ hoàn thành tính năng.
+
+## [2026-11-10] — Sửa responsive hàng chờ duyệt Contributor và modal gửi công thức
+
+- **Mục tiêu**: khắc phục bảng hàng chờ kiểm duyệt bị tràn ngang làm khuất nút `Từ chối` và cột `Thao tác`; khắc phục modal `"Gửi công thức thành công!"` cho Contributor/Admin bị tràn viền và đè nút ở màn hình hẹp.
+- **Thay đổi**:
+  - `ReviewQueueTable`: cho phép xuống dòng (`whitespace-normal` + giới hạn `max-w` và `line-clamp-2`) ở cột `Bài viết`, xếp dọc tên tác giả và badge vai trò ở cột `Tác giả`, xếp dọc cờ AI / báo cáo ở cột `Cảnh báo`, gọn padding ô (`p-2.5`) và nút (`px-2.5`) với `lg:flex-nowrap` để hiển thị đủ `Xem xét`, `Duyệt`, `Từ chối` trên desktop; bổ sung bố cục thẻ trên mobile (`md:hidden`), `SelectGroup` và `Skeleton`.
+  - `/recipes/new` success modal: đổi `DialogContent` sang `flex flex-col` với `sm:max-w-xl`, `overflow-x-hidden overflow-y-auto`, `max-h-[calc(100dvh-2rem)]`; dùng `DialogDescription asChild` tránh lồng `<Badge>` không hợp lệ trong `<p>`; cập nhật khối `"Tiêu chuẩn chất lượng thuần thực vật"` dùng `Separator` và `DialogFooter` dùng `sm:flex-wrap sm:justify-center` cùng nút `w-full sm:w-auto` (khi `isModerator`) / `sm:flex-1` để không đè nhau hay tràn viền.
+  - `/contributor/dashboard`: đổi lưới thẻ chỉ số nhanh từ `sm:grid-cols-3` sang `md:grid-cols-3`.
+- **File chính**: `src/features/review/components/review-queue-table.tsx`, `src/app/(site)/recipes/new/page.tsx`, `src/app/(site)/contributor/dashboard/page.tsx`.
+- **Kiểm chứng**: `node node_modules/typescript/bin/tsc --noEmit` (0 lỗi), ESLint các file sửa (0 lỗi; còn 1 cảnh báo có sẵn `Layers` chưa dùng ở `contributor/dashboard/page.tsx`), `npm test` (97 files / 793 tests pass), `npm run build` (47 trang pass, có cảnh báo có sẵn `middleware` deprecated) và `git diff --check` pass. Chưa kiểm tra trực tiếp trên trình duyệt.
+- **PROGRESS**: giữ nguyên tỷ lệ hoàn thành tính năng.
+
+## [2026-11-10] — Rà soát DTO và mapper
+
+- **Thay đổi**: bỏ các trường response không được mapper sử dụng ở chat, billing, meal analysis và meal program; bỏ kiểu SSE không có consumer và cập nhật fixture mapper. Giữ các trường liên quan nguồn gốc dinh dưỡng và ràng buộc an toàn; không đổi request hoặc hành vi mapper.
+- **Kiểm chứng**: đồng bộ catalog từ OpenAPI trong repository; TypeScript, 793 tests, lint các file sửa, build 47 trang và `git diff --check` pass. Build cảnh báo convention middleware đã deprecated.
+- **Tiến độ**: không thay đổi tỷ lệ hoàn thành tính năng.
+
+## [2026-11-09] — Cập nhật biểu tượng đang suy nghĩ
+
+- **Thay đổi**: dùng biểu tượng Sparkles của hệ thống cho trạng thái chờ chat, xoay bằng transform và tôn trọng tùy chọn giảm chuyển động.
+- **Kiểm chứng**: lint và kiểm tra TypeScript của frontend.
+- **Kiểm tra lại**: frontend local chạy `next start` với bản build cũ. Đã build và khởi động lại; `/assistant` và JavaScript được phục vụ trả 200, trạng thái chờ sử dụng `Sparkles` với `motion-safe:animate-spin`.
+
+## [2026-11-09] — Sửa bản đồ biến mất khi mở cụm quán
+
+- **Thay đổi**: giới hạn quy tắc `overflow: clip` cho lúc hộp thoại cụm quán mở, tránh khóa cuộn của Radix tạo scroll container trên body và làm mất vị trí sticky của bản đồ.
+- **Kiểm chứng**: TypeScript, 738 tests, build và `git diff --check` pass. Tìm địa chỉ trên trình duyệt local không trả kết quả, nên chưa xác minh được chuỗi chọn quán rồi mở cụm bằng dữ liệu thực.
+
+## [2026-11-09] — Làm rõ cảnh báo dị ứng trong thực đơn
+
+- **Thay đổi**: analysis v4 trả hardViolations theo món/bữa và lý do có bằng chứng; web/mobile nhóm món lặp, xuống dòng và hiển thị trạng thái cảnh báo. Giữ nguyên rule dị ứng, phân biệt cảnh báo snapshot khi chưa xác định được nguyên liệu.
+- **Kiểm chứng**: backend lint/typecheck/build/OpenAPI, acceptance meal-plan/analysis; frontend typecheck, 738 tests, build; mobile typecheck, 113 tests. Kiểm tra chỉ đọc thực đơn trong ảnh và mô phỏng snapshot-only/không dị ứng pass. Lint riêng trang web vẫn có 2 lỗi React Compiler và 1 cảnh báo có sẵn tại HEAD; lint các file logic sửa đổi khác pass.
+
+## [2026-11-09] — Điều chỉnh quota và gói tiện ích
+
+- **Mục tiêu**: 3 chat/ngày, 1 lượt/ngày mỗi loại quét, 10 ô miễn phí; gói mới cấp 300 chat và 30 lượt mỗi loại quét mỗi 30 ngày.
+- **Thay đổi**: backend giữ lượt miễn phí theo ngày, hoàn khi lỗi, giữ snapshot đơn cũ; web/mobile hiển thị số lượt còn lại và 30/90/360 ngày. Gói lẻ giữ giá và quyền lợi. Danh mục hiện hữu cần lệnh cập nhật riêng sau validator.
+- **Kiểm chứng**: backend lint/typecheck/build, OpenAPI và billing acceptance với transport giả lập pass; web typecheck, 736 tests, build và lint phần thay đổi pass; mobile typecheck, 112 tests và lint pass. Validator/index và danh mục đã áp dụng local; health 200. Seed cơ sở dữ liệu kiểm thử có lỗi Post mẫu đã tồn tại trước thay đổi; không xác nhận giao dịch payOS thật.
+
+## [2026-11-08] — Kiểm tra và sửa luồng chat AI
+
+- **Mục tiêu**: kiểm tra lỗi gửi câu hỏi và xác minh luồng chat.
+- **Thay đổi**: `chat-stream.ts` gửi bearer token như API client, refresh một lần khi nhận 401 với phiên đăng nhập, tiếp tục đọc event quota sau message_complete và báo lỗi khi stream kết thúc chưa hoàn tất. `chat-stream.test.ts` kiểm tra token, refresh, khách, quota và stream bị ngắt.
+- **Kiểm chứng**: Swagger được tạo từ backend và đồng bộ thành công; `npx tsc --noEmit`, lint các file sửa và `npm run build` pass; `npm test` 69 files / 735 tests pass. Backend và MongoDB local không chạy (MongoDB cổng 27018 không kết nối, Docker daemon không hoạt động), nên chưa kiểm thử trình duyệt hoặc OpenAI end-to-end. UC-07 giữ 95% → 95%.
+- **Kiểm tra lại sau khi chạy Docker**: health/database OK; guest và member seed tạo phiên, gửi SSE, nhận đủ message_start/content_delta/message_complete/quota; lịch sử member có hai tin nhắn. Cả hai nhận local fallback. Kiểm tra provider: Responses API hoạt động, Moderations API trả 503 `model_not_found` cho `omni-moderation-latest`; danh sách model khả dụng không có model moderation. Cần provider/credentials hỗ trợ moderation, không bỏ qua kiểm duyệt. Chưa kiểm tra trình duyệt và chưa xác nhận câu trả lời AI thực qua luồng chat.
 ## [2026-11-07] — Cho phép AI bổ sung thông tin công thức còn trống
 
 - **Mục tiêu:** Cho phép bỏ trống thông tin cơ bản để AI gợi ý, giữ dữ liệu tác giả và kiểm tra khi gửi.
@@ -4866,3 +5015,8 @@
 - File sửa: `src/features/pantry/components/pantry-item-card.tsx`, `docs/PROGRESS.md`, `docs/WORK-LOG.md`.
 - Verify: `npx tsc --noEmit` pass. Chưa chạy production build hoặc kiểm tra viewport thực tế trong task này.
 - Tiến độ Pantry: giữ nguyên; chỉ sửa bố cục responsive.
+
+## [2026-11-09] — Xóa cuộc trò chuyện trong lịch sử
+
+- **Thay đổi**: thêm `DELETE /chat/sessions/:id` có xác thực, kiểm tra chủ sở hữu, khóa phiên và từ chối khi trợ lý đang trả lời. Web và mobile có nút xóa và xác nhận ghi rõ đây là xóa mềm; xóa phiên đang xem sẽ chuyển sang cuộc trò chuyện mới/bản nháp mới.
+- **Kiểm chứng**: backend lint/typecheck/build, OpenAPI và kiểm thử HTTP trên cơ sở dữ liệu riêng pass: 401 chưa đăng nhập, 404 tài khoản khác/đã xóa, 409 đang xử lý, 200 khi xóa; nội dung giữ lại nhưng lịch sử không thể mở. Web typecheck, lint phần sửa, mapper tests và production build pass. Mobile typecheck, lint phần sửa và mapper test pass.

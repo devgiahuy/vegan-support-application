@@ -2,7 +2,7 @@ import { FALLBACK_ARTICLE_COVER_URL } from '@/lib/env';
 import { BaseMapper, pickField, safeArray, safeDate, safeNumber, safeString } from '@/lib/mapper';
 import { formatDate } from '@/lib/utils';
 import { PaginationResult } from '@/types/api';
-import { authorFromDto, coverUrlFromMedia, firstCategory, getPostStatusLabel, parsePostStatus } from './post-shared';
+import { authorFromDto, coverUrlFromMedia, firstCategory, getPostStatusLabel, parsePostStatus, revisionStatusFromDto } from './post-shared';
 import type { BasePostDto, PostMediaDto, PostRevisionDto } from '../types/post.dto';
 import type { Article } from '../types/post.model';
 
@@ -26,6 +26,7 @@ export class PostMapper extends BaseMapper<BasePostDto, Article> {
       slug: safeString(pickField(dto, ['slug'], '')),
       status,
       statusLabel: getPostStatusLabel(status),
+      revisionStatus: revisionStatusFromDto(dto),
       version: safeNumber(pickField(dto, ['version'], 1)),
       author: authorFromDto(dto, 'Tác giả VeggieConnect'),
       category: firstCategory(dto),

@@ -98,6 +98,14 @@ globalThis.fetch = async (input, init) => {
     const body = JSON.parse(init.body) as CreatePaymentLinkRequest;
     assert(Number.isSafeInteger(body.orderCode) && body.orderCode > 0);
     assert(body.description.length <= 9);
+    const returnUrl = new URL(body.returnUrl);
+    const configuredReturnUrl = new URL(config.billing.returnUrl);
+    assert.equal(
+      returnUrl.origin + returnUrl.pathname,
+      configuredReturnUrl.origin + configuredReturnUrl.pathname,
+    );
+    assert.match(returnUrl.searchParams.get('orderId') ?? '', /^[a-f0-9-]{36}$/i);
+    assert.equal(body.cancelUrl, body.returnUrl);
     assert.equal(
       body.signature,
       signedData({
@@ -215,7 +223,15 @@ const balance = async () =>
   billingEnvelope(entitlementSchema).parse(await (await request('/entitlements/me')).json()).data;
 const createOrder = async (productId: string, key = randomUUID()) =>
   billingEnvelope(billingOrderSchema).parse(
-    await (await request('/billing/orders', 'POST', { productId, idempotencyKey: key })).json(),
+    await (
+      await request('/billing/orders', 'POST', {
+        productId,
+        idempotencyKey: key,
+        expectedProductVersion: (
+          await db.billingProduct.findUniqueOrThrow({ where: { id: productId } })
+        ).version,
+      })
+    ).json(),
   ).data;
 const expectCode = (code: string) => (error: unknown) =>
   error instanceof AppError && error.code === code;
@@ -357,11 +373,14 @@ try {
   // Duration combos grant per-period credits; permanent balances are unchanged.
   assert.equal(purchased.chatCredits, before.chatCredits);
   assert(purchased.subscription);
-  assert.equal(purchased.subscription.chatCredits, 100);
-  assert.equal(purchased.subscription?.fridgeCredits, 10);
-  assert.equal(purchased.subscription?.receiptCredits, 10);
+  assert.equal(purchased.subscription.chatCredits, 300);
+  assert.equal(purchased.subscription?.fridgeCredits, 30);
+  assert.equal(purchased.subscription?.receiptCredits, 30);
   assert.equal(purchased.subscription?.pantrySlots, 50);
   assert.equal(purchased.pantryLimit, (before.pantryLimit ?? 0) + 50);
+  await db.paymentOrder.update({ where: { id: order.id }, data: { productVersion: 1 } });
+  assert.equal((await balance()).pantryLimit, 70);
+  await db.paymentOrder.update({ where: { id: order.id }, data: { productVersion: 2 } });
   assert.equal(
     Date.parse(purchased.subscription.endsAt) - Date.parse(purchased.subscription.startsAt),
     30 * 86_400_000,
@@ -606,6 +625,27 @@ try {
   const receiptAsset = assets.find((a) => a.kind === 'RECEIPT_IMAGE')!;
   const visionRepo = new IngredientRecognitionRepository(db, entitlements);
   const receiptRepo = new ReceiptRepository(db, entitlements);
+  await db.entitlementAccount.update({
+    where: { ownerId: user.id },
+    data: { fridgeCredits: 0, receiptCredits: 0 },
+  });
+  const dailyKeys = ['FRIDGE:' + randomUUID(), 'FRIDGE:' + randomUUID()];
+  const dailyRace = await Promise.allSettled(
+    dailyKeys.map((resourceKey) =>
+      db.$transaction((tx) => entitlements.reserve(tx, user.id, 'FRIDGE', resourceKey)),
+    ),
+  );
+  assert.equal(dailyRace.filter((result) => result.status === 'fulfilled').length, 1);
+  const dailyHeld = await db.usageReservation.findFirstOrThrow({
+    where: { ownerId: user.id, source: 'DAILY_FREE', status: 'HELD' },
+  });
+  assert.equal((await balance()).fridgeDailyFreeRemaining, 0);
+  await db.$transaction((tx) => entitlements.settle(tx, dailyHeld.resourceKey, false));
+  assert.equal((await balance()).fridgeDailyFreeRemaining, 1);
+  await db.entitlementAccount.update({
+    where: { ownerId: user.id },
+    data: { fridgeCredits: 10, receiptCredits: 10 },
+  });
   const visionBefore = (await balance()).fridgeCredits;
   const vision = await visionRepo.createJob({
     ownerId: user.id,
@@ -636,7 +676,21 @@ try {
     [candidate],
     running.attemptCount,
   );
-  assert.equal((await balance()).fridgeCredits, visionBefore - 1);
+  assert.equal((await balance()).fridgeCredits, visionBefore);
+  assert.equal((await balance()).fridgeDailyFreeRemaining, 0);
+  const consumedDaily = await db.usageReservation.findUniqueOrThrow({
+    where: { resourceKey: 'FRIDGE:' + vision.job.id },
+  });
+  assert.equal(consumedDaily.source, 'DAILY_FREE');
+  await db.usageReservation.update({
+    where: { id: consumedDaily.id },
+    data: { periodKey: '2000-01-01' },
+  });
+  assert.equal((await balance()).fridgeDailyFreeRemaining, 1);
+  await db.usageReservation.update({
+    where: { id: consumedDaily.id },
+    data: { periodKey: consumedDaily.periodKey },
+  });
   const confirmVision = () =>
     visionRepo.confirm({
       ownerId: user.id,
@@ -646,7 +700,7 @@ try {
       requestHash: marker,
     });
   await assert.rejects(confirmVision(), expectCode('PANTRY_CAPACITY_EXCEEDED'));
-  assert.equal((await balance()).fridgeCredits, visionBefore - 1);
+  assert.equal((await balance()).fridgeCredits, visionBefore);
   const receipt = await receiptRepo.createJob({
     ownerId: user.id,
     assetIds: [receiptAsset.id],

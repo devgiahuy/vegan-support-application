@@ -77,8 +77,16 @@ export class RecipeNutritionReviewService {
   /** Submit hook: canonical estimate now, AI gap-filling job only when reviewed data is insufficient.
    * Never throws: nutrition must not block submission; the reviewer can recalculate later.
    */
-  async onRevisionSubmitted(revisionId: string): Promise<void> {
+  async onRevisionSubmitted(revisionId: string, published = false): Promise<void> {
     try {
+      if (published) {
+        const revision = await this.nutritionRepository.findRevisionById(revisionId);
+        if (revision?.recipeDetail) {
+          const estimate = await this.nutrition.buildForReview(revision, null);
+          await this.nutrition.persistBuilt(revision, estimate);
+        }
+        return;
+      }
       await this.calculate(revisionId, RecipeNutritionJobTrigger.SUBMIT, null);
     } catch (error) {
       console.error('[RecipeNutritionReview] Submit calculation failed:', error);

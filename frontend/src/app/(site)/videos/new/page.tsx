@@ -19,26 +19,24 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { AuthGuard } from '@/components/shared/auth-guard';
-import { CategoryType, VideoSource } from '@/common/enums';
+import { CategoryType, UserRole, VideoSource } from '@/common/enums';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { flattenCategories } from '@/features/category/utils/flatten-categories';
-import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import { VideoUploader } from '@/features/video/components/video-uploader';
 import { ImageUploader } from '@/features/post/components/image-uploader';
-import { useCreateVideoMutation } from '@/features/video/queries/video.queries';
-import { POST_QUERY_KEYS } from '@/features/post/queries/post.queries';
+import {
+  useCreateAndSubmitVideoMutation,
+  VideoSubmitForReviewError,
+} from '@/features/video/queries/video.queries';
 import { useAuthStore } from '@/store/useAuthStore';
 import { addTrackedUserPost } from '@/features/post/utils/user-posts-tracker';
-import { reviewApi } from '@/features/review/api/review.api';
-import { CONTENT_REVIEW_KEYS } from '@/features/review/queries/review.queries';
 import { videoFormSchema, type VideoFormValues } from '@/features/video/schemas/video-form.schema';
 
 export default function UploadVideoPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const queryClient = useQueryClient();
-  const createVideoMutation = useCreateVideoMutation();
+  const isContributor = user?.role === UserRole.CONTRIBUTOR;
+  const createVideoMutation = useCreateAndSubmitVideoMutation();
   const { data: categoryTree = [] } = useCategoryTreeQuery(CategoryType.CONTENT_TOPIC);
   const flatCategories = React.useMemo(() => flattenCategories(categoryTree), [categoryTree]);
 
@@ -69,7 +67,7 @@ export default function UploadVideoPage() {
 
   const onSubmit = async (values: VideoFormValues) => {
     try {
-      const created = await createVideoMutation.mutateAsync({
+      const submitted = await createVideoMutation.mutateAsync({
         title: values.title,
         category: { id: values.categoryId, name: '' },
         coverImageUrl: values.coverImageUrl || '',
@@ -80,41 +78,33 @@ export default function UploadVideoPage() {
         durationSeconds: values.durationSeconds ?? 0,
         description: values.description ?? '',
       });
-      void queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.mineRoot() });
 
-      if (created?.id && user?.id) {
+      if (submitted?.id && user?.id) {
         addTrackedUserPost(user.id, {
-          id: created.id,
+          id: submitted.id,
           type: 'VIDEO',
-          title: created.title || values.title,
+          title: submitted.title || values.title,
           createdAt: new Date().toISOString(),
         });
       }
 
-      if (created?.id && created?.revisionId) {
-        try {
-          await reviewApi.submitPost(created.id, {
-            revisionId: created.revisionId,
-            expectedVersion: created.version || 1,
-          });
-          queryClient.invalidateQueries({ queryKey: CONTENT_REVIEW_KEYS.all });
-          queryClient.invalidateQueries({ queryKey: ['videos'] });
-          toast.success('Đăng tải video thành công!', {
-            description: 'Video đã được gửi vào hàng chờ kiểm duyệt của Quản trị viên.',
-          });
-        } catch {
-          toast.info('Video đã được lưu nháp.', {
-            description: 'Bạn có thể bấm "Gửi kiểm duyệt" từ trang chi tiết video.',
-          });
-        }
-      }
-
-      if (created?.id) {
-        router.push(`/videos/${created.id}`);
+      if (submitted?.id) {
+        router.push(`/videos/${submitted.id}`);
       } else {
         router.push('/videos');
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof VideoSubmitForReviewError && error.video.id) {
+        if (user?.id) {
+          addTrackedUserPost(user.id, {
+            id: error.video.id,
+            type: 'VIDEO',
+            title: error.video.title || values.title,
+            createdAt: new Date().toISOString(),
+          });
+        }
+        router.push(`/videos/${error.video.id}`);
+      }
       // Toast lỗi đã xử lý trong mutation onError
     }
   };
@@ -143,8 +133,9 @@ export default function UploadVideoPage() {
               <Video className="h-7 w-7 text-primary" /> Đăng Video Hướng Dẫn Nấu Chay
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Tải lên tệp MP4/WebM tối đa 100MB hoặc nhúng link YouTube. Video của thành viên sẽ vào
-              hàng chờ duyệt trước khi xuất bản.
+              {isContributor
+                ? 'Tải lên tệp MP4/WebM tối đa 100MB hoặc nhúng link YouTube. Video của Người đóng góp sẽ được tự động duyệt và xuất bản công khai ngay khi đăng.'
+                : 'Tải lên tệp MP4/WebM tối đa 100MB hoặc nhúng link YouTube. Video của thành viên sẽ vào hàng chờ duyệt trước khi xuất bản.'}
             </p>
           </div>
           <Button asChild variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
@@ -304,10 +295,16 @@ export default function UploadVideoPage() {
                   disabled={createVideoMutation.isPending}
                   className="w-full gap-2 text-sm font-semibold shadow-md"
                 >
-                  {createVideoMutation.isPending ? 'Đang gửi video...' : 'Đăng tải video'}
+                  {createVideoMutation.isPending
+                    ? 'Đang gửi video...'
+                    : isContributor
+                      ? 'Đăng tải & xuất bản video'
+                      : 'Đăng tải & gửi duyệt'}
                 </Button>
                 <p className="mt-2 text-center text-[11px] italic text-muted-foreground">
-                  Video sau khi đăng sẽ tuân thủ quy tắc kiểm duyệt nội dung cộng đồng.
+                  {isContributor
+                    ? 'Với vai trò Người đóng góp, video sẽ được duyệt tự động và xuất bản công khai ngay khi đăng.'
+                    : 'Video sau khi gửi sẽ vào hàng chờ kiểm duyệt nội dung cộng đồng.'}
                 </p>
               </div>
             </CardContent>

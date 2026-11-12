@@ -61,6 +61,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { UserRole } from '@/common/enums';
 import { ReviewStatusBanner } from '@/features/review/components/review-status-banner';
 import { ReviewHistoryDialog } from '@/features/review/components/review-history-dialog';
+import { getAuthorInitials, resolveAuthorDisplay } from '@/lib/author-display';
 
 interface RecipeDetailViewProps {
   recipe: Recipe;
@@ -71,9 +72,12 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const [historyDialogOpen, setHistoryDialogOpen] = React.useState(false);
-  const isAuthor = Boolean(user && recipe.author?.id && user.id === recipe.author.id);
+  const authorDisplay = resolveAuthorDisplay(recipe.author, user, {
+    fallbackName: 'Bếp Chay An Nhiên',
+  });
+  const isAuthor = authorDisplay.isCurrentUser;
   const { data: summary } = useCommunitySummaryQuery(recipe.id);
-  const canModerate = user?.role === UserRole.ADMIN || user?.role === UserRole.CONTRIBUTOR;
+  const effectiveStatus = recipe.revisionStatus ?? recipe.status;
   const [servings, setServings] = React.useState<number>(recipe.servings || 2);
   const [checkedIngredients, setCheckedIngredients] = React.useState<string[]>([]);
   const [viewingNutritionIngredient, setViewingNutritionIngredient] = React.useState<{
@@ -146,11 +150,11 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
         {/* LEFT COLUMN: Main Recipe Details */}
         <div className="space-y-8 lg:col-span-8">
           {/* Review Status Banner (hiển thị cho tác giả hoặc khi công thức chưa xuất bản) */}
-          {(isAuthor || recipe.status !== 'PUBLISHED') && (
+          {(isAuthor || effectiveStatus !== 'PUBLISHED') && (
             <ReviewStatusBanner
               postId={recipe.id}
               postTitle={recipe.title}
-              postStatus={recipe.status}
+              postStatus={effectiveStatus}
               revisionId={recipe.revisionId}
               revisionVersion={recipe.revisionVersion ?? recipe.version}
               publishedRevisionVersion={recipe.publishedRevisionVersion}
@@ -207,24 +211,17 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
             <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-y py-4">
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12 ring-2 ring-primary/20">
-                  <AvatarImage
-                    src={
-                      (recipe.author && 'avatar' in recipe.author
-                        ? recipe.author.avatar
-                        : undefined) ||
-                      recipe.author?.avatarUrl ||
-                      ''
-                    }
-                    alt={recipe.author.name}
-                  />
+                  {authorDisplay.avatarUrl ? (
+                    <AvatarImage src={authorDisplay.avatarUrl} alt={authorDisplay.name} />
+                  ) : null}
                   <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                    {recipe.author.name[0]}
+                    {authorDisplay.initials}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="font-semibold text-foreground text-sm sm:text-base">
-                      {recipe.author.name}
+                      {authorDisplay.name}
                     </span>
                     {((recipe.author && 'verified' in recipe.author
                       ? recipe.author.verified
@@ -633,8 +630,10 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2.5">
                             <Avatar className="h-9 w-9">
-                              <AvatarImage src={rev.userAvatar} alt={rev.userName} />
-                              <AvatarFallback>{rev.userName[0]}</AvatarFallback>
+                              {rev.userAvatar ? (
+                                <AvatarImage src={rev.userAvatar} alt={rev.userName} />
+                              ) : null}
+                              <AvatarFallback>{getAuthorInitials(rev.userName)}</AvatarFallback>
                             </Avatar>
                             <div>
                               <div className="flex items-center gap-2">

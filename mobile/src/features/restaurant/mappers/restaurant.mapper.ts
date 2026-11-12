@@ -21,6 +21,7 @@ import type {
   SubmittedRestaurantStatus,
 } from '../types/restaurant.model';
 import { MAX_RADIUS_M, MIN_KEYWORD_LENGTH, MIN_RADIUS_M } from '../schemas/restaurant.schema';
+import { isBoundsUsable } from '../utils/restaurant-map-layout';
 import { sanitizeAdvancedFilters } from '../utils/restaurant-filters';
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -157,6 +158,9 @@ export class RestaurantMapper extends BaseMapper<RestaurantPlaceDto, Restaurant>
         resultsTruncated: safeBoolean(pickField(meta, ['resultsTruncated'], false)),
         externalDataUnavailable: safeBoolean(pickField(meta, ['externalDataUnavailable'], false)),
         externalResultsSuppressed: safeBoolean(pickField(meta, ['externalResultsSuppressed'], false)),
+        provider: safeString(pickField(meta, ['provider'], '')),
+        providerResultLimit: nullableNumber(pickField(meta, ['providerResultLimit'], null)),
+        locationStored: typeof pickField(meta, ['locationStored'], null) === 'boolean' ? safeBoolean(pickField(meta, ['locationStored'], false)) : null,
       },
     };
   }
@@ -235,13 +239,21 @@ export class RestaurantMapper extends BaseMapper<RestaurantPlaceDto, Restaurant>
   /** Query string cho `nearby`/`search`; vị trí thiết bị phải gửi kèm đồng ý của người dùng. */
   toLocationParams(query: LocationQuery, page = 1): Record<string, string | number> {
     const params: Record<string, string | number> = {
-      lat: query.lat,
-      lng: query.lng,
       radiusMeters: Math.max(MIN_RADIUS_M, Math.min(MAX_RADIUS_M, Math.round(query.radiusM))),
       locationSource: query.source,
       page,
       limit: PAGE_SIZE,
     };
+    // Backend nhận hoặc `lat`+`lng` hoặc đủ bốn mốc khung vùng; khung đang xem thay thế tâm tìm kiếm.
+    if (isBoundsUsable(query.bounds)) {
+      params.north = query.bounds.north;
+      params.south = query.bounds.south;
+      params.east = query.bounds.east;
+      params.west = query.bounds.west;
+    } else {
+      params.lat = query.lat;
+      params.lng = query.lng;
+    }
     if (query.source === 'DEVICE') params.locationConsent = 'true';
     if (query.dietPattern) params.dietPattern = query.dietPattern;
     if (hasSearchKeyword(query.query)) {

@@ -2,12 +2,27 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Plus, MessageSquare, MessagesSquare, Sparkles, LogIn, Compass } from 'lucide-react';
+import {
+  Plus,
+  MessageSquare,
+  MessagesSquare,
+  Sparkles,
+  LogIn,
+  Compass,
+  Trash2,
+  Loader2,
+} from 'lucide-react';
+import { AlertDialog } from 'radix-ui';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useChatSessionsQuery, useCreateChatSessionMutation } from '../queries/chat.queries';
+import {
+  useChatSessionsQuery,
+  useCreateChatSessionMutation,
+  useDeleteChatSessionMutation,
+} from '../queries/chat.queries';
+import type { ChatSession } from '../types/chat.model';
 
 /**
  * Danh sách phiên trò chuyện trong Sidebar:
@@ -18,14 +33,31 @@ export function SessionList({
   activeId,
   onSelect,
   onNewChat,
+  onDelete,
+  isStreaming = false,
 }: {
   activeId: string;
   onSelect: (sessionId: string) => void;
   onNewChat?: () => void;
+  onDelete: (sessionId: string) => void;
+  isStreaming?: boolean;
 }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const sessionsQuery = useChatSessionsQuery();
   const createSession = useCreateChatSessionMutation();
+  const deleteSession = useDeleteChatSessionMutation();
+  const [pendingDelete, setPendingDelete] = React.useState<ChatSession | null>(null);
+
+  const handleDelete = async () => {
+    if (!pendingDelete || deleteSession.isPending) return;
+    try {
+      const deleted = await deleteSession.mutateAsync(pendingDelete.id);
+      setPendingDelete(null);
+      onDelete(deleted.id);
+    } catch {
+      // Mutation displays the documented business error and keeps confirmation open.
+    }
+  };
 
   const handleNew = () => {
     if (onNewChat) {
@@ -141,31 +173,85 @@ export function SessionList({
         {sessions.map((session) => {
           const isActive = session.id === activeId;
           return (
-            <button
-              key={session.id}
-              type="button"
-              onClick={() => onSelect(session.id)}
-              className={cn(
-                'group flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs transition-all duration-150',
-                isActive
-                  ? 'bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
-                  : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground'
-              )}
-              title={session.title}
-            >
-              <MessageSquare
+            <div key={session.id} className="group flex items-center gap-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => onSelect(session.id)}
                 className={cn(
-                  'size-3.5 shrink-0 transition-colors',
+                  'flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs transition-all duration-150',
                   isActive
-                    ? 'text-emerald-600 dark:text-emerald-400'
-                    : 'text-muted-foreground/70 group-hover:text-foreground'
+                    ? 'bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
+                    : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground'
                 )}
-              />
-              <span className="truncate flex-1">{session.title}</span>
-            </button>
+                title={session.title}
+              >
+                <MessageSquare
+                  className={cn(
+                    'size-3.5 shrink-0 transition-colors',
+                    isActive
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-muted-foreground/70 group-hover:text-foreground'
+                  )}
+                />
+                <span className="truncate flex-1">{session.title}</span>
+              </button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8 shrink-0 text-muted-foreground hover:text-destructive focus-visible:text-destructive"
+                aria-label={`Xóa cuộc trò chuyện ${session.title}`}
+                title={
+                  isStreaming && isActive
+                    ? 'Chờ câu trả lời hoàn tất để xóa'
+                    : `Xóa ${session.title}`
+                }
+                disabled={(isStreaming && isActive) || deleteSession.isPending}
+                onClick={() => setPendingDelete(session)}
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </div>
           );
         })}
       </div>
+      <AlertDialog.Root
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleteSession.isPending) setPendingDelete(null);
+        }}
+      >
+        <AlertDialog.Portal>
+          <AlertDialog.Overlay className="fixed inset-0 z-[60] bg-black/50" />
+          <AlertDialog.Content className="fixed left-1/2 top-1/2 z-[61] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border bg-background p-6 shadow-lg outline-none">
+            <AlertDialog.Title className="text-lg font-semibold">
+              Xóa cuộc trò chuyện?
+            </AlertDialog.Title>
+            <AlertDialog.Description className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              “{pendingDelete?.title}” sẽ biến mất khỏi lịch sử và không thể mở lại. Nội dung vẫn
+              được lưu trên máy chủ theo chính sách lưu trữ.
+            </AlertDialog.Description>
+            <div className="mt-6 flex justify-end gap-2">
+              <AlertDialog.Cancel asChild>
+                <Button type="button" variant="outline" disabled={deleteSession.isPending}>
+                  Hủy
+                </Button>
+              </AlertDialog.Cancel>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={deleteSession.isPending}
+                onClick={() => void handleDelete()}
+              >
+                {deleteSession.isPending && (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                )}
+                Xóa khỏi lịch sử
+              </Button>
+            </div>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
     </div>
   );
 }

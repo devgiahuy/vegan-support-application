@@ -8,6 +8,7 @@ import {
   firstCategory,
   getPostStatusLabel,
   parsePostStatus,
+  revisionStatusFromDto,
 } from '@/features/post/mappers/post-shared';
 import type {
   RecipeDetailDto,
@@ -156,6 +157,7 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       slug: safeString(pickField(dto, ['slug'], '')),
       status,
       statusLabel: getPostStatusLabel(status),
+      revisionStatus: revisionStatusFromDto(dto),
       version: safeNumber(pickField(dto, ['version'], 1)),
       author: {
         id: author.id,

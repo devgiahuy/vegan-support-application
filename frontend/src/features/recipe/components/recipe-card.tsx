@@ -1,18 +1,13 @@
+'use client';
+
 import Link from 'next/link';
 import { SafeImage } from '@/components/shared/safe-image';
-import {
-  ArrowRight,
-  BadgeCheck,
-  Clock,
-  Flame,
-  ShieldAlert,
-  Star,
-  User,
-  Users,
-} from 'lucide-react';
+import { ArrowRight, BadgeCheck, Clock, Flame, ShieldAlert, Star, User, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { resolveAuthorDisplay } from '@/lib/author-display';
+import { useAuthStore } from '@/store/useAuthStore';
 import type { Recipe } from '../types/recipe.model';
 import { RecipeCardBookmark } from './recipe-card-bookmark';
 
@@ -25,14 +20,15 @@ export function RecipeCard({
   priority?: boolean;
   className?: string;
 }) {
+  const user = useAuthStore((s) => s.user);
   const RECIPE_FALLBACK_COVER =
     'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80';
   const imageUrl = recipe.image || recipe.coverImageUrl || RECIPE_FALLBACK_COVER;
-  const authorAvatar =
-    (recipe.author && 'avatar' in recipe.author ? recipe.author.avatar : undefined) ||
-    recipe.author?.avatarUrl ||
-    '';
-  const authorName = recipe.author?.name || 'Tác giả ẩn danh';
+  const authorDisplay = resolveAuthorDisplay(recipe.author, user, {
+    fallbackName: 'Tác giả ẩn danh',
+  });
+  const authorAvatar = authorDisplay.avatarUrl;
+  const authorName = authorDisplay.name;
   const authorVerified =
     recipe.author && 'verified' in recipe.author ? recipe.author.verified === true : false;
   const isExpert = Boolean(
@@ -129,7 +125,7 @@ export function RecipeCard({
           <div className="flex items-center gap-2 min-w-0">
             <Avatar className="h-8 w-8 shrink-0">
               {authorAvatar ? <AvatarImage src={authorAvatar} alt={authorName} /> : null}
-              <AvatarFallback>{authorName.charAt(0)}</AvatarFallback>
+              <AvatarFallback>{authorDisplay.initials}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col min-w-0">
               <span className="truncate text-xs font-medium text-foreground">{authorName}</span>

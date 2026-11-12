@@ -69,6 +69,9 @@ export class VideoMapper extends BaseMapper<VideoDetailDto, Video> {
     const revisionId = safeString(revision?.id);
     const version = safeNumber(pickField(dto, ['version'], 1));
     const revisionVersion = safeNumber(revision?.version, version);
+    const revisionStatus = revision?.status
+      ? parsePostStatus(safeString(revision.status))
+      : undefined;
     const publishedRevisionVersion = pickField<number | null>(
       dto,
       ['publishedRevisionVersion'],
@@ -84,6 +87,7 @@ export class VideoMapper extends BaseMapper<VideoDetailDto, Video> {
       version,
       revisionId: revisionId || undefined,
       revisionVersion,
+      revisionStatus,
       publishedRevisionVersion,
       author,
       category: firstCategory(dto),

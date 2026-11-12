@@ -5,6 +5,7 @@ import { type Href, useRouter } from 'expo-router';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { VideoForm } from '@/features/video/components/video-form';
 import { useCreateVideoMutation } from '@/features/video/queries/video.queries';
+import { getSubmitFeedback, getSubmitOutcome } from '@/features/post/utils/submit-outcome';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -26,7 +27,7 @@ export default function CreateVideoScreen() {
         <Text className="text-2xl font-extrabold text-foreground">Đăng video nấu ăn</Text>
 
         <VideoForm
-          submitLabel="Gửi video"
+          submitLabel="Đăng video"
           isSubmitting={createVideoMutation.isPending}
           onSubmit={async (values) => {
             try {
@@ -40,7 +41,8 @@ export default function CreateVideoScreen() {
                 tags: values.tags,
                 coverAssetId: values.coverAssetId,
               });
-              Alert.alert('Đã gửi video', 'Video đã được gửi lên hệ thống nội dung.');
+              const feedback = getSubmitFeedback(getSubmitOutcome(created.revisionStatus), 'video');
+              Alert.alert(feedback.title, feedback.message);
               router.replace(`/videos/${created.id}` as Href);
             } catch (error) {
               Alert.alert('Không đăng được video', getApiErrorMessage(error, 'Vui lòng kiểm tra dữ liệu và thử lại.'));

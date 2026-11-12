@@ -33,7 +33,6 @@ import { RecipeEditorForm } from '@/features/recipe/components/recipe-editor-for
 import type { RecipeFormValues } from '@/features/recipe/schemas/recipe-form.schema';
 import { ImageUploader } from '@/features/post/components/image-uploader';
 import type { UploadedMediaMeta } from '@/features/storage/types/storage.model';
-import { StorageQuotaWidget } from '@/features/storage/components/storage-quota-widget';
 import { postFormSchema, type PostFormValues } from '@/features/post/schemas/post-form.schema';
 import { VideoUploader } from '@/features/video/components/video-uploader';
 import { videoFormSchema, type VideoFormValues } from '@/features/video/schemas/video-form.schema';
@@ -102,9 +101,6 @@ export function AdminContentEditorDialog({
             trước khi công khai.
           </DialogDescription>
         </DialogHeader>
-
-        {/* Hạn mứng dung lượng tài khoản: đã dùng / hạn mức / còn lại (FR-040). */}
-        <StorageQuotaWidget variant="compact" className="mx-6 -mb-2" />
 
         <ScrollArea className="max-h-[65vh] pr-3">
           <div className="space-y-4">

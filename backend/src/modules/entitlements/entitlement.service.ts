@@ -23,6 +23,8 @@ const periodFields = {
   RECEIPT: 'periodReceiptCredits',
 } as const;
 const day = 86_400_000;
+const localDayKey = (now: Date) =>
+  new Date(now.getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
 export class EntitlementService {
   constructor(
@@ -33,27 +35,7 @@ export class EntitlementService {
   async account(tx: Prisma.TransactionClient, ownerId: string) {
     const existing = await tx.entitlementAccount.findUnique({ where: { ownerId } });
     if (existing) return existing;
-    const account = await tx.entitlementAccount.create({
-      data: {
-        ownerId,
-        fridgeCredits: this.config.billing.fridgeTrialJobs,
-        receiptCredits: this.config.billing.receiptTrialJobs,
-      },
-    });
-    for (const feature of ['FRIDGE', 'RECEIPT'] as const) {
-      const delta = account[fields[feature]];
-      if (delta)
-        await tx.entitlementLedger.create({
-          data: {
-            ownerId,
-            feature,
-            delta,
-            operationKey: 'trial:' + ownerId + ':' + feature,
-            reason: 'TRIAL_GRANT',
-          },
-        });
-    }
-    return account;
+    return tx.entitlementAccount.create({ data: { ownerId } });
   }
 
   async reserve(
@@ -70,9 +52,23 @@ export class EntitlementService {
       throw new Error('USAGE_IDENTITY_MISMATCH');
     if (existing && existing.status !== UsageReservationStatus.RELEASED) return;
     const account = await this.refreshPeriod(tx, ownerId);
+    const freeDay = localDayKey(new Date());
+    const freeScan =
+      feature !== 'CHAT' &&
+      !(await tx.usageReservation.findFirst({
+        where: {
+          ownerId,
+          feature,
+          source: 'DAILY_FREE',
+          periodKey: freeDay,
+          status: { in: ['HELD', 'SPENT'] },
+        },
+        select: { id: true },
+      }));
     // Current-period subscription credits expire first, so they are spent before permanent ones.
     const periodKey = account.periodKey;
     const fromPeriod =
+      !freeScan &&
       periodKey !== null &&
       (
         await tx.entitlementAccount.updateMany({
@@ -81,12 +77,13 @@ export class EntitlementService {
         })
       ).count > 0;
     const field = fields[feature];
-    const updated = fromPeriod
-      ? { count: 1 }
-      : await tx.entitlementAccount.updateMany({
-          where: { ownerId, [field]: { gte: 1 } },
-          data: { [field]: { decrement: 1 } },
-        });
+    const updated =
+      freeScan || fromPeriod
+        ? { count: 1 }
+        : await tx.entitlementAccount.updateMany({
+            where: { ownerId, [field]: { gte: 1 } },
+            data: { [field]: { decrement: 1 } },
+          });
     if (!updated.count)
       throw new AppError({
         statusCode: 429,
@@ -96,9 +93,11 @@ export class EntitlementService {
       });
     const until = leaseUntil ?? new Date(Date.now() + this.config.billing.usageLeaseSeconds * 1000);
     const generation = (existing?.generation ?? 0) + 1;
-    const source = fromPeriod
-      ? { source: 'SUBSCRIPTION', periodKey }
-      : { source: 'CREDITS', periodKey: null };
+    const source = freeScan
+      ? { source: 'DAILY_FREE', periodKey: freeDay }
+      : fromPeriod
+        ? { source: 'SUBSCRIPTION', periodKey }
+        : { source: 'CREDITS', periodKey: null };
     await tx.usageReservation.upsert({
       where: { resourceKey },
       create: { ownerId, feature, resourceKey, leaseUntil: until, ...source },
@@ -137,6 +136,8 @@ export class EntitlementService {
               data: { [periodFields[feature]]: { increment: 1 } },
             })
           ).count > 0;
+      } else if (reservation.source === 'DAILY_FREE') {
+        refunded = reservation.periodKey === localDayKey(new Date());
       } else
         await tx.entitlementAccount.update({
           where: { ownerId: reservation.ownerId },
@@ -310,9 +311,30 @@ export class EntitlementService {
     await tx.entitlementLedger.create({ data });
   }
 
-  private pantryLimit(account: Account): number {
+  private async pantryLimit(
+    tx: Prisma.TransactionClient,
+    ownerId: string,
+    account: Account,
+  ): Promise<number> {
+    const subscription = account.periodKey
+      ? await tx.entitlementSubscription.findFirst({
+          where: { ownerId, startsAt: { lte: new Date() }, endsAt: { gt: new Date() } },
+          select: { orderId: true },
+        })
+      : null;
+    const order = subscription
+      ? await tx.paymentOrder.findUnique({
+          where: { id: subscription.orderId },
+          select: { productVersion: true },
+        })
+      : null;
+    const legacyBase =
+      order?.productVersion === 1 ? Math.max(0, 20 - this.config.billing.pantryBaseLimit) : 0;
     return (
-      this.config.billing.pantryBaseLimit + account.pantrySlots + (account.periodPantrySlots ?? 0)
+      this.config.billing.pantryBaseLimit +
+      legacyBase +
+      account.pantrySlots +
+      (account.periodPantrySlots ?? 0)
     );
   }
 
@@ -321,7 +343,7 @@ export class EntitlementService {
     await lockDocument(tx, 'user', { id: ownerId });
     const account = await this.refreshPeriod(tx, ownerId);
     const used = await tx.pantryItem.count({ where: { ownerId, deletedAt: null } });
-    const limit = this.pantryLimit(account);
+    const limit = await this.pantryLimit(tx, ownerId, account);
     if (used >= limit)
       throw new AppError({
         statusCode: 409,
@@ -353,13 +375,24 @@ export class EntitlementService {
         where: { ownerId, status: 'HELD' },
         select: { feature: true },
       });
+      const freeScans = await tx.usageReservation.findMany({
+        where: {
+          ownerId,
+          source: 'DAILY_FREE',
+          periodKey: localDayKey(new Date()),
+          status: { in: ['HELD', 'SPENT'] },
+        },
+        select: { feature: true },
+      });
       const pantryUsed = await tx.pantryItem.count({ where: { ownerId, deletedAt: null } });
       const ledger = await tx.entitlementLedger.findMany({
         where: { ownerId },
         orderBy: { createdAt: 'desc' },
         take: 20,
       });
-      const pantryLimit = this.config.billing.enabled ? this.pantryLimit(account) : null;
+      const pantryLimit = this.config.billing.enabled
+        ? await this.pantryLimit(tx, ownerId, account)
+        : null;
       const current = subscriptions[0];
       return {
         enabled: this.config.billing.enabled,
@@ -371,6 +404,8 @@ export class EntitlementService {
         chatReserved: held.filter((r) => r.feature === 'CHAT').length,
         fridgeReserved: held.filter((r) => r.feature === 'FRIDGE').length,
         receiptReserved: held.filter((r) => r.feature === 'RECEIPT').length,
+        fridgeDailyFreeRemaining: freeScans.some((r) => r.feature === 'FRIDGE') ? 0 : 1,
+        receiptDailyFreeRemaining: freeScans.some((r) => r.feature === 'RECEIPT') ? 0 : 1,
         pantryUsed,
         pantryLimit,
         pantrySlots: account.pantrySlots,

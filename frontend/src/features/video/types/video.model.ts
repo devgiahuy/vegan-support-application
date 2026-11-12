@@ -14,6 +14,8 @@ export interface Video {
   revisionId?: string;
   /** Số thứ tự phiên bản của revision (v1, v2,...) */
   revisionVersion?: number;
+  /** Trạng thái của revision hiện tại (DRAFT, PENDING_REVIEW, FLAGGED, QUARANTINED, PUBLISHED, REJECTED...) */
+  revisionStatus?: PostStatus;
   /** Phiên bản revision đã xuất bản công khai (nếu có, dùng cho luồng song song dual-revision) */
   publishedRevisionVersion?: number | null;
   author: PostAuthorModel;

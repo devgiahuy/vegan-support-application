@@ -4,7 +4,7 @@ import { getApiErrorCode, getApiErrorFields, toastApiError } from '@/lib/api-err
 import { reviewApi } from '../api/review.api';
 import type { ReviewQueueQueryParams, SubmitPostInput } from '../types/content-review.model';
 import type { ReviewNutritionOverrideValues } from '../types/review-nutrition.model';
-import { ReviewDecisionEnum } from '../types/content-review.model';
+import { ReviewDecisionEnum, PostReviewStatus } from '../types/content-review.model';
 import { localizeReviewReasonError } from '../utils/review-error';
 
 // ==========================================
@@ -35,7 +35,7 @@ export const REVIEW_QUEUE_KEYS = {
 // ==========================================
 
 /**
- * Hook nộp bản nháp để Admin kiểm duyệt
+ * Hook nộp bản nháp immutable để xuất bản (Contributor) hoặc kiểm duyệt
  * POST /api/v1/posts/:id/submit
  */
 export function useSubmitPostMutation(postId: string) {
@@ -43,12 +43,31 @@ export function useSubmitPostMutation(postId: string) {
 
   return useMutation({
     mutationFn: (input: SubmitPostInput) => reviewApi.submitPost(postId, input),
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: CONTENT_REVIEW_KEYS.all });
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       queryClient.invalidateQueries({ queryKey: ['recipes'] });
       queryClient.invalidateQueries({ queryKey: ['articles'] });
       queryClient.invalidateQueries({ queryKey: ['videos'] });
+
+      if (result.isAutoPublished) {
+        toast.success('Đã xuất bản nội dung công khai!', {
+          description: 'Nội dung của bạn đã được duyệt tự động và hiển thị cho cộng đồng.',
+        });
+        return;
+      }
+
+      if (
+        result.revisionStatus === PostReviewStatus.FLAGGED ||
+        result.revisionStatus === PostReviewStatus.QUARANTINED
+      ) {
+        toast.warning('Nội dung cần được kiểm duyệt bổ sung', {
+          description:
+            'Hệ thống đã chuyển bản nộp tới Quản trị viên để xem xét trước khi xuất bản.',
+        });
+        return;
+      }
+
       toast.success('Nộp bài viết kiểm duyệt thành công!', {
         description: 'Bài viết đang chờ Quản trị viên thẩm định và xuất bản.',
       });
@@ -56,20 +75,20 @@ export function useSubmitPostMutation(postId: string) {
     onError: (err: unknown) => {
       const code = getApiErrorCode(err);
       if (code === 'CONTENT_NOT_SUBMITTABLE') {
-        toast.error('Chưa thể gửi duyệt', {
+        toast.error('Chưa thể gửi nội dung', {
           description:
             'Nội dung chưa hoàn thiện các trường bắt buộc (tiêu đề, nguyên liệu hoặc video).',
         });
         return;
       }
-      if (code === 'CONTENT_ALREADY_SUBMITTED') {
-        toast.warning('Bài viết đã được gửi duyệt', {
+      if (code === 'CONTENT_ALREADY_SUBMITTED' || code === 'CONTENT_STATE_CONFLICT') {
+        toast.warning('Bản nháp không thể gửi lại', {
           description:
-            'Bản nháp này đang ở trạng thái chờ duyệt. Vui lòng chờ Quản trị viên phản hồi.',
+            'Bản nháp này đã được xử lý hoặc đang ở trạng thái chờ duyệt. Vui lòng tải lại trang.',
         });
         return;
       }
-      if (code === 'VERSION_CONFLICT') {
+      if (code === 'VERSION_CONFLICT' || code === 'CONTENT_VERSION_CONFLICT') {
         toast.error('Xung đột phiên bản', {
           description: 'Dữ liệu bài viết đã có thay đổi mới từ nơi khác. Vui lòng tải lại trang.',
         });

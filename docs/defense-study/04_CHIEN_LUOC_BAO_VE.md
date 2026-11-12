@@ -2,7 +2,7 @@
 
 ## Định vị project trong 20 giây
 
-“Đây là hệ thống hỗ trợ ăn chay gồm web, mobile và backend. Điểm cốt lõi là các ràng buộc ăn kiêng được kiểm tra ở backend; nội dung công khai cần Admin duyệt; AI chỉ đề xuất, người dùng xác nhận mới ghi Pantry. Em sẽ demo một luồng xuyên suốt từ hồ sơ ăn kiêng đến món ăn và thực đơn, sau đó cho thấy một quyết định review và một trường hợp lỗi.”
+“Đây là hệ thống hỗ trợ ăn chay gồm web, mobile và backend. Ràng buộc ăn kiêng của recipe và thực đơn được kiểm tra ở backend; nội dung công khai cần reviewer có quyền duyệt; AI chỉ đề xuất, người dùng xác nhận mới ghi Pantry. Em sẽ demo từ hồ sơ ăn kiêng đến món ăn và thực đơn, sau đó cho thấy review và một trường hợp lỗi.”
 
 **Không học theo danh sách màn hình.** Học theo quyết định nghiệp vụ: ai được làm, dữ liệu vào, backend chặn gì, dữ liệu sau thao tác, cách xử lý lỗi. Có hai người hỏi, nên chuẩn bị cả câu về sản phẩm/nghiệp vụ và câu về source/transaction/API.
 
@@ -27,6 +27,8 @@ Nếu thời gian chỉ 8 phút, hoàn thành hai mức đầu. Nếu được 1
 | 7:00–9:00 | Tạo/adjust Pantry rồi xem shopping gap | “Chỉ tồn kho đã xác nhận và đơn vị quy đổi được mới được trừ.” | [PantryService](../../backend/src/modules/pantry/pantry.service.ts), [ReceiptService](../../backend/src/modules/receipts/receipt.service.ts) |
 | 9:00–11:00 | Member submit draft; đổi sang Admin khác approve | “Revision mới vào hàng duyệt; self-review bị chặn.” | [publication policy](../../backend/src/modules/content/content-publication.policy.ts), [moderation repository](../../backend/src/modules/moderation/moderation.repository.ts) |
 | 11:00–12:00 | Kết luận và giới hạn | “Scan còn kiểm chứng ảnh thật; payOS cần settlement server; mock/fixture không là thành công backend.” | [phase status](../../backend/docs/IMPLEMENTATION_PHASES.md) |
+
+Khi demo recipe review, chuẩn bị đủ 5 chỉ số dinh dưỡng hoặc giải thích `RECIPE_NUTRITION_INCOMPLETE`; reviewer có thể xem estimate/override kèm audit. Có thể dùng Contributor khác duyệt bài Member sạch trong phạm vi được phép, hoặc Admin cho ca leo thang. Với restaurant, không nói trang tự lọc theo hồ sơ dị ứng; hãy chọn bộ lọc tường minh và nêu giới hạn dữ liệu provider.
 
 Lượt demo có thể bị vướng UI/cache hoặc dữ liệu seed. Chuẩn bị một tab OpenAPI/HTTP response để chỉ ra request, `error.code`, state và `requestId`. Khi UI hiển thị trái backend, nói rõ đó là gap frontend và dùng response backend để chứng minh rule server.
 

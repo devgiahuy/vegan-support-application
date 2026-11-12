@@ -19,6 +19,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { billingErrorMessage } from '@/features/billing/lib/billing-errors';
+import { getApiErrorCode } from '@/lib/api-error';
+import { cn } from '@/lib/utils';
 import {
   billingCheckMessage,
   billingCheckTime,
@@ -34,7 +36,7 @@ import {
 } from '@/features/billing/queries/billing.queries';
 import type { BillingOrder, BillingProduct } from '@/features/billing/types/billing.model';
 
-function OrderRow({
+export function OrderRow({
   order,
   onRefresh,
   refreshing,
@@ -72,8 +74,8 @@ function OrderRow({
         <div className="min-w-0">
           <p className="font-medium">
             {order.productName}
-            {order.durationLabel !== 'Mua một lần' && (
-              <span className="text-muted-foreground"> · {order.durationLabel}</span>
+            {order.durationSuffixLabel && (
+              <span className="text-muted-foreground"> · {order.durationSuffixLabel}</span>
             )}
           </p>
           <p className="text-sm text-muted-foreground">
@@ -120,7 +122,7 @@ function OrderRow({
   );
 }
 
-function DurationPlanCard({
+export function DurationPlanCard({
   plans,
   enabled,
   pendingProductId,
@@ -149,16 +151,24 @@ function DurationPlanCard({
         <ToggleGroup
           type="single"
           variant="outline"
+          spacing={plans.length > 3 ? 2 : 0}
           value={plan.id}
           onValueChange={(value) => {
             if (value) setSelectedId(value);
           }}
-          aria-label="Chọn thời hạn gói tiện ích"
-          className="w-full"
+          aria-label="Chọn gói tiện ích theo thời hạn"
+          className={cn('w-full', plans.length > 3 && 'flex-wrap gap-2')}
         >
           {plans.map((item) => (
-            <ToggleGroupItem key={item.id} value={item.id} className="flex-1">
-              {item.durationLabel}
+            <ToggleGroupItem
+              key={item.id}
+              value={item.id}
+              className={cn(
+                'h-auto min-h-11 flex-1 whitespace-normal px-2.5 py-2 text-center text-xs leading-snug sm:text-sm',
+                plans.length > 3 && 'min-w-[calc(50%-0.25rem)]'
+              )}
+            >
+              {item.displayName}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
@@ -168,7 +178,7 @@ function DurationPlanCard({
           <p className="tabular-nums text-2xl font-semibold">{plan.priceLabel}</p>
           {plan.durationMonths !== null && plan.durationMonths > 1 && (
             <p className="tabular-nums text-sm text-muted-foreground">
-              Tương đương {plan.monthlyPriceLabel} / tháng
+              Tương đương {plan.monthlyPriceLabel} / 30 ngày
             </p>
           )}
         </div>
@@ -217,14 +227,30 @@ function BillingContent() {
   const reconcile = useReconcileBillingOrderMutation();
   async function buy(productId: string) {
     setActionError(null);
+    const product = catalog.data?.products.find((item) => item.id === productId);
+    if (!product || product.version < 1) {
+      setActionError('Không xác định được phiên bản gói. Vui lòng tải lại danh sách.');
+      return;
+    }
     const key = intents.current.get(productId) ?? crypto.randomUUID();
     intents.current.set(productId, key);
     try {
-      const order = await purchase.mutateAsync({ productId, idempotencyKey: key });
+      const order = await purchase.mutateAsync({
+        productId,
+        idempotencyKey: key,
+        expectedProductVersion: product.version,
+      });
       intents.current.delete(productId);
       router.replace('/billing?orderId=' + order.id);
       if (order.checkoutUrl) window.location.assign(order.checkoutUrl);
     } catch (error) {
+      if (
+        getApiErrorCode(error) === 'BILLING_PRODUCT_CHANGED' ||
+        getApiErrorCode(error) === 'BILLING_PRODUCT_UNAVAILABLE'
+      ) {
+        intents.current.delete(productId);
+        void catalog.refetch();
+      }
       setActionError(billingErrorMessage(error));
     }
   }
@@ -240,9 +266,9 @@ function BillingContent() {
         <p className="text-sm font-medium text-primary">Gói tiện ích VeggieConnect</p>
         <h1 className="text-balance text-3xl font-semibold sm:text-4xl">Thêm lượt, chủ động hơn</h1>
         <p className="max-w-2xl text-pretty text-muted-foreground">
-          Gói tiện ích chọn thời hạn 1 tháng, 3 tháng hoặc 1 năm và nhận lượt mới mỗi 30 ngày. Gói
-          lẻ mua một lần, cộng dồn vào tài khoản. Lượt chat miễn phí được dùng trước. Không tự gia
-          hạn và không tăng dung lượng ảnh lưu trữ.
+          Gói tiện ích theo thời hạn nhận lượt mới mỗi 30 ngày. Mỗi ngày có 3 lượt chat, 1 lượt quét
+          tủ lạnh và 1 lượt quét hóa đơn miễn phí. Gói lẻ mua một lần, cộng dồn vào tài khoản. Lượt
+          chat miễn phí được dùng trước. Không tự gia hạn và không tăng dung lượng ảnh lưu trữ.
         </p>
       </header>
       <Alert>

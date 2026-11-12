@@ -116,6 +116,8 @@ export interface Recipe {
   revisionId?: string;
   /** Số thứ tự phiên bản của revision (v1, v2,...) */
   revisionVersion?: number;
+  /** Trạng thái riêng của revision mới nhất (dùng khi dual-revision: bài đã xuất bản nhưng có bản nháp v2) */
+  revisionStatus?: PostStatus;
   /** Phiên bản revision đã xuất bản công khai (nếu có, dùng cho luồng song song dual-revision) */
   publishedRevisionVersion?: number | null;
   author: RecipeAuthor;

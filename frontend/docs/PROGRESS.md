@@ -1,5 +1,64 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Sửa lỗi hiển thị lặp thời hạn 30/90/360 ngày trên card gói tiện ích — Updated 2026-11-10
+
+Bổ sung chuẩn hóa nhãn hiển thị theo thời hạn trong `billing.mapper.ts` / `billing.model.ts` (`BillingProduct.displayName` và `BillingOrder.durationSuffixLabel`) để chỉ ghép thêm `durationLabel` khi tên gói chưa chứa sẵn thông tin thời hạn. Khắc phục tình trạng nút chọn gói trong `DurationPlanCard` (và dòng đơn hàng `OrderRow`) ở `/billing` hiển thị lặp `Gói tiện ích 30 ngày · 30 ngày`, `Gói tiện ích 90 ngày · 90 ngày`, `Gói tiện ích 360 ngày · 360 ngày`; giữ được khả năng phân biệt khi quản trị viên tạo nhiều gói cùng thời hạn và giữ ổn định bố cục `ToggleGroup` khi có từ 4 gói trở lên. Giữ nguyên tỷ lệ hoàn thành tính năng. Chi tiết kiểm chứng tại WORK-LOG.
+
+## Sửa lỗi sidebar sticky mất vị trí khi cuộn trang và mở popup ở Admin Dashboard — Updated 2026-11-10
+
+Nâng độ ưu tiên selector ghi đè khóa cuộn Radix trong `globals.css` (`html body[data-scroll-locked]` thắng style động của `react-remove-scroll-bar`) để giữ `overflow-x: clip` / `overflow-y: visible` và `margin-right: 0px`, tránh `body` biến thành vùng cuộn `overflow: hidden` làm thanh sidebar và topbar `sticky` ở `/admin/dashboard?tab=billing-catalog` (cũng như các màn hình admin/sticky khác) bị bật ngược lên trên và cắt khuất khi mở popup sau lúc cuộn trang; đồng thời chuyển chiều cao shell/sidebar `AdminLayout` sang `min-h-dvh` / `h-dvh`. Giữ nguyên tỷ lệ hoàn thành tính năng. Chi tiết kiểm chứng tại WORK-LOG.
+
+## Chuẩn bị danh mục gói quản trị — IN_PROGRESS 2026-11-10
+
+Dashboard admin tích hợp danh sách, chi tiết, tạo, sửa, mở bán và ngừng bán gói; lý do khi sửa gói là tùy chọn. Web và mobile gửi phiên bản gói khi mua và yêu cầu xem lại nếu giá/quyền lợi thay đổi. Cần triển khai đồng bộ client và backend; bộ acceptance backend đầy đủ chưa qua do thiếu fixture ảnh trên database cô lập. Chi tiết tại WORK-LOG và `docs/ADMIN_BILLING_CATALOG_PLAN.md` ở thư mục gốc.
+
+## Đồng bộ giao diện và luồng tự động duyệt cho Contributor khi đăng công thức, cẩm nang và video — Updated 2026-11-10
+
+Cập nhật toàn bộ consumer `POST /posts/{id}/submit` trên web (`features/review`, công thức, cẩm nang, video ẩm thực) đọc trạng thái `revision.status` thực tế từ backend thay vì mặc định hiển thị "Chờ kiểm duyệt". Khi Contributor tạo mới hoặc xuất bản sạch nhận `PUBLISHED`, modal thành công ở `/recipes/new` hiển thị trạng thái "Đăng công thức thành công!" / "Đã xuất bản" và bỏ nút "Phê duyệt ngay"; các luồng cẩm nang (`/articles/new`, `/articles/[id]/edit`) và video (`/videos/new`) thực hiện đủ `POST/PATCH /posts` → `POST /posts/:id/submit` và hiển thị thông báo tự động xuất bản (Admin và nội dung `PENDING_REVIEW`/`FLAGGED`/`QUARANTINED` vẫn giữ luồng kiểm duyệt). Đã pass `tsc --noEmit`, scoped ESLint (0 lỗi), `npm test` (103 files / 827 tests), `npm run build` (47 routes) và `git diff --check`; chưa kiểm thử tương tác trực tiếp trên trình duyệt và chưa cập nhật mobile. Giữ nguyên tỷ lệ hoàn thành tính năng và giữ trạng thái endpoint `CHANGING` chờ mobile/backend gates.
+
+## Đồng bộ ảnh đại diện tài khoản trên trang chi tiết nội dung — Updated 2026-11-10
+
+Gỡ ảnh đại diện giữ chỗ cứng (`i.pravatar.cc`) trong `RecipeMapper` và bổ sung tầng chuẩn hóa hiển thị tác giả (`resolveAuthorDisplay`) cùng cơ chế đồng bộ `useAuthStore` và làm mới cache công thức, video, bài viết, bình luận khi cập nhật hồ sơ tại `/profile`. Đảm bảo `/recipes/:id`, `/videos/:id`, `/articles/:id`, thẻ nội dung và bình luận hiển thị đúng ảnh đại diện thật của tài khoản hoặc chữ viết tắt khi tài khoản chưa có/vừa xóa ảnh. Giữ nguyên tỷ lệ hoàn thành tính năng. Chi tiết kiểm chứng tại WORK-LOG.
+
+## Sửa double toast khi vote ở trang chi tiết bài viết — Updated 2026-11-10
+
+Gỡ callback `handleVoteChange` hiển thị toast trùng (`"Đã ghi nhận đánh giá của bạn!"`) khỏi hai `VoteControl` trong `PostDetailView` (`/articles/[id]`), để `VoteControl` tự hiển thị một thông báo đúng trạng thái upvote/downvote/hủy bình chọn giống trang công thức và video. Giữ nguyên tỷ lệ hoàn thành tính năng. Chi tiết kiểm chứng tại WORK-LOG.
+
+## Ẩn thanh dung lượng khi tải ảnh — Updated 2026-11-10
+
+Gỡ bỏ thanh và chỉ báo hạn ngạch dung lượng lưu trữ khỏi các thành phần tải ảnh (`ImageUploader`, phần đầu hộp thoại `AdminContentEditorDialog` và dòng `Dung lượng khả dụng` trong `CustomMealPhotoUploader` nhưng vẫn giữ kiểm tra chặn khi hết hạn ngạch). Giữ thanh hạn ngạch `StorageQuotaWidget` trong `VideoUploader` (cho luồng tải/đăng video) và các màn hình quản lý lưu trữ (`/profile?tab=storage`, `/admin/storage`). Giữ nguyên tỷ lệ hoàn thành tính năng. Chi tiết kiểm chứng tại WORK-LOG.
+
+## Sửa responsive giao diện Contributor — Updated 2026-11-10
+
+Điều chỉnh độ rộng cột và thanh thao tác ở `ReviewQueueTable` (kèm danh sách thẻ cho màn hình `< 768px`) để hiển thị đủ cả ba nút `Xem xét`, `Duyệt`, `Từ chối` không bị cắt khuất; sửa modal gửi công thức thành công ở `/recipes/new` dùng flex layout với `sm:max-w-xl` để hộp thông tin và 3 nút thao tác không tràn hay đè viền trên Contributor/Admin. Giữ nguyên tỷ lệ hoàn thành tính năng. Chi tiết kiểm chứng tại WORK-LOG.
+
+## Rà soát DTO frontend — Updated 2026-11-10
+
+Dọn các trường response và kiểu payload SSE không có consumer được xác định; giữ nguyên chức năng và tỷ lệ hoàn thành. Chi tiết kiểm chứng tại WORK-LOG.
+
+## Xóa cuộc trò chuyện — Updated 2026-11-09
+
+Tài khoản đã đăng nhập có thể xóa cuộc trò chuyện của mình khỏi lịch sử trên web và mobile sau khi xác nhận. Backend xóa mềm, giữ nội dung theo chính sách lưu trữ; phiên đang nhận câu trả lời phải chờ hoàn tất. Đã kiểm tra quyền sở hữu, trạng thái xử lý và khả năng truy cập sau xóa bằng cơ sở dữ liệu riêng.
+
+## Biểu tượng trạng thái chat — Updated 2026-11-09
+
+Thay icon robot trước “Đang suy nghĩ...” bằng biểu tượng ngôi sao AI xoay; tắt chuyển động khi người dùng chọn giảm chuyển động.
+
+## Bản đồ tìm quán — Updated 2026-11-09
+
+Điều chỉnh khóa cuộn khi mở danh sách cụm quán để bản đồ sticky giữ vị trí sau khi chọn quán và cuộn danh sách. Chưa xác minh được kịch bản trên trình duyệt do tìm địa chỉ local không trả kết quả; chi tiết kiểm chứng ở WORK-LOG.
+
+## Chi tiết cảnh báo ràng buộc thực đơn — Updated 2026-11-09
+
+Backend analysis v4 trả lý do theo từng món/bữa, nêu nguyên liệu dị ứng có bằng chứng và phân biệt cảnh báo chỉ có ở cấp công thức; web/mobile nhóm món lặp kèm ngày/bữa và đổi màu cảnh báo. Kiểm tra chỉ đọc thực đơn người dùng và tình huống snapshot/no-allergy pass; kiểm thử web/mobile và backend ghi ở WORK-LOG. Không thay đổi ràng buộc an toàn.
+
+## Quota miễn phí hằng ngày và gói tiện ích — Updated 2026-11-09
+
+Đã cập nhật web/mobile hiển thị lượt quét miễn phí còn lại và thời hạn 30/90/360 ngày; backend bổ sung quota quét mỗi ngày, danh mục version 2 và giữ quyền lợi đơn cũ. Validator/index và danh mục đã áp dụng local. Backend lint/typecheck/build và billing acceptance pass; web typecheck, 736 tests, build pass; mobile typecheck, 112 tests, lint pass. Kiểm thử payOS dùng transport giả lập, không phát sinh giao dịch thật.
+
+## Sửa luồng chat AI — Updated 2026-11-08
+
+UC-07 giữ 95% → 95%: yêu cầu SSE gửi access token, refresh một lần khi phiên hết hạn, nhận quota sau message_complete và báo lỗi khi stream đóng sớm. Backend/MongoDB đã kiểm thử với khách và tài khoản seed; cả hai trả fallback vì provider cấu hình không có model moderation. Chưa xác nhận câu trả lời AI thực qua toàn luồng.
 ## AI điền thông tin cơ bản còn thiếu — 2026-11-07
 
 AI recipe giữ 100% → 100% scaffold. Form cho qua bước cơ bản khi chưa nhập; AI điền trường trống và giữ giá trị đã nhập; gửi cuối vẫn kiểm tra trường bắt buộc. Backend và OpenAPI đã cập nhật; provider thật đã được kiểm tra. Ảnh bìa vẫn tải riêng, chưa được AI tạo. Chưa kiểm thử giao diện trình duyệt.
@@ -397,6 +456,7 @@ Roadmap Phase 2 features are tracked only in `/docs/ROADMAP_PHASE_2.md`; they mu
 ## Lịch sử cập nhật (mỗi dòng = 1 lần agent sửa %)
 
 | Ngày (UTC) | Task | % cũ → % mới | Lý do |
+| 2026-11-08 | Sửa luồng chat AI | UC-07 95% → 95% | Sửa xác thực SSE, refresh và quota; kiểm thử end-to-end còn chờ MongoDB. |
 | 2026-11-05 | Kiểm tra lại response và lỗi API | % các feature giữ nguyên | Bỏ fixture fallback trên `/posts` READY, phân biệt 404 chưa phân tích với 409 stale, kiểm tra envelope meal program và bỏ upload signature cũ; 783 tests, typecheck, build pass. |
 | 2026-11-05 | Rà soát cuối response frontend | Phase 15/17/19 100% → 100% | Sửa `data[]`/`meta` meal program; loại fallback sai ở custom meal và storage; 787 tests, typecheck, scoped lint, build 47 routes pass. |
 | 2026-10-25 | Kiểm chứng và bàn giao nhánh sửa 3 luồng | Phase 17/19 100% → 100% | 12 runtime/API checks, 42 món qua mapper; sửa zero/clear/manual macro UI và tổng macro tuần; browser QA custom meal. |

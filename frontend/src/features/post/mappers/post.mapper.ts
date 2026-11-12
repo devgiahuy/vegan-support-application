@@ -161,6 +161,9 @@ export class PostMapper extends BaseMapper<BlogDetailDto, Article> {
     const revisionId = safeString(revision?.id);
     const version = safeNumber(pickField(dto, ['version'], 1));
     const revisionVersion = safeNumber(revision?.version, version);
+    const revisionStatus = revision?.status
+      ? parsePostStatus(safeString(revision.status))
+      : undefined;
     const publishedRevisionVersion = pickField<number | null>(
       dto,
       ['publishedRevisionVersion'],
@@ -177,6 +180,7 @@ export class PostMapper extends BaseMapper<BlogDetailDto, Article> {
       version,
       revisionId: revisionId || undefined,
       revisionVersion,
+      revisionStatus,
       publishedRevisionVersion,
       author: authorFromDto(dto, 'Tác giả VeggieConnect'),
       category: firstCategory(dto),

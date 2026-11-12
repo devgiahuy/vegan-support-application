@@ -24,6 +24,12 @@ export function createChatRouter(
   router.use(authentication.optionalAuthenticate);
   router.post('/sessions', validateBody(createChatSessionRequestSchema), controller.createSession);
   router.get('/sessions', validateQuery(chatListQuerySchema), controller.listSessions);
+  router.delete(
+    '/sessions/:id',
+    authentication.authenticate,
+    validateParams(chatSessionParamsSchema),
+    controller.deleteSession,
+  );
   router.get(
     '/sessions/:id/messages',
     validateParams(chatSessionParamsSchema),

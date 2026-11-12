@@ -1484,6 +1484,7 @@ export class MealPlanService {
             suggestion:
               'Vui lòng thay món không phù hợp hoặc bổ sung dữ liệu thành phần đã rà soát.',
             hardConstraintsPreserved: false,
+            hardViolations: analysis.summary.hardViolations,
           },
     };
   }

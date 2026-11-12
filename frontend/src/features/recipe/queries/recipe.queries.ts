@@ -2,7 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { getApiErrorMessage, toastApiError } from '@/lib/api-error';
 import { PostStatus } from '@/common/enums';
+import { getPostStatusLabel, parsePostStatus } from '@/features/post/mappers/post.mapper';
+import { POST_QUERY_KEYS } from '@/features/post/queries/post.queries';
 import { reviewApi } from '@/features/review/api/review.api';
+import type { SubmitPostResult } from '@/features/review/types/content-review.model';
 import { CONTENT_REVIEW_KEYS } from '@/features/review/queries/review.queries';
 import { recipeApi, RecipeQueryParams } from '../api/recipe.api';
 import type { Recipe } from '../types/recipe.model';
@@ -59,18 +62,39 @@ export class RecipeSubmitForReviewError extends Error {
   }
 }
 
-/** Backend luôn lưu revision mới ở dạng DRAFT; gửi duyệt ngay bằng `POST /posts/:id/submit`. */
-async function submitSavedRecipe(saved: Recipe): Promise<Recipe> {
-  const expectedVersion = saved.revisionVersion ?? saved.version;
+/** Backend luôn lưu revision mới ở dạng DRAFT; gửi/xuất bản ngay bằng `POST /posts/:id/submit`. */
+export async function submitSavedRecipe(saved: Recipe): Promise<Recipe> {
+  const expectedVersion = saved.version ?? saved.revisionVersion;
+  let submitted: SubmitPostResult;
   try {
     if (!saved.id || !saved.revisionId || expectedVersion === undefined) {
       throw new Error('Phản hồi lưu công thức thiếu thông tin phiên bản.');
     }
-    await reviewApi.submitPost(saved.id, { revisionId: saved.revisionId, expectedVersion });
+    submitted = await reviewApi.submitPost(saved.id, {
+      revisionId: saved.revisionId,
+      expectedVersion,
+    });
   } catch (err) {
     throw new RecipeSubmitForReviewError(saved, err);
   }
-  return { ...saved, status: PostStatus.PENDING_REVIEW };
+
+  const nextPostStatus = parsePostStatus(submitted.postStatus);
+  const nextRevisionStatus = parsePostStatus(submitted.revisionStatus);
+
+  return {
+    ...saved,
+    status: nextPostStatus,
+    statusLabel: getPostStatusLabel(nextPostStatus),
+    version: submitted.version || saved.version,
+    revisionId: submitted.revisionId || saved.revisionId,
+    revisionVersion: submitted.revisionVersion || saved.revisionVersion,
+    revisionStatus: nextRevisionStatus,
+    publishedRevisionVersion: submitted.publishedRevisionVersion ?? saved.publishedRevisionVersion,
+    publishedAt: submitted.publishedAt ?? saved.publishedAt,
+    formattedPublishedAt: submitted.publishedAt
+      ? submitted.formattedPublishedAt
+      : saved.formattedPublishedAt,
+  };
 }
 
 function useSaveAndSubmitCallbacks() {
@@ -80,14 +104,32 @@ function useSaveAndSubmitCallbacks() {
       queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.lists() });
       queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.detail(data.id) });
       queryClient.invalidateQueries({ queryKey: CONTENT_REVIEW_KEYS.all });
-      toast.success('Đã gửi công thức để kiểm duyệt', {
-        description: 'Ban biên tập sẽ duyệt trước khi công thức được xuất bản.',
-      });
+      queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.mineRoot() });
+
+      const effectiveStatus = data.revisionStatus ?? data.status;
+      if (effectiveStatus === PostStatus.PUBLISHED) {
+        toast.success('Đã xuất bản công thức công khai!', {
+          description: 'Công thức của bạn đã được duyệt tự động và hiển thị trong kho công thức.',
+        });
+      } else if (
+        effectiveStatus === PostStatus.FLAGGED ||
+        effectiveStatus === PostStatus.QUARANTINED
+      ) {
+        toast.warning('Công thức cần được kiểm duyệt bổ sung', {
+          description:
+            'Hệ thống đã chuyển công thức tới Ban biên tập để rà soát trước khi công khai.',
+        });
+      } else {
+        toast.success('Đã gửi công thức để kiểm duyệt', {
+          description: 'Ban biên tập sẽ duyệt trước khi công thức được xuất bản.',
+        });
+      }
     },
     onError: (err: unknown, fallbackTitle: string) => {
       if (err instanceof RecipeSubmitForReviewError) {
         queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.detail(err.recipe.id) });
-        toast.warning('Đã lưu bản nháp nhưng chưa gửi duyệt được', {
+        queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.mineRoot() });
+        toast.warning('Đã lưu bản nháp nhưng chưa gửi xuất bản được', {
           description: getApiErrorMessage(err.reason, 'Vui lòng thử gửi lại.'),
         });
         return;

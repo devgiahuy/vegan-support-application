@@ -4,6 +4,11 @@ import type { ChatMessageListResponseDto, ChatSessionListResponseDto } from '../
 import { ChatMessageStatus, ChatOwnerType, ChatRole, FeedbackValue } from '@/common/enums';
 
 describe('ChatMapper sessions', () => {
+  it('map kết quả xóa phiên từ envelope', () => {
+    expect(chatMapper.toDeletedSession({ success: true, data: { id: 's1' }, meta: null })).toEqual({
+      id: 's1',
+    });
+  });
   it('map phiên guest + hết hạn', () => {
     const session = chatMapper.toSingleSession(
       {

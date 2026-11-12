@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Bot, User, Copy, Check, Sparkles, ShieldAlert } from 'lucide-react';
+import { User, Copy, Check, Sparkles, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -80,7 +80,10 @@ export function MessageBubble({
                 <ChatMarkdown content={text} />
               ) : (
                 <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <Bot className="size-4 animate-spin text-emerald-500" />
+                  <Sparkles
+                    aria-hidden="true"
+                    className="size-4 text-emerald-500 motion-safe:animate-spin"
+                  />
                   Đang suy nghĩ...
                 </span>
               )}

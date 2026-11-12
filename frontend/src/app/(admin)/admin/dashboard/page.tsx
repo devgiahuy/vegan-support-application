@@ -25,6 +25,7 @@ import {
   Database,
   Newspaper,
   Wallet,
+  Package,
   Activity,
   ChevronLeft,
   ChevronRight,
@@ -72,6 +73,7 @@ import {
 import { AiVerificationTable } from '@/features/ai-artifacts';
 import { AiUsageTraceTable, RevenueStatsPanel } from '@/features/admin-insights';
 import { AdminContentManager } from '@/features/admin-content/components/admin-content-manager';
+import { AdminBillingCatalog } from '@/features/billing/components/admin-billing-catalog';
 
 type Tab =
   | 'queue'
@@ -88,6 +90,7 @@ type Tab =
   | 'restaurants'
   | 'ai-governance'
   | 'ai-revenue'
+  | 'billing-catalog'
   | 'ai-usage'
   | 'ai-verifications';
 
@@ -117,6 +120,7 @@ function parseTabParam(value: string | null): Tab {
     value === 'restaurants' ||
     value === 'ai-governance' ||
     value === 'ai-revenue' ||
+    value === 'billing-catalog' ||
     value === 'ai-usage' ||
     value === 'ai-verifications'
   ) {
@@ -285,6 +289,7 @@ function AdminDashboardContent() {
     // { id: 'contrib-apps', label: 'Đơn cộng tác', icon: UserCheck },
     { id: 'ai-governance', label: 'Giám sát AI', icon: Bot },
     { id: 'ai-revenue', label: 'Doanh thu AI', icon: Wallet },
+    { id: 'billing-catalog', label: 'Gói tiện ích', icon: Package },
     { id: 'ai-usage', label: 'Truy vết AI', icon: Activity },
     { id: 'restaurants', label: 'Quán chờ duyệt', icon: Store },
     { id: 'categories', label: 'Cây danh mục', icon: FolderTree },
@@ -470,6 +475,8 @@ function AdminDashboardContent() {
 
             {/* TAB: AI-REVENUE — doanh thu mua quota AI (features/admin-insights) */}
             {tab === 'ai-revenue' && <RevenueStatsPanel />}
+
+            {tab === 'billing-catalog' && <AdminBillingCatalog />}
 
             {/* TAB: AI-USAGE — truy vết sử dụng AI theo người dùng (features/admin-insights) */}
             {tab === 'ai-usage' && <AiUsageTraceTable />}

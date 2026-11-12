@@ -1,13 +1,14 @@
-# Bổ sung tài liệu ôn bảo vệ — cập nhật 21/10/2026
+# Bổ sung tài liệu ôn bảo vệ — lịch sử 21/10, đối chiếu 08/11/2026
 
-Tài liệu này bổ sung các thay đổi mới vào kế hoạch ôn bảo vệ. Nó đối chiếu source hiện tại với SRS, Implementation Plan, Backend Integration và các ghi nhận triển khai. Dùng tài liệu chuẩn ở repo làm căn cứ khi trạng thái khác nhau.
+Các đoạn chi tiết bên dưới giữ bối cảnh thay đổi 21/10; không dùng chúng như bằng chứng trạng thái triển khai hiện tại. Đối chiếu tĩnh lại ngày 08/11 trên `dev` tại `0feaca2`; dùng [luồng hiện hành](02_LUONG_NGHIEP_VU.md), [khoảng trống](05_KHOANG_TRONG_CANH_BAO.md) và registry làm căn cứ.
 
 ## Trạng thái snapshot cần nhớ
 
-- `HEAD`: `a022917` trên nhánh `dev`, cập nhật đến 19/10/2026.
-- Working tree hiện có thay đổi frontend chưa commit ở API Catalog, Backend Integration, PROGRESS/WORK-LOG và hai feature quét ảnh. Các thay đổi này không được xem là trạng thái đã merge.
+- `a022917` và working tree scan trong bản 21/10 là **snapshot lịch sử**, không phải mô tả trạng thái `dev` hiện tại.
 - Phase 21 (nhận diện ảnh tủ lạnh), Phase 22 (bóc tách hóa đơn) và Phase 27 (hardening/release gate) vẫn được ghi `IN_PROGRESS`. Nguyên nhân chính là chưa xác nhận độ chính xác/behavior trên bộ ảnh thực tế đại diện với OpenAI.
-- Các file này được đọc và đối chiếu tĩnh. Lượt bổ sung này không chạy lại typecheck, test, build, HTTP hoặc browser acceptance. WORK-LOG ghi kết quả kiểm tra của nhóm triển khai; đó không phải kết quả được xác minh lại trong lượt này.
+- Lượt cập nhật 08/11 không chạy lại typecheck, test, build, HTTP hoặc browser acceptance. WORK-LOG ghi kết quả cũ, không coi là kết quả được xác minh lại trong lượt này.
+
+**Đính chính sau snapshot:** Contributor được duyệt có thể review nội dung Member đủ điều kiện, không tự duyệt; trường hợp leo thang cần Admin. Recipe approve cần đủ 5 chỉ số dinh dưỡng cuối cùng. Nhà hàng không tự áp hồ sơ ăn uống, chỉ dùng bộ lọc tường minh. Nhánh này có web meal-program integration và shopping list tổng hợp, không suy diễn tính năng trên nhánh khác. Schema AI draft hiện yêu cầu tên, mô tả và nguyên liệu; registry ghi `IN_PROGRESS`. Chi tiết/khác biệt source với SRS: [05_KHOANG_TRONG_CANH_BAO](05_KHOANG_TRONG_CANH_BAO.md).
 
 ## Bản đồ hệ thống để trình bày
 
@@ -99,12 +100,12 @@ chọn ảnh → validate → reserve quota → upload Cloudinary → commit Med
 
 1. **Meal plan data sync (17/10):** 21 slot, dữ liệu macro theo slot, ảnh recipe, swap/manual add trả dữ liệu cập nhật. Nói rõ target do backend trả.
 2. **Backend scan improvements (17–19/10):** dedupe ảnh theo ETag, merge candidate/dòng lặp, giữ uncertainty/evidence và retry theo ảnh lỗi; Phase 21/22 vẫn còn live-provider acceptance gate.
-3. **Frontend scan additions (working tree ngày 21/10):** API/DTO/model/mapper/query, nút thêm ảnh cho hai màn review, cập nhật progress UI và mapper tests. Các file này chưa commit tại snapshot; changelog trên đầu Backend Integration ghi FE integrated `Yes`, trong khi bảng chi tiết vẫn có dòng `No`, và status endpoint là `IN_PROGRESS`. Đây là mâu thuẫn cần giải quyết trước khi trình bày là integration hoàn tất.
+3. **Frontend scan additions:** source có API/DTO/model/mapper/query và nút thêm ảnh cho hai màn review. Tại đối chiếu 08/11, bảng tổng hợp registry ghi FE `Yes`, bảng chi tiết vẫn ghi `No`; endpoint `IN_PROGRESS`. Không suy diễn việc chưa commit từ snapshot 21/10 sang hiện tại.
 4. **Mobile follow-up (14/10):** map fallback có hành động mở provider map/directions; meal plan hiển thị target backend; Pantry giải thích RESTORE; một số chức năng vẫn chặn bởi API/native dependencies. Xem WORK-LOG mobile để phân biệt phần chạy được với phần còn cần native device acceptance.
 
 ## Việc cần chốt trước ngày chấm
 
-- Thống nhất một câu trả lời về trạng thái web scan: endpoint `IN_PROGRESS`, FE code có thay đổi local, provider acceptance còn mở. Không gọi là `READY` cho tới khi backend/integration registry cập nhật theo gate.
+- Thống nhất một câu trả lời về trạng thái web scan: endpoint `IN_PROGRESS`, có source consumer, provider acceptance còn mở. Không gọi là `READY` cho tới khi backend/integration registry cập nhật theo gate.
 - So sánh hai API `/images` ở changelog đầu và bảng chi tiết trong `BACKEND_INTEGRATION.md`; hiện `FE integrated` đang lệch `Yes`/`No`.
 - Nếu demo dựa trên working tree, chạy lại các gate và kiểm tra HTTP/browser với backend tương ứng; nếu không, demo đúng commit đã chốt. Bản ghi WORK-LOG nói test/build pass nhưng lượt rà này chưa chạy lại.
 - Cập nhật hoặc đánh dấu `backend/docs/BACKEND_FEATURES_AND_WORKFLOWS.md` là historical snapshot, vì mô tả PostgreSQL và OpenAPI count không còn khớp runtime hiện tại.

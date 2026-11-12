@@ -57,7 +57,7 @@
   "usage_reservations": [
     { "$in": ["$feature", ["CHAT", "FRIDGE", "RECEIPT"]] },
     { "$gte": ["$generation", 1] },
-    { "$in": [{ "$ifNull": ["$source", null] }, [null, "SUBSCRIPTION", "CREDITS"]] }
+    { "$in": [{ "$ifNull": ["$source", null] }, [null, "SUBSCRIPTION", "CREDITS", "DAILY_FREE"]] }
   ],
   "payment_events": [{ "$gt": ["$amount_vnd", 0] }],
   "entitlement_subscriptions": [

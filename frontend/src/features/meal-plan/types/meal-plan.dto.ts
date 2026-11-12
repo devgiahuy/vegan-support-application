@@ -132,6 +132,13 @@ export interface PlanUserSummaryDto {
   detail?: string;
   suggestion?: string | null;
   hardConstraintsPreserved?: boolean;
+  hardViolations?: Array<{
+    itemId?: string;
+    name?: string;
+    date?: string;
+    mealType?: string;
+    reasons?: Array<{ code?: string; detail?: string }>;
+  }>;
 }
 
 /** Dòng danh sách đi chợ (thô). Shape thật: `{ingredientId,canonicalName,amount,unit,sourceItemCount}`. */

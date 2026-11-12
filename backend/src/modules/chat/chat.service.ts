@@ -169,6 +169,20 @@ export class ChatService {
     };
   }
 
+  async deleteSession(identity: ChatIdentity, sessionId: string) {
+    if (identity.type !== 'AUTHENTICATED') throw this.authRequired();
+    const staleBefore = new Date(Date.now() - this.config.ai.timeoutMs - 10_000);
+    const result = await this.repository.deleteSession(identity.userId, sessionId, staleBefore);
+    if (result === 'NOT_FOUND') throw this.notFound();
+    if (result === 'BUSY')
+      throw new AppError({
+        statusCode: 409,
+        code: 'CHAT_SESSION_BUSY',
+        message: 'Cuộc trò chuyện đang xử lý câu trả lời. Vui lòng thử lại sau.',
+      });
+    return { id: sessionId };
+  }
+
   async listMessages(identity: ChatIdentity, sessionId: string, query: ChatMessageListQuery) {
     await this.repository.purgeExpiredGuestHistory(new Date());
     const result = await this.repository.listMessages(identity, sessionId, query.page, query.limit);

@@ -161,6 +161,31 @@ export interface SubmitPostRequestDto {
   expectedVersion: number;
 }
 
+export interface SubmitPostRevisionDto {
+  id?: string;
+  version?: number;
+  status?: string;
+  title?: string;
+  submittedAt?: string | null;
+}
+
+export interface SubmitPostResponseDataDto {
+  id?: string;
+  type?: string;
+  slug?: string;
+  status?: string;
+  version?: number;
+  publishedRevisionVersion?: number | null;
+  publishedAt?: string | null;
+  revision?: SubmitPostRevisionDto | null;
+}
+
+export interface SubmitPostResponseDto {
+  success: boolean;
+  data: SubmitPostResponseDataDto;
+  meta?: null;
+}
+
 // ==========================================
 // 5. Review History (GET /posts/:id/review-history)
 // ==========================================

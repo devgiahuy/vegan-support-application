@@ -54,6 +54,7 @@ export function RecipeEditorReview({
   const colors = useIconColors();
   const ingredients = values.ingredients.filter((item) => item.name.trim());
   const steps = values.steps.filter((item) => item.instruction.trim());
+  const unlinked = ingredients.filter((item) => !item.ingredientId);
 
   return (
     <View className="gap-4">
@@ -83,10 +84,25 @@ export function RecipeEditorReview({
             <Text className="flex-1 text-sm font-semibold text-foreground">Công thức đã đủ thông tin bắt buộc</Text>
           </View>
           <Text className="text-xs leading-5 text-muted-foreground">
-            Sau khi gửi, công thức vào hàng chờ duyệt. Hệ thống tự tính dinh dưỡng từ nguyên liệu.
+            Sau khi gửi, công thức được xuất bản hoặc vào hàng chờ duyệt tùy quyền tài khoản. Hệ thống tự tính dinh dưỡng từ nguyên liệu.
           </Text>
         </View>
       )}
+
+      {unlinked.length > 0 ? (
+        <View className="gap-2 rounded-xl border border-amber-500/40 bg-amber-500/5 p-3">
+          <View className="flex-row items-center gap-2">
+            <CircleAlert size={16} color={colors.warning} />
+            <Text className="flex-1 text-sm font-semibold text-foreground">Nguyên liệu chưa liên kết danh mục chuẩn</Text>
+          </View>
+          <Text className="text-xs leading-5 text-muted-foreground">
+            {unlinked.map((item) => item.name.trim()).join(', ')}. Nếu hệ thống không nhận diện được nguyên liệu, công thức có thể không xuất hiện với người có ràng buộc ăn uống, kể cả sau khi được duyệt.
+          </Text>
+          <Pressable accessibilityRole="button" onPress={() => onEdit('ingredients')} hitSlop={8} className="self-start rounded-lg border border-border px-3 py-1.5">
+            <Text className="text-xs font-semibold text-foreground">Kiểm tra nguyên liệu</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <ReviewSection title="Thông tin cơ bản" onEdit={() => onEdit('basics')}>
         <View className="gap-3">

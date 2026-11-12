@@ -164,13 +164,31 @@ export interface AdminContentReviewDetailModel {
 }
 
 // ==========================================
-// 3. Author Submit Input Model
+// 3. Author Submit Input & Result Models
 // ==========================================
 
 export interface SubmitPostInput {
   revisionId: string;
   expectedVersion: number;
   note?: string;
+}
+
+export interface SubmitPostResult {
+  postId: string;
+  type: PostType;
+  slug: string;
+  title: string;
+  postStatus: PostReviewStatus;
+  postStatusLabel: string;
+  version: number;
+  revisionId: string;
+  revisionVersion: number;
+  revisionStatus: PostReviewStatus;
+  revisionStatusLabel: string;
+  publishedRevisionVersion: number | null;
+  publishedAt: Date | null;
+  formattedPublishedAt: string;
+  isAutoPublished: boolean;
 }
 
 // ==========================================

@@ -2,7 +2,17 @@ import { EvidenceGrade, FoodRuleSeverity, InteractionScope, MealType } from '@pr
 import { z } from '../../common/validation/zod.js';
 import { dateOnlySchema } from '../profile/profile.schemas.js';
 
-export const MEAL_ANALYSIS_ALGORITHM_VERSION = 'meal-analysis-v3-user-facing-warnings' as const;
+export const MEAL_ANALYSIS_ALGORITHM_VERSION = 'meal-analysis-v4-constraint-details' as const;
+
+export const hardViolationSchema = z
+  .object({
+    itemId: z.string().uuid(),
+    name: z.string(),
+    date: dateOnlySchema,
+    mealType: z.enum(MealType),
+    reasons: z.array(z.object({ code: z.string(), detail: z.string() }).strict()),
+  })
+  .strict();
 
 export const mealAnalysisParamsSchema = z.object({ id: z.string().uuid() }).strict();
 
@@ -116,6 +126,11 @@ export const mealAnalysisDataSchema = z
         advisoryCount: z.number().int().nonnegative(),
         hardConstraintViolationCount: z.number().int().nonnegative(),
         hardConstraintsPreserved: z.boolean(),
+        hardViolations: z
+          .array(hardViolationSchema)
+          .describe(
+            'Per-slot hard constraint reasons based on current profile and reviewed ingredient data; snapshot-only allergies are identified separately.',
+          ),
       })
       .strict(),
     confidence: z.number().min(0).max(1),

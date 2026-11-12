@@ -10,6 +10,7 @@ export const createBillingOrderSchema = z
   .object({
     productId: z.string().trim().min(1).max(80),
     idempotencyKey: z.string().trim().min(8).max(160),
+    expectedProductVersion: z.number().int().positive().optional(),
   })
   .strict();
 export const billingIdSchema = z.object({ id: z.string().uuid() }).strict();
@@ -61,6 +62,58 @@ export const billingProductSchema = z
       .describe('Length of one credit period; benefits are granted once per period'),
   })
   .strict();
+export const adminBillingProductParamsSchema = z
+  .object({ id: z.string().trim().min(1).max(80) })
+  .strict();
+export const adminBillingProductSchema = billingProductSchema.extend({
+  active: z.boolean(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+const adminBenefits = {
+  chatCredits: z.number().int().min(0).max(1000000),
+  fridgeCredits: z.number().int().min(0).max(1000000),
+  receiptCredits: z.number().int().min(0).max(1000000),
+  pantrySlots: z.number().int().min(0).max(1000000),
+};
+const adminProductFields = {
+  name: z.string().trim().min(1).max(100),
+  description: z.string().trim().max(1000),
+  priceVnd: z.number().int().min(1).max(2000000000),
+  ...adminBenefits,
+};
+const hasBenefits = (v: {
+  chatCredits: number;
+  fridgeCredits: number;
+  receiptCredits: number;
+  pantrySlots: number;
+}) => v.chatCredits + v.fridgeCredits + v.receiptCredits + v.pantrySlots > 0;
+export const adminBillingCreateSchema = z
+  .object({
+    ...adminProductFields,
+    durationMonths: z.union([z.literal(1), z.literal(3), z.literal(12)]).nullable(),
+    reason: z.string().trim().min(3).max(500),
+  })
+  .strict()
+  .refine(hasBenefits, { message: 'Gói cần ít nhất một quyền lợi.' });
+export const adminBillingUpdateSchema = z
+  .object({
+    ...adminProductFields,
+    expectedVersion: z.number().int().positive(),
+    reason: z.string().trim().min(3).max(500).optional(),
+  })
+  .strict()
+  .refine(hasBenefits, { message: 'Gói cần ít nhất một quyền lợi.' });
+export const adminBillingAvailabilitySchema = z
+  .object({
+    active: z.boolean(),
+    expectedVersion: z.number().int().positive(),
+    reason: z.string().trim().min(3).max(500),
+  })
+  .strict();
+export type AdminBillingCreate = z.infer<typeof adminBillingCreateSchema>;
+export type AdminBillingUpdate = z.infer<typeof adminBillingUpdateSchema>;
+export type AdminBillingAvailability = z.infer<typeof adminBillingAvailabilitySchema>;
 export const billingCatalogSchema = z
   .object({
     enabled: z.boolean(),
@@ -103,6 +156,18 @@ export const entitlementSchema = z
     chatReserved: z.number().int().nonnegative(),
     fridgeReserved: z.number().int().nonnegative(),
     receiptReserved: z.number().int().nonnegative(),
+    fridgeDailyFreeRemaining: z
+      .number()
+      .int()
+      .min(0)
+      .max(1)
+      .describe('Daily free fridge jobs remaining; resets at midnight Asia/Ho_Chi_Minh.'),
+    receiptDailyFreeRemaining: z
+      .number()
+      .int()
+      .min(0)
+      .max(1)
+      .describe('Daily free receipt jobs remaining; resets at midnight Asia/Ho_Chi_Minh.'),
     pantryUsed: z.number().int().nonnegative(),
     pantryLimit: z.number().int().positive().nullable(),
     fridgeMaxImages: z.number().int().positive(),

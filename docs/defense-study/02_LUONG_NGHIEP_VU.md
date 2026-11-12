@@ -1,6 +1,6 @@
 # 2. Các luồng nghiệp vụ phải trình bày được
 
-Đọc mỗi luồng theo **tác nhân → thao tác → quy tắc backend → kết quả → lỗi**. `READY` dưới đây phản ánh registry tại snapshot 21/10; trạng thái tích hợp web/mobile không phải lúc nào cũng giống nhau. Kiểm tra [Backend Integration](../../frontend/docs/BACKEND_INTEGRATION.md) trước ngày chấm.
+Đọc mỗi luồng theo **tác nhân → thao tác → quy tắc backend → kết quả → lỗi**. Đối chiếu tĩnh nhánh `dev` tại `0feaca2` ngày 08/11/2026; trạng thái tích hợp web/mobile không phải lúc nào cũng giống nhau. Kiểm tra [Backend Integration](../../frontend/docs/BACKEND_INTEGRATION.md) trước ngày chấm.
 
 ## A. Định danh, quyền và nội dung
 
@@ -22,11 +22,13 @@
 
 ### L03. Tạo công thức/bài viết/video và duyệt xuất bản — `READY` backend
 
-- **Ai:** Member/Contributor/Admin tạo nội dung; Admin duyệt revision.
-- **Luồng:** tạo `DRAFT` → chỉnh nội dung/ ảnh/video → submit đúng revision → backend gắn moderation signals → Admin approve/reject có lý do → revision được duyệt mới public. Sửa bài đã public sinh draft revision mới; bản duyệt trước còn hiển thị đến lúc bản mới được duyệt.
-- **Quy tắc:** `ModeratedPublicationPolicy` hiện đưa mọi submit vào `PENDING_REVIEW`, kể cả Contributor. AI flag không tự publish/reject/xóa. Video cần media hợp lệ trước submit.
-- **Khi lỗi:** `CONTENT_STATE_CONFLICT`, `CONTENT_VERSION_CONFLICT`, `INVALID_MEDIA_REFERENCE`, không cho tự duyệt theo quy tắc review.
+- **Ai:** Member/Contributor/Admin tạo nội dung; Admin hoặc Contributor đã duyệt review theo phạm vi được phép, không tự review.
+- **Luồng:** tạo `DRAFT` → chỉnh nội dung/ảnh/video → submit đúng revision → backend gắn moderation signals → reviewer đủ quyền approve/reject → revision được duyệt mới public. Sửa bài đã public sinh draft revision mới; bản duyệt trước còn hiển thị đến lúc bản mới được duyệt.
+- **Quy tắc:** `ModeratedPublicationPolicy` đưa submit vào `PENDING_REVIEW`, kể cả bài Contributor. Contributor có thể review bài Member đủ điều kiện; ca có flag mở, báo cáo ưu tiên cao hoặc thuộc diện leo thang cần Admin. Recipe submit kích hoạt tính dinh dưỡng; approve cần đủ calories, protein, carbs, fat và fiber từ estimate/override. AI flag không tự publish/reject/xóa.
+- **Khi lỗi:** `CONTENT_STATE_CONFLICT`, `CONTENT_VERSION_CONFLICT`, `INVALID_MEDIA_REFERENCE`, `SELF_APPROVAL_FORBIDDEN`, `ADMIN_REVIEW_REQUIRED`, `RECIPE_NUTRITION_INCOMPLETE`. Có chênh lệch cần audit giữa điều kiện role tác giả theo SRS và source; xem [khoảng trống](05_KHOANG_TRONG_CANH_BAO.md).
 - **Mở code:** [publication policy](../../backend/src/modules/content/content-publication.policy.ts), [ContentService](../../backend/src/modules/content/content.service.ts), [ModerationService](../../backend/src/modules/moderation/moderation.service.ts).
+
+**Bản nháp AI:** `POST /recipe-drafts/generate` hiện `IN_PROGRESS`, mặc dù web có consumer. Source nhánh này yêu cầu `title` tối thiểu 3 ký tự, `description` không rỗng và `ingredientNames`; AI trả gợi ý chỉnh sửa được, không tạo hay xuất bản bài. Không mô tả các thay đổi trên nhánh khác như đã có ở `dev` này. [Schema](../../backend/src/modules/content/recipe-draft.schemas.ts), [registry](../../frontend/docs/BACKEND_INTEGRATION.md).
 
 ### L04. Bình luận, vote/rating/bookmark và báo cáo — `READY`
 
@@ -40,7 +42,7 @@
 
 - **Ai:** Member nộp đơn; Admin duyệt/từ chối/thu hồi.
 - **Luồng:** đăng ký có intent hoặc nộp ở hồ sơ → đơn `PENDING` → Admin xem claim/evidence → duyệt với `approvalBasis` hoặc từ chối kèm lý do → role backend đổi thành `CONTRIBUTOR` khi được duyệt.
-- **Quy tắc:** một đơn pending; `ADMIN_INVITED` chỉ qua đường Admin; từ chối có thời gian nộp lại 30 ngày; . `approvalBasis` mô tả căn cứ xét duyệt, không chia cấp quyền.
+- **Quy tắc:** một đơn pending; `ADMIN_INVITED` chỉ qua đường Admin; từ chối có thời gian nộp lại 30 ngày. `approvalBasis` mô tả căn cứ xét duyệt, không chia cấp quyền.
 - **Khi lỗi:** `CONTRIBUTOR_APPLICATION_PENDING`, `CONTRIBUTOR_REAPPLY_NOT_ALLOWED`, `SELF_APPROVAL_FORBIDDEN`, `CONTRIBUTOR_APPROVAL_BASIS_INVALID`.
 - **Mở code:** [state machine](../../backend/src/modules/contributors/contributor-application.state-machine.ts), [ContributorService](../../backend/src/modules/contributors/contributor.service.ts).
 
@@ -58,7 +60,7 @@
 
 - **Ai:** Admin quản lý dữ liệu tham chiếu; user xem nutrition estimate.
 - **Luồng:** nguyên liệu/alias chuẩn → quy đổi đơn vị và khối lượng ăn được → nutrient basis → retention/yield theo bước nấu → chia servings → trả giá trị, độ phủ, assumptions, confidence, source/version.
-- **Quy tắc:** dữ liệu canonical giữ provenance; AI chỉ đề xuất/ước lượng có nhãn, không ghi đè tự động. Missing nutrient khác 0. Ingredient guideline và nutrient intake limit là hai loại quy tắc khác nhau.
+- **Quy tắc:** dữ liệu canonical giữ provenance; AI chỉ đề xuất/ước lượng có nhãn, không ghi đè tự động. Khi submit recipe hệ thống tính baseline; nếu thiếu dữ liệu có thể xếp job AI. Reviewer xem 5 chỉ số, có thể nhập override có audit; approve thiếu chỉ số trả `RECIPE_NUTRITION_INCOMPLETE`. Missing nutrient khác 0, dù một mapper web hiện có fallback 0 cần lưu ý. Ingredient guideline và nutrient intake limit là hai loại quy tắc khác nhau.
 - **Khi lỗi:** thiếu conversion/ingredient thì đánh dấu chưa rõ hoặc giảm confidence; không bịa giá trị đủ để kết luận an toàn.
 - **Mở code:** [FoodDataService](../../backend/src/modules/food-data/food-data.service.ts), [RecipeNutritionService](../../backend/src/modules/recipe-nutrition/recipe-nutrition.service.ts), [nguồn dữ liệu](../FOOD_DATA_SOURCES.md).
 
@@ -124,7 +126,7 @@
 
 ### L15. Nhà hàng và thông báo — `READY`
 
-- **Nhà hàng:** location do user nhập hoặc cấp consent → provider adapter/internal records → lọc diet/allergy theo dữ liệu đã được rà soát → xếp hạng khoảng cách/relevance. Nhãn provider bên ngoài tự nó không chứng minh an toàn dị ứng; địa điểm do user đóng góp cần Admin duyệt.
+- **Nhà hàng:** location do user nhập hoặc cấp consent → provider adapter/internal records → áp bộ lọc được chọn rõ ràng → xếp hạng khoảng cách/relevance. Không tự áp hồ sơ diet/allergy/exclusion/tradition. `dietPattern` chỉ lọc claim nội bộ được duyệt và loại kết quả provider chưa xác minh. Nhãn provider không chứng minh an toàn dị ứng; địa điểm do user đóng góp cần Admin duyệt.
 - **Thông báo:** domain event → idempotent database dispatch → owner xem danh sách/unread/mark read. Payload chỉ có thông tin an toàn; hiện là in-app, không hứa push/realtime/email.
 - **Mở code:** [RestaurantService](../../backend/src/modules/restaurants/restaurant.service.ts), [NotificationService](../../backend/src/modules/notifications/notification.service.ts).
 
@@ -132,6 +134,6 @@
 
 - **Ai:** user đã đăng nhập chọn gói một lần cho chat credit, lượt scan hoặc sức chứa Pantry.
 - **Luồng:** backend chụp giá/quyền lợi + tạo order idempotent → payOS checkout → webhook/query ký hợp lệ và đúng số tiền → transaction chỉ grant một lần → owner xem order/balance. Return URL chỉ để hiển thị; reconcile có cooldown.
-- **Quy tắc:** gói không tăng media storage, không cấp role và không bỏ qua diet/confirmation. Free daily chat dùng trước; job scan có kết quả một phần thành công có thể tính một lượt, total failure release theo policy.
+- **Quy tắc:** gói lẻ tích lũy không hết hạn; combo có thời hạn 1/3/12 tháng, cấp credit theo kỳ 30 ngày và credit kỳ không dùng hết hết hạn; không tự gia hạn. Gói không tăng media storage, không cấp role và không bỏ qua diet/confirmation. Free daily chat dùng trước; job scan có kết quả một phần thành công có thể tính một lượt, total failure release theo policy.
 - **Khi lỗi:** thiếu merchant credentials thì checkout tắt; underpaid còn pending; duplicate callback không cộng hai lần; payOS development vẫn chuyển tiền thật.
 - **Mở code:** [BillingService](../../backend/src/modules/billing/billing.service.ts), [EntitlementService](../../backend/src/modules/entitlements/entitlement.service.ts), [SRS FR-17](../SRS.md).

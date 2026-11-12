@@ -53,6 +53,8 @@ export interface EntitlementDto extends BillingBenefitsDto {
   chatReserved?: number | string;
   fridgeReserved?: number | string;
   receiptReserved?: number | string;
+  fridgeDailyFreeRemaining?: number | string;
+  receiptDailyFreeRemaining?: number | string;
   pantryUsed?: number | string;
   pantryLimit?: number | string | null;
   fridgeMaxImages?: number | string;
@@ -63,7 +65,6 @@ export interface EntitlementDto extends BillingBenefitsDto {
 }
 export interface EntitlementSubscriptionDto {
   productId?: string;
-  startsAt?: string;
   endsAt?: string;
   periodEndsAt?: string;
   periodDays?: number | string;
@@ -76,6 +77,7 @@ export interface EntitlementSubscriptionDto {
   receiptPerPeriod?: number | string;
 }
 export interface CreateBillingOrderRequestDto {
+  expectedProductVersion: number;
   productId: string;
   idempotencyKey: string;
 }

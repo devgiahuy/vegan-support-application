@@ -1,10 +1,20 @@
-import { randomInt } from 'node:crypto';
-import type { PaymentOrder, PrismaClient } from '@prisma/client';
+import { randomInt, randomUUID } from 'node:crypto';
+import type { BillingProduct, PaymentOrder, PrismaClient } from '@prisma/client';
 import type { AppConfig } from '../../config/env.js';
 import { lockDocument } from '../../database/locking.js';
 import type { EntitlementService } from '../entitlements/entitlement.service.js';
 import { subscriptionPeriodDays } from './billing.catalog.js';
-import { BillingProviders, paymentError, type VerifiedPayment } from './billing.providers.js';
+import type {
+  AdminBillingAvailability,
+  AdminBillingCreate,
+  AdminBillingUpdate,
+} from './billing.schemas.js';
+import {
+  BillingProviders,
+  billingReturnUrl,
+  paymentError,
+  type VerifiedPayment,
+} from './billing.providers.js';
 
 export class BillingService {
   readonly providers: BillingProviders;
@@ -42,7 +52,121 @@ export class BillingService {
     };
   }
 
-  async create(ownerId: string, input: { productId: string; idempotencyKey: string }, ip: string) {
+  private adminProduct(product: BillingProduct) {
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      version: product.version,
+      active: product.active,
+      priceVnd: product.priceVnd,
+      chatCredits: product.chatCredits,
+      fridgeCredits: product.fridgeCredits,
+      receiptCredits: product.receiptCredits,
+      pantrySlots: product.pantrySlots,
+      durationMonths: product.durationMonths ?? null,
+      periodDays: product.durationMonths ? subscriptionPeriodDays : null,
+      createdAt: product.createdAt.toISOString(),
+      updatedAt: product.updatedAt.toISOString(),
+    };
+  }
+
+  async adminProducts() {
+    const products = await this.prisma.billingProduct.findMany({
+      orderBy: [{ active: 'desc' }, { priceVnd: 'asc' }, { id: 'asc' }],
+    });
+    return products.map((product) => this.adminProduct(product));
+  }
+
+  async adminProductById(id: string) {
+    const product = await this.prisma.billingProduct.findUnique({ where: { id } });
+    if (!product)
+      throw paymentError('BILLING_PRODUCT_NOT_FOUND', 'Không tìm thấy gói tiện ích.', 404);
+    return this.adminProduct(product);
+  }
+
+  async adminCreateProduct(actorId: string, input: AdminBillingCreate) {
+    const { reason, ...fields } = input;
+    return this.prisma.$transaction(async (tx) => {
+      const product = await tx.billingProduct.create({
+        data: { ...fields, id: randomUUID(), active: false, version: 1 },
+      });
+      const after = this.adminProduct(product);
+      await tx.billingProductAudit.create({
+        data: {
+          productId: product.id,
+          actorId,
+          action: 'CREATE',
+          reason,
+          beforeJson: null,
+          afterJson: JSON.stringify(after),
+        },
+      });
+      return after;
+    });
+  }
+
+  async adminUpdateProduct(actorId: string, id: string, input: AdminBillingUpdate) {
+    const { expectedVersion, reason, ...fields } = input;
+    return this.prisma.$transaction(async (tx) => {
+      const before = await tx.billingProduct.findUnique({ where: { id } });
+      if (!before)
+        throw paymentError('BILLING_PRODUCT_NOT_FOUND', 'Không tìm thấy gói tiện ích.', 404);
+      const result = await tx.billingProduct.updateMany({
+        where: { id, version: expectedVersion },
+        data: { ...fields, version: { increment: 1 } },
+      });
+      if (!result.count)
+        throw paymentError('BILLING_PRODUCT_CONFLICT', 'Gói đã thay đổi. Vui lòng tải lại.', 409);
+      const after = this.adminProduct(await tx.billingProduct.findUniqueOrThrow({ where: { id } }));
+      await tx.billingProductAudit.create({
+        data: {
+          productId: id,
+          actorId,
+          action: 'UPDATE',
+          reason: reason ?? '',
+          beforeJson: JSON.stringify(this.adminProduct(before)),
+          afterJson: JSON.stringify(after),
+        },
+      });
+      return after;
+    });
+  }
+
+  async adminSetProductAvailability(actorId: string, id: string, input: AdminBillingAvailability) {
+    return this.prisma.$transaction(async (tx) => {
+      const before = await tx.billingProduct.findUnique({ where: { id } });
+      if (!before)
+        throw paymentError('BILLING_PRODUCT_NOT_FOUND', 'Không tìm thấy gói tiện ích.', 404);
+      if (before.version !== input.expectedVersion)
+        throw paymentError('BILLING_PRODUCT_CONFLICT', 'Gói đã thay đổi. Vui lòng tải lại.', 409);
+      if (before.active === input.active) return this.adminProduct(before);
+      const result = await tx.billingProduct.updateMany({
+        where: { id, version: input.expectedVersion },
+        data: { active: input.active, version: { increment: 1 } },
+      });
+      if (!result.count)
+        throw paymentError('BILLING_PRODUCT_CONFLICT', 'Gói đã thay đổi. Vui lòng tải lại.', 409);
+      const after = this.adminProduct(await tx.billingProduct.findUniqueOrThrow({ where: { id } }));
+      await tx.billingProductAudit.create({
+        data: {
+          productId: id,
+          actorId,
+          action: input.active ? 'ACTIVATE' : 'WITHDRAW',
+          reason: input.reason,
+          beforeJson: JSON.stringify(this.adminProduct(before)),
+          afterJson: JSON.stringify(after),
+        },
+      });
+      return after;
+    });
+  }
+
+  async create(
+    ownerId: string,
+    input: { productId: string; idempotencyKey: string; expectedProductVersion?: number },
+    ip: string,
+  ) {
     this.ensureEnabled();
     if (!this.providers.configured)
       throw paymentError(
@@ -67,6 +191,22 @@ export class BillingService {
       const product = await tx.billingProduct.findUnique({ where: { id: input.productId } });
       if (!product?.active)
         throw paymentError('BILLING_PRODUCT_UNAVAILABLE', 'Gói không còn được bán.', 422);
+      if (input.expectedProductVersion !== product.version)
+        throw paymentError(
+          'BILLING_PRODUCT_CHANGED',
+          'Gói đã thay đổi. Vui lòng xem lại giá và quyền lợi.',
+          409,
+        );
+      const locked = await tx.billingProduct.updateMany({
+        where: { id: product.id, version: product.version, active: true },
+        data: { referenceVersion: { increment: 1 }, updatedAt: product.updatedAt },
+      });
+      if (!locked.count)
+        throw paymentError(
+          'BILLING_PRODUCT_CHANGED',
+          'Gói đã thay đổi. Vui lòng xem lại giá và quyền lợi.',
+          409,
+        );
       if (
         (await tx.paymentOrder.count({
           where: { ownerId, status: 'PENDING', expiresAt: { gt: new Date() } },
@@ -228,9 +368,7 @@ export class BillingService {
   }
 
   returnUrl(id: string): string {
-    const url = new URL(this.config.billing.returnUrl);
-    url.searchParams.set('orderId', id);
-    return url.toString();
+    return billingReturnUrl(this.config, id);
   }
 
   serialize(order: PaymentOrder, _ip = '127.0.0.1') {

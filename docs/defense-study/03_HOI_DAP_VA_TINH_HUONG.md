@@ -8,7 +8,7 @@ Tự nói đáp án thành tiếng trước khi mở cột gợi ý. Câu trả 
 |---:|---|---|
 | 1 | Đăng ký chọn “muốn làm Contributor” đã được đăng bài tự do chưa? | Chưa. User vẫn là `MEMBER`, đơn ở `PENDING`; Admin duyệt thủ công rồi backend đổi role. |
 | 2 | Ba `approvalBasis` khác nhau về quyền thế nào? | Không khác. Chúng chỉ lưu căn cứ duyệt và audit. |
-| 3 | Contributor có tự xuất bản bài nếu AI không gắn cờ không? | Theo source hiện tại, không. Submit luôn thành `PENDING_REVIEW`; Admin quyết định. Tài liệu BUSINESS_RULES cũ có câu trái với source/SRS. |
+| 3 | Contributor có tự xuất bản bài nếu AI không gắn cờ không? | Không tự xuất bản hoặc tự duyệt: submit vào `PENDING_REVIEW`. Contributor khác đã được duyệt có thể review bài Member đủ điều kiện; Admin xử lý ca leo thang. Source hiện cần audit thêm khác biệt về role tác giả giữa repository và SRS. |
 | 4 | Vì sao sửa bài đã public không đổi trực tiếp bài đang xem? | Bản public là revision đã duyệt. Edit tạo draft revision mới; bản cũ còn public tới khi duyệt replacement. |
 | 5 | Admin có thể tự duyệt nội dung/tạo tác của mình không? | Các luồng review có guard theo actor. Với AI artifact, owner tự verify bị cấm rõ bằng `SELF_VERIFICATION_FORBIDDEN`; cần chỉ đúng rule của từng loại review khi mở code. |
 | 6 | AI thấy spam hoặc có 5 report thì tự xóa bài không? | Không. Signal/report có thể tăng mức ưu tiên hoặc tạm ẩn theo policy cụ thể, nhưng quyết định vi phạm/xóa cuối cùng phải có Admin và audit; không hard-delete tự động. |
@@ -52,7 +52,7 @@ Tự nói đáp án thành tiếng trước khi mở cột gợi ý. Câu trả 
 | 29 | Chat AI mất kết nối giữa câu, có trừ lượt không? | Chỉ câu hoàn tất theo policy mới tính lượt; failure/fallback release reservation tương ứng. Kiểm tra ledger nếu hội đồng yêu cầu chứng minh. |
 | 30 | Contributor xác minh một output AI có biến nó thành chuẩn khoa học không? | Không. Verification là ý kiến có evidence, scope, version và audit; promotion vào canonical data là quyết định review riêng. |
 | 31 | Vì sao không đưa raw prompt/ảnh hóa đơn vào màn Admin AI? | Quyền riêng tư: log chỉ metadata đã che PII; Admin thấy metrics/signal và thao tác có version/audit. |
-| 32 | Google/SerpApi gọi đây là quán chay, có thể kết luận phù hợp dị ứng? | Không. Nhãn provider không phải bằng chứng dietary safety; chỉ dữ liệu nội bộ đã rà soát mới dùng cho hard filtering. |
+| 32 | Google/SerpApi gọi đây là quán chay, có thể kết luận phù hợp dị ứng? | Không. Danh bạ không tự áp hồ sơ ăn uống. Khi người dùng chủ động chọn `dietPattern`, chỉ claim nội bộ được duyệt mới được lọc; kết quả provider chưa xác minh bị loại khỏi truy vấn có bộ lọc đó. |
 | 33 | User từ chối location permission thì còn tìm quán được không? | Có thể dùng địa chỉ/tọa độ do user nhập rõ ràng; không tự theo dõi vị trí liên tục. |
 | 34 | Thông báo có push/realtime chưa? | Chỉ in-app list, unread count và mark read theo contract hiện tại; không tuyên bố push/email/realtime. |
 | 35 | Người dùng về từ payOS với query `success=true` thì cộng credit? | Không. Return chỉ hiển thị. Webhook/query ký hợp lệ, đúng order/số tiền và transaction backend mới grant một lần. |
@@ -80,3 +80,5 @@ Tự nói đáp án thành tiếng trước khi mở cột gợi ý. Câu trả 
 3. Giải thích khác biệt giữa **quota lưu trữ**, **credit scan**, **sức chứa Pantry**.
 4. Chỉ vào code vị trí backend kiểm tra self-verification, content submit, diet filter và settlement.
 5. Tập trả lời 38 câu ở trên trong 60 giây/câu; đánh dấu câu không thể giải thích mà không nhìn tài liệu để ôn lại buổi sau.
+
+**Bổ sung cho code hiện tại:** recipe approve cần đủ 5 giá trị dinh dưỡng cuối cùng; thiếu trả `RECIPE_NUTRITION_INCOMPLETE`. Endpoint tạo nháp AI còn `IN_PROGRESS`, hiện yêu cầu tên, mô tả và nguyên liệu; output không tự tạo bài. Combo payOS cấp credit theo kỳ 30 ngày trong thời hạn mua và không tự gia hạn. Xem [registry](../../frontend/docs/BACKEND_INTEGRATION.md) và [luồng L03/L16](02_LUONG_NGHIEP_VU.md).

@@ -120,7 +120,7 @@ export class ContentService {
     private readonly mediaService: MediaService,
     private readonly publicationPolicy: ContentPublicationPolicy,
     /** Recipe submit hook: attaches a nutrition estimate to the pending revision; must never throw. */
-    private readonly onRecipeSubmitted: (revisionId: string) => Promise<void> = () =>
+    private readonly onRecipeSubmitted: (revisionId: string, published?: boolean) => Promise<void> = () =>
       Promise.resolve(),
   ) {}
 
@@ -377,7 +377,8 @@ export class ContentService {
         input.expectedVersion,
         decision,
       );
-      if (post.type === PostType.RECIPE) await this.onRecipeSubmitted(revision.id);
+      if (post.type === PostType.RECIPE)
+        await this.onRecipeSubmitted(revision.id, submitted.revision.status === PostRevisionStatus.PUBLISHED);
       return this.postOutput(submitted.post, submitted.revision);
     } catch (error) {
       throw this.mapPersistenceError(error);

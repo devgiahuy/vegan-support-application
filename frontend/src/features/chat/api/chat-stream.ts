@@ -5,6 +5,9 @@ import { CHAT_ENDPOINTS } from '@/features/chat/constants/chat.endpoints';
 import { extractDeltaText, parseSseEvent } from '../mappers/chat.mapper';
 import type { QuotaState, StreamEvent } from '../types/chat.model';
 import { chatMapper } from '../mappers/chat.mapper';
+import { getAccessToken } from '@/lib/auth-token';
+import { sharedRefresh } from '@/lib/auth-refresh';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export interface ChatStreamCallbacks {
   onStart?: () => void;
@@ -38,13 +41,24 @@ export async function streamChatMessage(
 ): Promise<ChatStreamResult> {
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${CHAT_ENDPOINTS.SESSION_MESSAGES(sessionId)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
-      credentials: 'include',
-      signal,
-      body: JSON.stringify(chatMapper.toSendDto({ sessionId, content, idempotencyKey })),
-    });
+    const sendRequest = (token: string | null) =>
+      fetch(`${API_BASE_URL}${CHAT_ENDPOINTS.SESSION_MESSAGES(sessionId)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'text/event-stream',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+        signal,
+        body: JSON.stringify(chatMapper.toSendDto({ sessionId, content, idempotencyKey })),
+      });
+    const token = getAccessToken() ?? useAuthStore.getState().token;
+    response = await sendRequest(token);
+    if (response.status === 401 && !signal.aborted && (token || useAuthStore.getState().user)) {
+      const refreshedToken = await sharedRefresh();
+      if (refreshedToken && !signal.aborted) response = await sendRequest(refreshedToken);
+    }
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       return { content: '', topicCodes: [], aborted: true, completed: false };
@@ -106,7 +120,7 @@ export async function streamChatMessage(
           topicCodes = codes.filter((c): c is string => typeof c === 'string' && c.length > 0);
         }
         completed = true;
-        return true;
+        return false;
       }
       default:
         return false;
@@ -135,6 +149,7 @@ export async function streamChatMessage(
     if (buffer.trim().length > 0 && dispatch(buffer)) {
       return { content: fullContent, topicCodes, aborted: false, completed };
     }
+    if (!completed) throw new Error('Luồng chat kết thúc trước khi hoàn tất.');
     return { content: fullContent, topicCodes, aborted: false, completed };
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {

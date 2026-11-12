@@ -8,6 +8,32 @@ test('request trims, de-duplicates and limits ingredient names', () => {
   assert.deepEqual(dto, { title: 'Cơm', description: 'ngon', ingredientNames: ['Đậu hũ', 'Nấm'] });
 });
 
+test('request allows blank title/description and only sends valid user-entered numbers', () => {
+  const blank = recipeDraftMapper.toDto({ title: '', description: '', ingredientNames: ['Nấm'] });
+  assert.deepEqual(blank, { title: '', description: '', ingredientNames: ['Nấm'] });
+
+  const entered = recipeDraftMapper.toDto({
+    title: '', description: '', servings: 4, prepTimeMinutes: 0, cookTimeMinutes: 20, ingredientNames: ['Nấm'],
+  });
+  assert.equal(entered.servings, 4);
+  assert.equal(entered.prepTimeMinutes, 0);
+  assert.equal(entered.cookTimeMinutes, 20);
+
+  const invalid = recipeDraftMapper.toDto({
+    title: '', description: '', servings: 0, prepTimeMinutes: -1, cookTimeMinutes: 1.5, ingredientNames: ['Nấm'],
+  });
+  assert.deepEqual(Object.keys(invalid).sort(), ['description', 'ingredientNames', 'title']);
+});
+
+test('draft exposes AI suggested title and description', () => {
+  const model = recipeDraftMapper.toModel({
+    data: { draft: { title: ' Đậu hũ sốt cà ', excerpt: 'Món chay nhanh.', recipe: { servings: 2 } } },
+  });
+  assert.equal(model.title, 'Đậu hũ sốt cà');
+  assert.equal(model.description, 'Món chay nhanh.');
+  assert.equal(recipeDraftMapper.toModel(undefined).title, '');
+});
+
 test('draft keeps AI values as suggestions and drops unusable rows', () => {
   const model = recipeDraftMapper.toModel({
     success: true,

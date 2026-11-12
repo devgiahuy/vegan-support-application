@@ -20,6 +20,11 @@ function toDifficulty(value: unknown): RecipeDifficulty {
   return RecipeDifficulty.MEDIUM;
 }
 
+/** BE từ chối giá trị ngoài khoảng, nên chỉ gửi khi người dùng đã nhập số nguyên hợp lệ. */
+function optionalInteger(value: number | undefined, min: number, max: number): number | undefined {
+  return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max ? value : undefined;
+}
+
 export class RecipeDraftMapper {
   toDto(prompt: RecipeDraftPrompt): GenerateRecipeDraftRequestDto {
     const seen = new Set<string>();
@@ -32,16 +37,23 @@ export class RecipeDraftMapper {
         return true;
       })
       .slice(0, 50);
-    return { title: prompt.title.trim(), description: prompt.description.trim().slice(0, 500), ingredientNames };
+    const servings = optionalInteger(prompt.servings, 1, 100);
+    const prepTimeMinutes = optionalInteger(prompt.prepTimeMinutes, 0, 10_080);
+    const cookTimeMinutes = optionalInteger(prompt.cookTimeMinutes, 0, 10_080);
+    return {
+      title: prompt.title.trim().slice(0, 200),
+      description: prompt.description.trim().slice(0, 500),
+      ...(servings !== undefined ? { servings } : {}),
+      ...(prepTimeMinutes !== undefined ? { prepTimeMinutes } : {}),
+      ...(cookTimeMinutes !== undefined ? { cookTimeMinutes } : {}),
+      ingredientNames,
+    };
   }
 
   toModel(dto: GenerateRecipeDraftResponseDto | null | undefined): RecipeDraftSuggestion {
     const data = pickField<NonNullable<GenerateRecipeDraftResponseDto['data']> | null>(dto, ['data'], null);
-    const recipe = pickField<NonNullable<NonNullable<typeof data>['draft']>['recipe'] | null>(
-      pickField(data, ['draft'], null),
-      ['recipe'],
-      null
-    );
+    const draft = pickField<NonNullable<typeof data>['draft'] | null>(data, ['draft'], null);
+    const recipe = pickField<NonNullable<NonNullable<typeof data>['draft']>['recipe'] | null>(draft, ['recipe'], null);
     const confidences = safeArray<number>(pickField(data, ['ingredientConfidence'], []));
     const ingredients = safeArray<RecipeDraftIngredientDto | null, RecipeDraftIngredient>(
       pickField(recipe, ['ingredients'], []),
@@ -66,6 +78,8 @@ export class RecipeDraftMapper {
     const provenance = pickField<Record<string, unknown> | null>(data, ['provenance'], null);
 
     return {
+      title: safeString(pickField(draft, ['title'], '')).trim(),
+      description: safeString(pickField(draft, ['excerpt'], '')).trim(),
       servings: Math.max(1, Math.trunc(safeNumber(pickField(recipe, ['servings'], 2), 2))),
       prepTimeMinutes: Math.max(0, Math.trunc(safeNumber(pickField(recipe, ['prepTimeMinutes'], 0), 0))),
       cookTimeMinutes: Math.max(0, Math.trunc(safeNumber(pickField(recipe, ['cookTimeMinutes'], 0), 0))),

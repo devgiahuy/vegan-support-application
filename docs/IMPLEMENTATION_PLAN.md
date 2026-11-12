@@ -2,7 +2,7 @@
 
 **Version:** 4.15
 
-**Updated:** 2026-11-06
+**Updated:** 2026-11-09
 
 **Status:** Approved implementation baseline
 
@@ -267,6 +267,8 @@ User-approved 2026-10-25 extension: use a public named allergen catalog for expl
 
 ### BL-06 — Content and video review lifecycle
 
+**Approved change, 2026-11-10 — implementation pending:** An approved Contributor's own recipe, handbook, or video is automatically approved and published on submission, including a submitted edit. Member submissions continue to require a publication decision by an eligible Contributor or Admin. Admin approval of Contributor content is not required. The implementation must verify the current active Contributor role/profile in the backend, retain publication audit and moderation signals, preserve Admin moderation powers, and update the API contract and all affected clients. Recipe nutrition must retain its provenance and uncertainty; automatic publication must not misrepresent an estimate as reviewer-verified. Until these changes are implemented and verified, the existing lifecycle below describes current behavior.
+
 Maintenance clarification 2026-10-26: titles and bodies need not be unique. Automatically generated URLs are unique and collision-safe; an explicitly requested URL must remain unique. Editing without a requested URL change preserves the current slug.
 
 1. Author creates a draft and submits a specific immutable revision.
@@ -348,6 +350,7 @@ Maintenance clarification 2026-10-26: titles and bodies need not be unique. Auto
 
 ### BL-14 — Chatbot and AI artifacts
 
+- Authenticated users may hide their own chat sessions from history by soft deletion. Deleted sessions and their messages remain stored for existing retention/audit needs but are excluded from history and cannot be opened. An active answer blocks deletion until processing finishes. Guests cannot delete sessions through this endpoint.
 - Guest quota is smaller than authenticated quota and protected from trivial bypass.
 - AI provider/model is configuration and logged per request.
 - Health/profile context is used only for the requested purpose.
@@ -407,6 +410,10 @@ Maintenance clarification 2026-10-26: titles and bodies need not be unique. Auto
 
 ### BL-20.1 — Duration combo and Admin insights (user-approved 2026-10-27)
 
+**Admin catalog management requested 2026-11-10 (implementation in progress):** Provide ADMIN-only create, read, update, withdrawal and reactivation of member purchase packages, including price and supported chat, fridge, receipt and Pantry benefits. Withdrawal retains historical product and order references. New orders require the displayed version and snapshot its price and benefits; existing idempotent retries remain recoverable. Changing or withdrawing a product must not modify existing orders, subscriptions or granted balances. Validate supported package types and benefits on the server. The member catalog must display the current price and benefits accurately. Synchronize OpenAPI, integration status, persistence and verification gates before release.
+
+**Superseding quota/catalog update approved 2026-11-09:** Daily free quota defaults to 3 chat messages and one job each for fridge and receipt, resetting at 00:00 Asia/Ho_Chi_Minh. Daily free scans are reserved atomically and released on failure; a successful scan consumes the day in which it was reserved. Scan order is daily free, current subscription period, permanent credits. Existing trial balances remain usable, but new accounts receive no one-time trial grants. Free Pantry base is 10; existing items are not deleted. A version-1 duration order retains its prior 20-slot base while that subscription is active. Version-2 duration products cost 69,000/176,000/580,000 VND for 30/90/360 days and grant 300 chat plus 30 jobs of each scan type per 30-day period, plus 50 temporary Pantry slots. Single packs and prices remain unchanged. Existing orders and subscriptions retain their snapshotted benefits. Apply reviewed Mongo validators before enabling daily reservations and run `npm run billing:catalog` to update only version-1 catalog entries without altering existing orders.
+
 - Only the combo has durations; the four single packs remain one-time and permanent. Catalog: `combo-1m` 69.000đ, `combo-3m` 176.000đ (−15%, rounded from 175.950), `combo-12m` 580.000đ (−30%, rounded from 579.600). The former one-time `combo` is deactivated; historical/pending orders keep their snapshot (demo data, no migration).
 - A paid duration order creates one subscription of N periods × 30 days from activation (1 year = 12 periods = 360 days). Each period grants 100 chat, 10 fridge and 10 receipt credits once; unused period credits expire at the boundary (ledger `SUBSCRIPTION_PERIOD_EXPIRED`). +50 Pantry slots apply while active, not multiplied; after expiry existing items remain and only new additions are blocked.
 - Current-period credits are spent before permanent (trial and single-pack) credits. A release returns to the same period only while it is current; a release after the boundary is not refunded (`USAGE_RELEASED_PERIOD_EXPIRED`). Buying while active appends after the current end date. No auto-renewal.
@@ -414,6 +421,8 @@ Maintenance clarification 2026-10-26: titles and bodies need not be unique. Auto
 - Admin AI usage trace: signed-in chat requests (free daily, combo period or permanent credits) and fridge/receipt reservations with user name/email, feature, time, allowance source, units charged, outcome (spent/released/held), AI status, provider/model, tokens, latency and error code. Filters: feature, outcome, user email/name, date range. Prompts, images, receipts and provider payloads are never returned; guests are excluded; chat rows follow AI request-log retention; chat rows created before 2026-10-27 report source `UNKNOWN`. No CSV export.
 
 ## 6. RBAC summary
+
+Meal-plan warning presentation update, 2026-11-09: current hard-constraint enforcement is unchanged; analysis v4 returns per-slot structured reasons and distinguishes matched allergy ingredients from recipe-level snapshot-only signals. Existing analyses become stale through the algorithm fingerprint and are recomputed on plan detail. Prior string detail remains available with newline separation.
 
 | Capability | Guest | Member | Contributor | Admin |
 |---|:---:|:---:|:---:|:---:|

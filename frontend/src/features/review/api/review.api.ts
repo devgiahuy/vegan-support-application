@@ -13,6 +13,7 @@ import type {
   AdminContentReviewDetailResponseDto,
   ContentReviewHistoryResponseDto,
   ReviewQueueListResponseDto,
+  SubmitPostResponseDto,
 } from '../types/content-review.dto';
 import type {
   AdminContentReviewDetailModel,
@@ -20,6 +21,7 @@ import type {
   ContentReviewQueueItem,
   ReviewQueueQueryParams,
   SubmitPostInput,
+  SubmitPostResult,
 } from '../types/content-review.model';
 import { ReviewDecisionEnum } from '../types/content-review.model';
 
@@ -29,14 +31,19 @@ export const reviewApi = {
   // ==========================================
 
   /**
-   * Tác giả nộp một bản nháp immutable để Admin kiểm duyệt
+   * Tác giả nộp một bản nháp immutable để xuất bản (Contributor) hoặc kiểm duyệt
    * POST /api/v1/posts/:id/submit
    */
-  submitPost: async (postId: string, input: SubmitPostInput): Promise<void> => {
-    await api.post(CONTENT_REVIEW_ENDPOINTS.SUBMIT(postId), {
+  submitPost: async (postId: string, input: SubmitPostInput): Promise<SubmitPostResult> => {
+    const res = await api.post<SubmitPostResponseDto>(CONTENT_REVIEW_ENDPOINTS.SUBMIT(postId), {
       revisionId: input.revisionId,
       expectedVersion: input.expectedVersion,
     });
+
+    if (res.data?.success && res.data.data) {
+      return contentReviewMapper.toSubmitResult(res.data.data);
+    }
+    throw new Error('Phản hồi nộp nội dung không đúng định dạng.');
   },
 
   /**

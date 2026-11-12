@@ -15,6 +15,13 @@ Tạo private chat session cho authenticated user hoặc guest
 - Request: `CreateChatSessionRequest` (required)
 - Responses: `201` → ChatSessionResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `423` → ErrorResponse
 
+## DELETE `/api/v1/chat/sessions/{id}`
+Ẩn cuộc trò chuyện của tài khoản khỏi lịch sử
+- operationId: `deleteChatSession`
+- Params: `path:id* (string)`
+- Request: —
+- Responses: `200` → object, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
+
 ## GET `/api/v1/chat/sessions/{id}/messages`
 Đọc message history theo ownership
 - operationId: `listChatMessages`

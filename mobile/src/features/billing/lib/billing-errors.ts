@@ -2,6 +2,7 @@ import { getApiErrorCode, getApiErrorMessage } from '@/lib/api-error';
 const messages: Record<string, string> = {
   BILLING_DISABLED: 'Thanh toán payOS chưa được bật.',
   BILLING_PRODUCT_UNAVAILABLE: 'Gói không còn được bán. Vui lòng tải lại danh sách.',
+  BILLING_PRODUCT_CHANGED: 'Giá hoặc quyền lợi đã thay đổi. Vui lòng xem lại gói trước khi mua.',
   BILLING_ORDER_NOT_FOUND: 'Không tìm thấy đơn hàng của bạn.',
   BILLING_IDEMPOTENCY_CONFLICT: 'Yêu cầu này đã dùng cho gói khác. Hãy tải lại và chọn gói.',
   BILLING_PENDING_LIMIT: 'Bạn có nhiều đơn chờ thanh toán. Tiếp tục một đơn ở phần lịch sử.',

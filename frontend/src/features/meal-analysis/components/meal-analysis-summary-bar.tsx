@@ -150,7 +150,7 @@ export function MealAnalysisSummaryBar({
                 </span>
               )}
             </div>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="mt-0.5 whitespace-pre-line text-xs text-muted-foreground">
               {summary.detail ||
                 (isStale
                   ? 'Một hoặc nhiều món ăn vừa được chỉnh sửa. Vui lòng bấm phân tích lại để làm tươi kết quả kiểm tra.'
