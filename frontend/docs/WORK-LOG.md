@@ -1,5 +1,11 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-14] — Bán kính web mặc định 3 km, tối đa 5 km
+
+- **Yêu cầu:** Giới hạn dropdown bán kính tìm quán tối đa 5 km và mặc định 3 km.
+- **Thay đổi:** Dùng chung các mức 100m/300m/500m/1km/3km/5km; request mapper chặn radius ở 5km. Bộ lọc đã lưu có giá trị ngoài các mức này (gồm 10/20/50km cũ) về 3km; lựa chọn hợp lệ như 5km được giữ. Map default dùng cùng hằng số và nút nới bán kính chuyển tới mức hợp lệ tiếp theo. Không đổi backend/native mobile hay giới hạn bounds-search riêng; không đổi API/SSE/quota/schema/seed hoặc % scaffold. IMPLEMENTATION_PLAN 4.22 và BACKEND_INTEGRATION 4.76 ghi nhận quyết định.
+- **Kiểm chứng:** FE typecheck/scoped ESLint, 9 restaurant test files/152 tests, production build 47 routes và diff check đạt. Regression test kiểm tra chuyển dữ liệu lưu cũ và giữ lựa chọn 5km. Browser localhost xác nhận fresh selector hiển thị 3km và đúng sáu lựa chọn, không có mức trên 5km. Ảnh `/tmp/vegan-radius-3km/radius-options.png`. Backend gates và full FE suite không chạy lại vì thay đổi chỉ nằm ở cấu hình/consumer frontend đã kiểm tra; không thêm backend test infrastructure.
+
 ## [2026-11-14] — Response chat, toàn bộ ghim quán và nhãn lượt mua thêm
 
 - **Yêu cầu nối tiếp:** Style câu trả lời từ ảnh bị dính chữ/raw Markdown; hiển thị toàn bộ quán trên map/danh sách không chuyển trang; bỏ dropdown Loại quán chay; giải thích/sửa cảnh báo hết lượt khi ảnh vẫn còn 49/50 lượt miễn phí. Giữ yêu cầu commit/push đang thực hiện; commit `b80cf10` đã đóng gói map/chat provider trước các follow-up này.

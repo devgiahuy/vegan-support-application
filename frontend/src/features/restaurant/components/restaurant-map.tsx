@@ -26,6 +26,7 @@ import type { DiscoveryNotice, Restaurant, RestaurantBounds } from '../types/res
 import { getRestaurantDirectionsUrl } from '../utils/restaurant-links';
 import { toRestaurantMapData } from '../utils/restaurant-map-data';
 import { useRestaurantStreetMap } from './use-restaurant-street-map';
+import { DEFAULT_RADIUS_M } from '../schemas/restaurant.schema';
 
 export interface RestaurantMapProps {
   items: Restaurant[];
@@ -47,7 +48,7 @@ export interface RestaurantMapProps {
 export function RestaurantMap({
   items,
   userLocation,
-  radiusM = 5000,
+  radiusM = DEFAULT_RADIUS_M,
   selectedId,
   onSelectRestaurant,
   onClearSelection,

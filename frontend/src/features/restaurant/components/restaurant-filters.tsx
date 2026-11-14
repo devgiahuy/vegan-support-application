@@ -19,12 +19,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { DEFAULT_RADIUS_M, MAX_RADIUS_M, MIN_RADIUS_M } from '../schemas/restaurant.schema';
+import {
+  DEFAULT_RADIUS_M,
+  MAX_RADIUS_M,
+  MIN_RADIUS_M,
+  RESTAURANT_RADIUS_OPTIONS,
+} from '../schemas/restaurant.schema';
 import { countActiveAdvancedFilters } from '../utils/restaurant-search';
 import type { RestaurantAdvancedFilters, RestaurantSearchMode } from '../types/restaurant.model';
 import { AdvancedFiltersSheet } from './advanced-filters';
 
-const RADIUS_OPTIONS = [100, 300, 500, 1000, 3000, 5000, 10000, 20000, 50000];
 const KEYWORD_SUGGESTIONS = ['Cơm chay', 'Phở chay', 'Lẩu chay'];
 export interface RestaurantFiltersProps {
   query: string;
@@ -107,7 +111,7 @@ export function RestaurantFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                {RADIUS_OPTIONS.map((option) => (
+                {RESTAURANT_RADIUS_OPTIONS.map((option) => (
                   <SelectItem key={option} value={String(option)}>
                     {option >= 1000 ? `${option / 1000} km` : `${option} m`}
                   </SelectItem>

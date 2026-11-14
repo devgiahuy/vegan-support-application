@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.75
+**Version:** 4.76
 
 **Cập nhật:** 14/11/2026
 
@@ -37,6 +37,12 @@ Changelog 2026-11-05 (4.59): cập nhật quy ước vị trí endpoint theo fea
 ---
 
 ## 1. Source of truth và status
+
+### Web radius choices — 2026-11-14 (4.76)
+
+User-approved web-only refinement: the restaurant radius selector offers 100m, 300m, 500m, 1km, 3km and 5km; default 3km, maximum 5km. Invalid/wider saved choices reset to 3km, while valid explicit selections remain. Web request mapping clamps radiusMeters to 100..5000 and the expand-radius action advances to the next available choice. Backend defaults/maximums, mobile behavior, separate bounds-search limit, response/authorization/error contracts and READY status are unchanged; no migration/seed or new consumer is introduced.
+
+Changelog 2026-11-14 (4.76): web restaurant radius defaults to 3km and is capped at 5km, including saved-filter normalization.
 
 ### All-result web restaurant discovery — 2026-11-14 (4.75, READY)
 

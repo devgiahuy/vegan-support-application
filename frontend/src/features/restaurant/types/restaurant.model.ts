@@ -157,7 +157,7 @@ export interface RestaurantSearchState {
   lat?: number;
   lng?: number;
   bounds?: RestaurantBounds;
-  /** 100..50000, mặc định 5000. */
+  /** Web: 100..5000, mặc định 3000; backend supports a wider range for other clients. */
   radiusM: number;
   /** Từ khóa món ăn/tên quán; ≥ 2 ký tự để vào chế độ KEYWORD. */
   query: string;

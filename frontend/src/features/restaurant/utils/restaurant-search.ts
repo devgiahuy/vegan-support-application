@@ -1,5 +1,5 @@
 import { DietPattern, RestaurantWeekday } from '@/common/enums';
-import { DEFAULT_RADIUS_M } from '../schemas/restaurant.schema';
+import { DEFAULT_RADIUS_M, RESTAURANT_RADIUS_OPTIONS } from '../schemas/restaurant.schema';
 import { isBoundsUsable } from './restaurant-bounds';
 import type {
   RestaurantAdvancedFilters,
@@ -94,7 +94,8 @@ export function sanitizePersistedFilters(
   const source = raw as Record<string, unknown>;
 
   const radiusM =
-    typeof source.radiusM === 'number' && Number.isFinite(source.radiusM)
+    typeof source.radiusM === 'number' &&
+    (RESTAURANT_RADIUS_OPTIONS as readonly number[]).includes(source.radiusM)
       ? source.radiusM
       : DEFAULT_RADIUS_M;
 

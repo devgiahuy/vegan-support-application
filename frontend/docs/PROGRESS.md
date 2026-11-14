@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Bán kính tìm quán 3–5 km — Updated 2026-11-14
+
+Dropdown web mặc định 3km, tối đa 5km; các mức cũ vượt giới hạn tự về 3km, lựa chọn hợp lệ được giữ. Mapper/map default/nút nới bán kính dùng cùng cấu hình. Typecheck/scoped lint, 152 restaurant tests, build và browser selector đạt; backend/mobile/bounds-search giữ nguyên, không đổi % scaffold. Chi tiết tại WORK-LOG.
+
 ## Chat response, toàn bộ quán và nhãn quota — Updated 2026-11-14
 
 Giữ whitespace/newlines khi stream; render GFM table/list/heading/link an toàn, responsive và cuộn ngang bảng bằng bàn phím. Web map/list lấy toàn bộ tập kết quả qua all=true, bỏ pagination/dropdown diet-type và không áp dụng lựa chọn diet cũ; backend giữ pagination cho client cũ cùng provider caps/notices. Lượt chat mua thêm=0 hiển thị trung tính, phân biệt với lượt miễn phí; không đổi quota backend. Backend gates/OpenAPI, sáu isolated groups, FE typecheck/scoped lint/860 tests/build và browser desktop/mobile đạt. Giữ READY và % scaffold; bằng chứng, giới hạn tại WORK-LOG.

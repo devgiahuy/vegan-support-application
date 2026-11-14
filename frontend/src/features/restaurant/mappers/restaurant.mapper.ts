@@ -521,7 +521,7 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
   /**
    * Dựng query params cho `nearby`/`search` từ state tìm kiếm.
    * Ràng buộc theo `restaurant.schemas.ts`:
-   * - `radiusMeters` luôn clamp về [100, 50000].
+   * - Web `radiusMeters` luôn clamp về [100, 5000].
    * - `lat`/`lng` đi cùng nhau; bounds phải đủ bốn mốc và đúng thứ tự.
    * - Lọc nâng cao chỉ có tác dụng ở chế độ tìm theo từ khóa.
    * - Gửi `page`/`limit` khi chuyển trang; backend mặc định 20 kết quả mỗi trang.

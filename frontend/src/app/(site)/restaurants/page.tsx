@@ -28,7 +28,11 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
-import { DEFAULT_RADIUS_M, MAX_RADIUS_M } from '@/features/restaurant/schemas/restaurant.schema';
+import {
+  DEFAULT_RADIUS_M,
+  MAX_RADIUS_M,
+  RESTAURANT_RADIUS_OPTIONS,
+} from '@/features/restaurant/schemas/restaurant.schema';
 import type {
   RestaurantBounds,
   RestaurantSearchState,
@@ -142,7 +146,10 @@ export default function RestaurantMapPage() {
     setRadiusM(DEFAULT_RADIUS_M);
   }, []);
   const expandRadius = React.useCallback(
-    () => handleRadiusChange(Math.min(radiusM * 2, MAX_RADIUS_M)),
+    () =>
+      handleRadiusChange(
+        RESTAURANT_RADIUS_OPTIONS.find((option) => option > radiusM) ?? MAX_RADIUS_M
+      ),
     [handleRadiusChange, radiusM]
   );
   const advancedCount = countActiveAdvancedFilters(advanced);
