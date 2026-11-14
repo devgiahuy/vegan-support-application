@@ -24,6 +24,10 @@ export interface ReviewNutritionMetricDto {
     updatedBy?: ReviewNutritionActorDto | null;
     updatedAt?: string;
   } | null;
+  /** Số tác giả tự nhập (USER_PROVIDED), null khi để trống */
+  author?: number | null;
+  deviationPercent?: number | null;
+  deviationWarning?: boolean;
   finalValue?: number | null;
   finalOrigin?: string | null;
 }

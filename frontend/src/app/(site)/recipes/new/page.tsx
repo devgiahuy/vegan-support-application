@@ -60,8 +60,15 @@ export default function CreateRecipePage() {
   const applyDraftToEditor = (draft: RecipeDraftSuggestion) => {
     const formVals = recipeDraftMapper.toFormValues(draft);
     editorRef.current?.setDraftValues(formVals);
+    // Khẩu phần/thời gian đã nhập được giữ; nếu AI đề xuất khác thì chỉ báo để tham khảo.
+    const timingHint = recipeDraftMapper.timingHint(draft);
     toast.success('Đã điền gợi ý AI vào nguyên liệu và các bước nấu', {
-      description: 'Kiểm tra lại định lượng, liên kết nguyên liệu chuẩn rồi chọn danh mục.',
+      description: [
+        'Kiểm tra lại định lượng, liên kết nguyên liệu chuẩn rồi chọn danh mục.',
+        timingHint,
+      ]
+        .filter(Boolean)
+        .join(' '),
     });
   };
 
@@ -113,7 +120,7 @@ export default function CreateRecipePage() {
     }
   };
 
-  const isContributor = user?.role === UserRole.CONTRIBUTOR;
+  const publishesDirectly = user?.role === UserRole.CONTRIBUTOR || user?.role === UserRole.ADMIN;
   const effectiveSubmittedStatus = createdRecipe?.revisionStatus ?? createdRecipe?.status;
   const isPublished = effectiveSubmittedStatus === PostStatus.PUBLISHED;
   const isFlaggedOrQuarantined =
@@ -145,8 +152,8 @@ export default function CreateRecipePage() {
             Đăng công thức món chay
           </h1>
           <p className="text-sm text-pretty text-muted-foreground">
-            {isContributor
-              ? 'Năm bước ngắn: thông tin món, nguyên liệu, cách nấu, phân loại rồi xem lại. Công thức của Người đóng góp được tự động duyệt và xuất bản ngay khi đăng.'
+            {publishesDirectly
+              ? 'Năm bước ngắn: thông tin món, nguyên liệu, cách nấu, phân loại rồi xem lại. Nhập đủ dinh dưỡng mỗi khẩu phần; công thức được xuất bản ngay khi đăng.'
               : 'Năm bước ngắn: thông tin món, nguyên liệu, cách nấu, phân loại rồi xem lại. Công thức được Ban biên tập duyệt trước khi xuất bản.'}
           </p>
         </div>
@@ -154,8 +161,8 @@ export default function CreateRecipePage() {
         <RecipeEditorForm
           ref={editorRef}
           formTitle="Đăng công thức mới"
-          submitLabel={isContributor ? 'Đăng & xuất bản công thức' : 'Gửi công thức để duyệt'}
-          autoPublishEligible={isContributor}
+          submitLabel={publishesDirectly ? 'Đăng & xuất bản công thức' : 'Gửi công thức để duyệt'}
+          autoPublishEligible={publishesDirectly}
           onSubmit={handleSubmit}
           isSubmitting={createRecipeMutation.isPending}
           renderAssistant={(seed, { editBasics }) => (
@@ -256,8 +263,8 @@ export default function CreateRecipePage() {
                   <span>Đã hiển thị công khai trên kho công thức</span>
                 </p>
                 <p className="leading-relaxed text-pretty">
-                  Với vai trò Người đóng góp, công thức của bạn đã được tự động duyệt và chia sẻ
-                  ngay tới cộng đồng ăn chay mà không cần chờ kiểm duyệt thủ công.
+                  Công thức của bạn đã được tự động xuất bản và chia sẻ ngay tới cộng đồng ăn chay
+                  mà không cần chờ kiểm duyệt thủ công.
                 </p>
               </div>
             ) : isFlaggedOrQuarantined ? (

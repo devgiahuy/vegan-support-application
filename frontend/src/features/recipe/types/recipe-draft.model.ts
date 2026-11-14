@@ -6,10 +6,11 @@ import { RecipeDifficulty } from '@/common/enums';
 export interface RecipeDraftPrompt {
   title: string;
   description: string;
+  ingredientNames: string[];
+  /** Số tác giả đã nhập ở bước 1; để trống thì AI tự đề xuất */
   servings?: number;
   prepTimeMinutes?: number;
   cookTimeMinutes?: number;
-  ingredientNames: string[];
 }
 
 /**
@@ -48,6 +49,12 @@ export interface RecipeDraftSuggestion {
   steps: RecipeDraftStep[];
   confidence: number;
   assumptions: string[];
+  /** Khẩu phần/thời gian AI tự đề xuất, null khi backend không trả */
+  suggestedTiming: {
+    servings: number;
+    prepTimeMinutes: number;
+    cookTimeMinutes: number;
+  } | null;
   provenance: {
     provider: string;
     model: string;

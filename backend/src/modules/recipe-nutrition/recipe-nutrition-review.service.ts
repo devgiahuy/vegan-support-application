@@ -77,17 +77,15 @@ export class RecipeNutritionReviewService {
   /** Submit hook: canonical estimate now, AI gap-filling job only when reviewed data is insufficient.
    * Never throws: nutrition must not block submission; the reviewer can recalculate later.
    */
-  async onRevisionSubmitted(revisionId: string, published = false): Promise<void> {
+  async onRevisionSubmitted(
+    revisionId: string,
+    options: { autoPublished: boolean } = { autoPublished: false },
+  ): Promise<void> {
     try {
-      if (published) {
-        const revision = await this.nutritionRepository.findRevisionById(revisionId);
-        if (revision?.recipeDetail) {
-          const estimate = await this.nutrition.buildForReview(revision, null);
-          await this.nutrition.persistBuilt(revision, estimate);
-        }
-        return;
-      }
-      await this.calculate(revisionId, RecipeNutritionJobTrigger.SUBMIT, null);
+      await this.calculate(revisionId, RecipeNutritionJobTrigger.SUBMIT, null, {
+        // Auto-published recipes keep a canonical-only reference estimate; no AI call.
+        allowAi: !options.autoPublished,
+      });
     } catch (error) {
       console.error('[RecipeNutritionReview] Submit calculation failed:', error);
     }
@@ -122,6 +120,9 @@ export class RecipeNutritionReviewService {
           origin: item.estimate.origin,
           confidence: item.estimate.confidence,
         },
+        author: item.author,
+        deviationPercent: item.deviationPercent,
+        deviationWarning: item.deviationWarning,
         override: item.override
           ? {
               value: item.override.value,
@@ -246,12 +247,13 @@ export class RecipeNutritionReviewService {
     revisionId: string,
     trigger: RecipeNutritionJobTrigger,
     requestedById: string | null,
+    options: { allowAi: boolean } = { allowAi: true },
   ): Promise<void> {
     const revision = await this.nutritionRepository.findRevisionById(revisionId);
     if (!revision?.recipeDetail) return;
     const built = await this.nutrition.buildForReview(revision, null);
     await this.nutrition.persistBuilt(revision, built);
-    if (!this.needsAi(revision, built)) {
+    if (!options.allowAi || !this.needsAi(revision, built)) {
       await this.repository.cancelActiveJobs(revisionId, 'CANONICAL_DATA_COMPLETE');
       return;
     }

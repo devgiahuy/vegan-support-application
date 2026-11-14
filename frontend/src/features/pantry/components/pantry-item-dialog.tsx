@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useIngredientsQuery } from '@/features/ingredient/queries/ingredient.queries';
+import { IngredientSuggestions } from '@/features/ingredient/components/ingredient-suggestions';
 import {
   pantryItemFormSchema,
   pantryUpdateFormSchema,
@@ -66,10 +66,7 @@ export function PantryItemDialog({ open, onOpenChange, editingItem }: PantryItem
   const [isCanonical, setIsCanonical] = useState(true);
   const [isCustomUnit, setIsCustomUnit] = useState(false);
   const [ingredientSearch, setIngredientSearch] = useState('');
-
-  const { data: ingredientsData } = useIngredientsQuery(
-    ingredientSearch ? { q: ingredientSearch, limit: 20 } : { limit: 50 }
-  );
+  const [selectedIngredientName, setSelectedIngredientName] = useState('');
 
   const createMutation = useCreatePantryItemMutation();
   const updateMutation = useUpdatePantryItemMutation();
@@ -125,14 +122,23 @@ export function PantryItemDialog({ open, onOpenChange, editingItem }: PantryItem
         expiresAt: '',
         freshnessNote: '',
       });
-      setIsCanonical(true);
-      setIsCustomUnit(false);
-      setIngredientSearch('');
     }
   }, [editingItem, open, createForm, updateForm]);
 
+  // Local picker state restarts whenever the dialog opens (adjusted during render, not in an effect).
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setIsCanonical(true);
+      setIsCustomUnit(false);
+      setIngredientSearch('');
+      setSelectedIngredientName('');
+    }
+  }
+
   const handleCreateSubmit = createForm.handleSubmit(async (data) => {
-    const idempotencyKey = `pantry-create-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const idempotencyKey = `pantry-create-${crypto.randomUUID()}`;
     const payload = pantryMapper.toCreateDto(data, idempotencyKey);
     await createMutation.mutateAsync(payload);
     onOpenChange(false);
@@ -239,6 +245,7 @@ export function PantryItemDialog({ open, onOpenChange, editingItem }: PantryItem
                   } else {
                     createForm.setValue('ingredientId', '');
                     createForm.clearErrors('ingredientId');
+                    setSelectedIngredientName('');
                   }
                 }}
               />
@@ -247,7 +254,7 @@ export function PantryItemDialog({ open, onOpenChange, editingItem }: PantryItem
             {isCanonical ? (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="ingredientSelect" className="text-xs">
+                  <Label htmlFor="ingredientSearch" className="text-xs">
                     Chọn nguyên liệu chuẩn <span className="text-destructive">*</span>
                   </Label>
                   <button
@@ -257,57 +264,46 @@ export function PantryItemDialog({ open, onOpenChange, editingItem }: PantryItem
                       createForm.setValue('isCanonical', false);
                       createForm.setValue('ingredientId', '');
                       createForm.clearErrors('ingredientId');
+                      setSelectedIngredientName('');
                     }}
                     className="text-[11px] text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline"
                   >
                     Tự nhập tên khác
                   </button>
                 </div>
-                <Select
-                  value={createForm.watch('ingredientId')}
-                  onValueChange={(val) => {
-                    if (val === '__CUSTOM__' || val === '__CUSTOM_BOTTOM__') {
-                      setIsCanonical(false);
-                      createForm.setValue('isCanonical', false);
-                      createForm.setValue('ingredientId', '');
-                      createForm.clearErrors('ingredientId');
-                      return;
-                    }
-                    createForm.setValue('ingredientId', val);
-                    createForm.clearErrors('ingredientId');
-                  }}
-                >
-                  <SelectTrigger id="ingredientSelect">
-                    <SelectValue placeholder="Chọn nguyên liệu từ danh mục..." />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    <SelectItem
-                      value="__CUSTOM__"
-                      className="text-emerald-600 dark:text-emerald-400 font-medium border-b border-border/50 pb-2 mb-1 cursor-pointer focus:bg-emerald-50 dark:focus:bg-emerald-950/40"
+                {selectedIngredientName ? (
+                  <div className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2">
+                    <span className="text-sm font-medium">{selectedIngredientName}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        createForm.setValue('ingredientId', '');
+                        setSelectedIngredientName('');
+                      }}
                     >
-                      <span className="flex items-center gap-1.5">
-                        <span>✏️</span>
-                        <span>Khác (Tự nhập tên nguyên liệu...)</span>
-                      </span>
-                    </SelectItem>
-                    {ingredientsData?.items?.map((ing) => (
-                      <SelectItem key={ing.id} value={ing.id}>
-                        {ing.canonicalName}
-                      </SelectItem>
-                    ))}
-                    {ingredientsData?.items && ingredientsData.items.length > 5 && (
-                      <SelectItem
-                        value="__CUSTOM_BOTTOM__"
-                        className="text-emerald-600 dark:text-emerald-400 font-medium border-t border-border/50 pt-2 mt-1 cursor-pointer focus:bg-emerald-50 dark:focus:bg-emerald-950/40"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <span>✏️</span>
-                          <span>Không tìm thấy? Tự nhập tên nguyên liệu...</span>
-                        </span>
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                      Đổi
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <Input
+                      id="ingredientSearch"
+                      placeholder="Tìm theo tên hoặc tên gọi khác..."
+                      value={ingredientSearch}
+                      onChange={(event) => setIngredientSearch(event.target.value)}
+                    />
+                    <IngredientSuggestions
+                      query={ingredientSearch}
+                      onSelect={(ingredient) => {
+                        createForm.setValue('ingredientId', ingredient.id);
+                        createForm.clearErrors('ingredientId');
+                        setSelectedIngredientName(ingredient.canonicalName);
+                      }}
+                    />
+                  </>
+                )}
                 {createForm.formState.errors.ingredientId && (
                   <p className="text-xs text-destructive">
                     {createForm.formState.errors.ingredientId.message}
@@ -339,6 +335,10 @@ export function PantryItemDialog({ open, onOpenChange, editingItem }: PantryItem
                   autoFocus
                   {...createForm.register('unmatchedText')}
                 />
+                <p className="text-[11px] text-muted-foreground">
+                  Nếu tên trùng khớp tên chuẩn hoặc tên gọi khác đã duyệt, hệ thống sẽ tự liên kết
+                  với nguyên liệu chuẩn.
+                </p>
                 {createForm.formState.errors.unmatchedText && (
                   <p className="text-xs text-destructive">
                     {createForm.formState.errors.unmatchedText.message}

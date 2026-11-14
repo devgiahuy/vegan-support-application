@@ -68,6 +68,8 @@ export function registerPantryOpenApi(
     path: '/api/v1/pantry/items',
     tags: [tag],
     summary: 'Create a confirmed manual pantry item',
+    description:
+      'When unmatchedText normalizes to exactly the canonical name or an approved alias of an active ingredient, the item is linked to that ingredient (ingredientId set, unmatchedText null) and converted with its reviewed conversions. There is no fuzzy matching; other text stays a free-text item.',
     operationId: 'createPantryItem',
     security,
     request: { body: { content: json(createPantryItemSchema) } },

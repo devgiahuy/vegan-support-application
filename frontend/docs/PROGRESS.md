@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Đồng bộ nhánh phát triển với dev — Updated 2026-11-14
+
+Rebase nhánh `fix/combined-nutrition-pantry-meal-plan` lên `origin/dev` (`9e3842a`), giữ bốn commit và xử lý conflict dinh dưỡng, trạng thái xuất bản, bản nháp AI và tài liệu. Backend lint/typecheck/build, frontend typecheck/841 tests/build và kiểm tra diff đạt. Scoped frontend lint còn lỗi đã có trước rebase ở pantry dialog. Giữ nguyên tỷ lệ hoàn thành; submit vẫn CHANGING chờ mobile/schema rollout. Chi tiết tại WORK-LOG.
+
 ## Sửa lỗi hiển thị lặp thời hạn 30/90/360 ngày trên card gói tiện ích — Updated 2026-11-10
 
 Bổ sung chuẩn hóa nhãn hiển thị theo thời hạn trong `billing.mapper.ts` / `billing.model.ts` (`BillingProduct.displayName` và `BillingOrder.durationSuffixLabel`) để chỉ ghép thêm `durationLabel` khi tên gói chưa chứa sẵn thông tin thời hạn. Khắc phục tình trạng nút chọn gói trong `DurationPlanCard` (và dòng đơn hàng `OrderRow`) ở `/billing` hiển thị lặp `Gói tiện ích 30 ngày · 30 ngày`, `Gói tiện ích 90 ngày · 90 ngày`, `Gói tiện ích 360 ngày · 360 ngày`; giữ được khả năng phân biệt khi quản trị viên tạo nhiều gói cùng thời hạn và giữ ổn định bố cục `ToggleGroup` khi có từ 4 gói trở lên. Giữ nguyên tỷ lệ hoàn thành tính năng. Chi tiết kiểm chứng tại WORK-LOG.
@@ -124,6 +128,10 @@ Tách 43 nhóm endpoint theo feature hoặc domain dùng chung, chuyển consume
 ## Refactor chọn ảnh cho luồng quét tủ lạnh và hóa đơn — Updated 2026-11-05
 
 Tách logic chọn, kiểm tra, sắp xếp, xóa và dọn URL ảnh trùng lặp sang hook chung trong `features/storage/hooks`. Hai màn quét giữ nguyên giao diện, giới hạn 6/4 ảnh và luồng tạo job riêng. Không đổi API hoặc trạng thái tích hợp. Typecheck, lint các file sửa, 732 tests và build 47 routes đều pass. Lint toàn frontend còn 82 lỗi và 318 cảnh báo ở các file ngoài phạm vi refactor.
+
+## Dinh dưỡng do tác giả nhập, Contributor/Admin tự xuất bản công thức — Updated 2026-10-29
+
+Form công thức có 6 ô dinh dưỡng mỗi khẩu phần: user thường không bắt buộc (ô trống được hệ thống tính khi gửi duyệt), Contributor/Admin bắt buộc đủ 6 và công thức (kể cả bản sửa) được xuất bản ngay, trừ khi bị bộ lọc tự động gắn cờ. Panel duyệt hiện số tác giả nhập, số hệ thống và cảnh báo lệch >30%. tsc, 735 test, build pass. Mobile chưa cập nhật.
 
 ## Dinh dưỡng công thức tính khi gửi duyệt, người duyệt xác nhận — Updated 2026-10-28
 

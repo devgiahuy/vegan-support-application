@@ -1,5 +1,14 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+
+## [2026-11-14] — Rebase nhánh dinh dưỡng/tủ bếp/thực đơn lên dev
+
+- **Yêu cầu:** Rebase `fix/combined-nutrition-pantry-meal-plan` lên `origin/dev` mới nhất để tiếp tục phát triển trên nhánh này.
+- **Mốc:** base `origin/dev` là `9e3842a`; backup trước rebase là `backup/combined-fixes-before-rebase-20261114` tại `cc9a301`. Giữ cả bốn commit tính năng; merge `dev` cũ được thay bằng lịch sử tuyến tính.
+- **Xử lý:** Ghép tài liệu và contract; giữ luồng Contributor tự xuất bản từ dev cùng dinh dưỡng tác giả của nhánh, kiểm tra lại role/profile trong transaction; giữ response/revision status mapping mới và shared review API; bỏ các trường khẩu phần/thời gian bị khai báo trùng do auto-merge; chuyển mapper tests sang data DTO theo kiến trúc hiện tại. Giữ mô tả/tên AI tùy chọn và liên kết nguyên liệu đã chọn. Đồng bộ OpenAPI và catalog 195 endpoints.
+- **Kiểm chứng:** Backend lint, typecheck, build pass; smoke 6 trường hợp xuất bản bằng transaction stub pass (không ghi DB); frontend typecheck, 105 files/841 tests, production build 47 routes pass; `git diff --check` pass. Scoped frontend lint còn 4 lỗi/1 warning có sẵn trong `pantry-item-dialog.tsx` (2 `as any`, 2 unescaped quotes, React Hook Form warning); đã đối chiếu với dev/commit gốc. Build cảnh báo middleware deprecated có sẵn.
+- **Phạm vi:** Không triển khai DB, seed hoặc chạy kiểm thử trình duyệt/live API. Endpoint submit vẫn `CHANGING` chờ mobile migration và schema rollout; không thay đổi tỷ lệ scaffold. Rebase local, chưa force-push remote.
+
 ## [2026-11-10] — Sửa lỗi hiển thị lặp `30 ngày`, `90 ngày`, `360 ngày` trên card gói tiện ích ở `/billing`
 
 - **Mục tiêu**: khắc phục lỗi trên card `Gói tiện ích theo thời hạn` tại `/billing` hiển thị lặp thời hạn ở các nút chọn gói (`Gói tiện ích 30 ngày · 30 ngày`, `Gói tiện ích 90 ngày · 90 ngày`, `Gói tiện ích 360 ngày · 360 ngày`), đồng thời giữ hiển thị đầy đủ tên + thời hạn khi có gói tùy chỉnh không chứa thời hạn trong tên.
@@ -258,6 +267,36 @@
 - **Nhánh**: `codex/refactor-src` (từ `dev`).
 - **Thay đổi**: Thêm `features/storage/hooks/use-selected-upload-images.ts` để dùng chung thao tác chọn, xác thực, sắp xếp, xóa và thu hồi URL ảnh. `fridge-upload-zone.tsx` và `receipt-upload-zone.tsx` gọi hook; giới hạn ảnh, thông báo và cách tạo job vẫn giữ nguyên.
 - **Kiểm chứng**: `npx tsc --noEmit`, scoped ESLint, `npm test` (68 files, 732 tests) và `npm run build` (47 routes) pass. `npm run lint` toàn frontend còn 82 lỗi và 318 cảnh báo tại các file ngoài phạm vi sửa. Không đổi endpoint, DTO, mapper hoặc backend contract nên không chạy Swagger sync.
+
+## [2026-10-29] — Bản nháp AI không ghi đè khẩu phần và thời gian
+
+- **Yêu cầu**: Người dùng chốt với Ngô Gia Huy: khi áp dụng bản nháp AI không ghi đè khẩu phần, thời gian sơ chế, thời gian nấu đã nhập ở bước 1; gửi 3 giá trị này cho AI để định lượng nguyên liệu đúng khẩu phần.
+- **Giả định (người dùng yêu cầu không hỏi thêm)**: ô bước 1 còn trống thì AI vẫn điền; chỉ bảo vệ 3 trường này (tên/mô tả vốn đã giữ; độ khó, nguyên liệu, bước nấu vẫn theo AI); thời gian AI khác thì chỉ gợi ý trong toast.
+- **Backend**: request `recipe-drafts/generate` thêm `servings`, `prepTimeMinutes`, `cookTimeMinutes` (tuỳ chọn), prompt định lượng theo khẩu phần, bản nháp giữ số tác giả, thêm `suggestedTiming`.
+- **Frontend**: DTO/Model/Mapper thêm trường mới + `timingHint`; trợ lý gửi 3 giá trị; `setDraftValues` giữ số đã nhập; mapper test mới.
+- **Kiểm chứng**: Backend lint/typecheck/build/OpenAPI; FE tsc, vitest, build. Chưa thử với provider OpenAI thật.
+
+## [2026-10-29] — Dinh dưỡng do tác giả nhập và Contributor/Admin tự xuất bản công thức
+
+- **Yêu cầu**: Người dùng chốt với Ngô Gia Huy: form công thức có lại 6 ô dinh dưỡng; user thường không bắt buộc (thiếu thì hệ thống tính), Contributor bắt buộc và đăng xong là xuất bản. Đã hỏi và chốt: giữ số đã nhập, chỉ tính ô thiếu; vẫn tính số hệ thống để đối chiếu, cảnh báo khi lệch >30%; Admin như Contributor; sửa bài đã xuất bản cũng tự xuất bản; bị bộ lọc tự động gắn cờ thì vào hàng chờ Admin; chỉ áp dụng cho công thức; bài tự xuất bản chỉ lưu bản ước tính từ dữ liệu chuẩn (không gọi AI); duyệt bài user thường vẫn 5 chỉ số, B12 tuỳ chọn.
+- **Backend**: `RecipeDetail.authorNutrition`; response thêm `recipe.authorNutrition`, sửa lỗi 0 bị trả về null; submit kiểm tra 6 chỉ số với Contributor/Admin (`422 RECIPE_NUTRITION_REQUIRED`), policy tự xuất bản (ghi `ModerationAction` APPROVE `autoPublished`); panel duyệt thêm `author`, `deviationPercent`, `deviationWarning`, thứ tự ưu tiên sửa tay > tác giả > hệ thống.
+- **Frontend**: 6 ô ở bước Phân loại (bắt buộc với CONTRIBUTOR/ADMIN), bước Xem lại hiện số đã nhập, form sửa điền sẵn từ `authorNutrition`; trạng thái thật từ phản hồi submit (hộp thoại/toast "Đã xuất bản"), nhãn nút theo role; panel duyệt hiện số tác giả nhập, số hệ thống và cảnh báo lệch. Mapper/schema test mới.
+- **Kiểm chứng**: Backend lint/typecheck/build/OpenAPI; smoke trên DB Mongo tạm (AI giả lập) cho các nhánh Member/Contributor/Admin/gắn cờ/bài viết. FE tsc, vitest 68 file/735 test, build.
+- **Còn lại**: Form công thức mobile chưa có 6 ô nên Contributor gửi từ mobile sẽ nhận 422.
+
+## [2026-10-29] — Thực đơn tuần: phân biệt "chưa xác minh được" với vi phạm ràng buộc khi thêm món
+
+- **Yêu cầu**: Người dùng báo chọn món cá nhân "Bún chả" bị báo vi phạm dị ứng dù không dính dị ứng. Trên dữ liệu thật, lý do duy nhất là `UNRESOLVED_INGREDIENT`: "bún" và "chả chay" là nguyên liệu Tự do nên backend không kiểm tra được. Người dùng chọn giữ việc chặn món, báo lỗi rõ ràng, không tự ghép tên, không migrate và cảnh báo trước trong form.
+- **Backend**: manual-add trả `409 MEAL_PLAN_INGREDIENTS_UNVERIFIED` (`fields.reasons`, `fields.unverifiedIngredients`) khi lý do chỉ là nguyên liệu chưa liên kết hoặc cấu tạo chưa rà soát; vi phạm thật vẫn trả `MEAL_PLAN_HARD_CONSTRAINT_VIOLATION`. Đã cập nhật OpenAPI.
+- **Frontend**:
+  - `meal-plan.dto.ts` / `meal-plan.model.ts` / `meal-plan.mapper.ts`: thêm `MealPlanConstraintErrorFieldsDto`, `MealPlanConstraintError` và `toConstraintError`, kèm mapper test.
+  - `meal-plan.queries.ts`: toast "Chưa thể kiểm tra món này" liệt kê nguyên liệu chưa liên kết; `meal-plan.api.ts` dùng `silent: true` để bỏ toast trùng từ interceptor.
+  - `custom-meal-ingredient-input.tsx`: hiển thị trạng thái liên kết từng dòng, nút "Liên kết" mở `IngredientSuggestions` và cảnh báo khi còn nguyên liệu Tự do.
+- **Kiểm chứng**:
+  - `npx tsc --noEmit` pass 0 lỗi type.
+  - `npx vitest run` 68 test suite (734 tests pass).
+  - `npm run build` pass.
+  - Gọi `MealPlanService.manualAdd` thật trên bản restore DB tạm cho đúng kịch bản trên.
 
 ## [2026-10-29] — Trang /admin/dashboard: Chuẩn hóa hiển thị lý do báo cáo & thêm 2 nút cuộn ngang thanh tabs
 

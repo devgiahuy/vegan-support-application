@@ -1,7 +1,7 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "..\\backend\\openapi.json",
-  "generatedAt": "2026-11-10T10:08:06.080Z",
+  "source": "../backend/openapi.json",
+  "generatedAt": "2026-11-14T07:02:00.730Z",
   "stats": {
     "operations": 195,
     "groups": 42,
@@ -1254,6 +1254,7 @@
         "404": "ErrorResponse",
         "409": "ErrorResponse",
         "410": "ErrorResponse",
+        "422": "ErrorResponse",
         "423": "ErrorResponse"
       }
     },
