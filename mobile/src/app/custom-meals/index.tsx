@@ -1,7 +1,7 @@
 import * as React from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
-import { Plus, Search, Utensils } from 'lucide-react-native';
+import { Plus, Search, Tag as TagIcon, Utensils } from 'lucide-react-native';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -18,9 +18,29 @@ import { useAuthStore } from '@/store/useAuthStore';
 export default function CustomMealsScreen() {
   const colors = useIconColors();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const { data, isLoading, isError, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
-    useInfiniteCustomMealsQuery({ limit: 20 });
+  const [selectedTag, setSelectedTag] = React.useState<string | null>(null);
+  // Truy vấn không lọc dùng để dựng thanh thẻ; khi chọn thẻ, truy vấn thứ hai gửi `tag` cho backend (backend chưa trả danh sách thẻ).
+  const allQuery = useInfiniteCustomMealsQuery({ limit: 20 });
+  const tagQuery = useInfiniteCustomMealsQuery({ limit: 20, tag: selectedTag ?? undefined }, selectedTag !== null);
+  const { data, isLoading, isError, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } = selectedTag
+    ? tagQuery
+    : allQuery;
   const meals = React.useMemo(() => data?.pages.flatMap((page) => page.items) ?? [], [data?.pages]);
+  const loadedAll = React.useMemo(() => allQuery.data?.pages.flatMap((page) => page.items) ?? [], [allQuery.data?.pages]);
+  const availableTags = React.useMemo(() => {
+    const counts = new Map<string, { label: string; count: number }>();
+    for (const meal of loadedAll) {
+      for (const tag of meal.tags) {
+        const key = tag.trim().toLowerCase();
+        if (!key) continue;
+        const current = counts.get(key);
+        counts.set(key, { label: current?.label ?? tag.trim(), count: (current?.count ?? 0) + 1 });
+      }
+    }
+    return Array.from(counts.entries())
+      .map(([key, value]) => ({ key, ...value }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'vi'));
+  }, [loadedAll]);
   const deleteMutation = useDeleteCustomMealMutation();
   const [search, setSearch] = React.useState('');
 
@@ -109,12 +129,41 @@ export default function CustomMealsScreen() {
           </Link>
         </View>
 
+        {availableTags.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="items-center gap-2">
+            <View className="flex-row items-center gap-1">
+              <TagIcon size={13} color={colors.mutedForeground} />
+              <Text className="text-xs text-muted-foreground">Lọc thẻ:</Text>
+            </View>
+            {[{ key: '', label: 'Tất cả', count: loadedAll.length }, ...availableTags].map((tag) => {
+              const active = tag.key === '' ? selectedTag === null : selectedTag?.toLowerCase() === tag.key;
+              return (
+                <Pressable
+                  key={tag.key || 'all'}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  onPress={() => setSelectedTag(tag.key === '' || active ? null : tag.label)}
+                  className={`rounded-full border px-3 py-1.5 ${active ? 'border-primary bg-primary' : 'border-border bg-card'}`}>
+                  <Text className={`text-xs font-medium ${active ? 'text-primary-foreground' : 'text-foreground'}`}>
+                    {tag.key === '' ? tag.label : `#${tag.label}`} ({tag.count})
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ) : null}
+
         {isLoading ? (
           [1, 2].map((item) => <View key={item} className="h-72 rounded-2xl border border-border bg-muted" />)
         ) : isError ? (
           <View className="items-center rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
             <Text className="font-semibold text-destructive">Không tải được danh sách món ăn.</Text>
             <PrimaryButton label="Thử lại" variant="outline" className="mt-3 w-full" onPress={() => void refetch()} />
+          </View>
+        ) : meals.length === 0 && selectedTag ? (
+          <View className="items-center rounded-2xl border border-dashed border-border p-8">
+            <Text className="text-center font-bold text-foreground">Không có món nào gắn thẻ #{selectedTag}</Text>
+            <PrimaryButton label="Bỏ lọc thẻ" variant="outline" className="mt-3 w-full" onPress={() => setSelectedTag(null)} />
           </View>
         ) : meals.length === 0 ? (
           <View className="items-center rounded-2xl border border-dashed border-border p-8">

@@ -1,6 +1,7 @@
 import { AllowanceNotice } from '@/features/billing/components/allowance-notice';
 import * as React from 'react';
 import { Linking, Platform, Text, View } from 'react-native';
+import { Plus } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { SiteScreen } from '@/components/layout/site-screen';
@@ -13,8 +14,9 @@ import { storageErrorMessage } from '@/features/storage/lib/storage-errors';
 import type { MediaAsset, SelectedImage, UploadAttempt } from '@/features/storage/types/storage.model';
 import { getApiErrorCode, getApiErrorMessage } from '@/lib/api-error';
 import { createOperationKey } from '@/lib/operation-key';
+import { useIconColors } from '@/lib/theme-colors';
 import { useAuthStore } from '@/store/useAuthStore';
-import { DEV_SCANS_ENABLED, SCAN_PROVIDER_MODE } from '../lib/scan-access';
+import { SCANS_ENABLED, SCAN_PROVIDER_MODE } from '../lib/scan-access';
 import { isScanDraftDirty, parseScanDraft, type ScanDraft } from '../lib/scan-draft';
 import { scanningErrorMessage } from '../lib/scanning-errors';
 import { useScanJobQuery, useScanMutations } from '../queries/scanning.queries';
@@ -37,6 +39,7 @@ export function ScanWorkspace({ kind }: { kind: ScanKind }) {
 
 function ScanWorkspaceSession({ kind }: { kind: ScanKind }) {
   const router = useRouter();
+  const colors = useIconColors();
   const authenticated = useAuthStore(state => state.isAuthenticated);
   const owner = useAuthStore(state => state.user?.id ?? '');
   const params = useLocalSearchParams<{ jobId?: string }>();
@@ -52,16 +55,20 @@ function ScanWorkspaceSession({ kind }: { kind: ScanKind }) {
   const [error, setError] = React.useState('');
   const [editing, setEditing] = React.useState<ScanCandidate | null>(null);
   const [cancelling, setCancelling] = React.useState(false);
+  const [addMode, setAddMode] = React.useState(false);
   const [confirmation, setConfirmation] = React.useState<ScanConfirmation | null>(null);
   // Người dùng chọn thì dùng lựa chọn đó; chưa chọn thì dùng quyết định BE đã lưu (nếu có).
   const [pickedDecision, setPickedDecision] = React.useState<ReceiptReviewDecision | null>(null);
   const createKey = React.useRef<{ fingerprint: string; key: string } | null>(null);
   const confirmKey = React.useRef<{ fingerprint: string; key: string } | null>(null);
   const retryKey = React.useRef<{ jobId: string; key: string } | null>(null);
-  const busy = picking || starting || mutations.edit.isPending || mutations.restore.isPending || mutations.confirm.isPending || mutations.cancel.isPending || mutations.retry.isPending;
+  const busy = picking || starting || mutations.addImages.isPending || mutations.edit.isPending || mutations.restore.isPending || mutations.confirm.isPending || mutations.cancel.isPending || mutations.retry.isPending;
   const job = query.data;
   const reviewDecision = kind === 'receipt' ? pickedDecision ?? job?.reviewDecision ?? null : null;
   const limit = kind === 'fridge' ? 6 : 4;
+  // Khi thêm ảnh vào job đang có, chỉ được chọn thêm phần còn lại của giới hạn ảnh/phiên.
+  const stageLimit = addMode && job ? Math.max(0, limit - job.images.length) : limit;
+  const canAddImages = Boolean(job && ['READY', 'PARTIAL_FAILED', 'FAILED'].includes(job.status) && job.images.length < limit);
   const title = kind === 'fridge' ? 'Quét tủ lạnh' : 'Quét hóa đơn';
 
   const pick = async (camera: boolean) => {
@@ -71,10 +78,10 @@ function ScanWorkspaceSession({ kind }: { kind: ScanKind }) {
         const permission = camera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) { setPermissionDenied(true); throw new Error(camera ? 'Cần quyền camera để chụp ảnh.' : 'Cần quyền thư viện để chọn ảnh.'); }
       }
-      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.9, allowsMultipleSelection: !camera, selectionLimit: limit - images.length };
+      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.9, allowsMultipleSelection: !camera, selectionLimit: Math.max(1, stageLimit - images.length) };
       const result = camera ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
       if (result.canceled) return;
-      if (images.length + result.assets.length > limit) throw new Error(`Chọn tối đa ${limit} ảnh.`);
+      if (images.length + result.assets.length > stageLimit) throw new Error(`Chọn tối đa ${stageLimit} ảnh${addMode ? ' nữa (tổng ' + limit + ' ảnh/phiên)' : ''}.`);
       const additions = result.assets.map(asset => {
         const mimeType = asset.file?.type || asset.mimeType || '';
         const extension = ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' } as Record<string, string>)[mimeType];
@@ -107,8 +114,28 @@ function ScanWorkspaceSession({ kind }: { kind: ScanKind }) {
       if (createKey.current?.fingerprint !== fingerprint) createKey.current = { fingerprint, key: createOperationKey('scan-create') };
       const created = await mutations.create.mutateAsync({ assetIds, operationKey: createKey.current.key });
       router.setParams({ jobId: created.id });
-      setConfirmation(null); setProgress('');
+      setAddMode(false); setConfirmation(null); setProgress('');
     } catch (value) { setError(creating ? scanningErrorMessage(value) : storageErrorMessage(value)); }
+    finally { setStarting(false); }
+  };
+
+  const addToJob = async () => {
+    if (!images.length || busy || !jobId) return;
+    setStarting(true); setError('');
+    let attaching = false;
+    try {
+      const assetIds: string[] = [];
+      for (const [index, entry] of images.entries()) {
+        if (useAuthStore.getState().user?.id !== owner) throw new Error('Phiên đăng nhập đã thay đổi.');
+        const asset = entry.asset ?? await upload.mutateAsync({ input: { kind: kind === 'fridge' ? 'FRIDGE_IMAGE' : 'RECEIPT_IMAGE', image: entry.image, idempotencyKey: entry.attempt.key }, attempt: entry.attempt, onProgress: percent => setProgress(`Ảnh ${index + 1}/${images.length}: ${percent}%`) });
+        entry.asset = asset;
+        setImages(current => current.map(item => item.id === entry.id ? { ...item, asset } : item));
+        assetIds.push(asset.id);
+      }
+      attaching = true;
+      await mutations.addImages.mutateAsync({ id: jobId, assetIds });
+      setImages([]); setAddMode(false); setProgress(''); setConfirmation(null);
+    } catch (value) { setError(attaching ? scanningErrorMessage(value) : storageErrorMessage(value)); }
     finally { setStarting(false); }
   };
 
@@ -173,7 +200,7 @@ function ScanWorkspaceSession({ kind }: { kind: ScanKind }) {
     const copy = [...current]; [copy[index], copy[index + offset]] = [copy[index + offset], copy[index]]; return copy;
   });
 
-  if (!DEV_SCANS_ENABLED) return <SiteScreen><View className="gap-4 p-5"><Text className="text-xl font-bold text-foreground">{title}</Text><Text className="text-muted-foreground">Chức năng quét chưa khả dụng ở môi trường này.</Text></View></SiteScreen>;
+  if (!SCANS_ENABLED) return <SiteScreen><View className="gap-4 p-5"><Text className="text-xl font-bold text-foreground">{title}</Text><Text className="text-muted-foreground">Tính năng quét đang tạm tắt. Vui lòng thử lại sau.</Text></View></SiteScreen>;
   if (!authenticated) return <SiteScreen><View className="gap-4 p-5"><Text className="text-xl font-bold text-foreground">{title}</Text><Link href="/(auth)/login" asChild><PrimaryButton label="Đăng nhập" /></Link></View></SiteScreen>;
 
   return (
@@ -182,22 +209,32 @@ function ScanWorkspaceSession({ kind }: { kind: ScanKind }) {
         <AllowanceNotice feature={kind === 'fridge' ? 'FRIDGE' : 'RECEIPT'} />
         {kind === 'fridge' ? <FreshnessBanner disclaimer={job?.disclaimer} /> : null}
         {jobId ? <Text className="text-2xl font-bold text-foreground">{title}</Text> : <ScanIntro kind={kind} />}
-        <Text className="text-sm text-muted-foreground">{SCAN_PROVIDER_MODE === 'fake' ? 'DEV · Kết quả mẫu, không phải nhận diện ảnh thật.' : 'DEV · Provider cấu hình: OpenAI'}</Text>
+        {__DEV__ || SCAN_PROVIDER_MODE === 'fake' ? <Text className="text-sm text-muted-foreground">{SCAN_PROVIDER_MODE === 'fake' ? 'DEV · Kết quả mẫu, không phải nhận diện ảnh thật.' : 'DEV · Provider cấu hình: OpenAI'}</Text> : null}
         {!jobId ? (
           <ScanUploadStage kind={kind} limit={limit} busy={busy} starting={starting} progress={progress} permissionDenied={permissionDenied}
             images={images.map(entry => ({ id: entry.id, uri: entry.image.uri, name: entry.image.name, bytes: entry.image.bytes }))}
             onPick={camera => void pick(camera)} onMove={move} onRemove={id => setImages(current => current.filter(item => item.id !== id))}
             onClear={() => setImages([])} onStart={() => void start()} onOpenSettings={() => void Linking.openSettings()} />
-        ) : query.isPending ? <LoadingState /> : query.isError ? <ErrorState description={scanningErrorMessage(query.error)} onRetry={() => void query.refetch()} /> : job ? (
+        ) : query.isPending ? <LoadingState /> : query.isError ? <ErrorState description={scanningErrorMessage(query.error)} onRetry={() => void query.refetch()} /> : job && addMode ? (
+          <View className="gap-3">
+            <Text className="text-sm text-muted-foreground">Thêm ảnh vào phiên này ({job.images.length}/{limit} ảnh hiện có). Kết quả nhận diện sẽ được cập nhật sau khi gửi.</Text>
+            <ScanUploadStage kind={kind} limit={stageLimit} busy={busy} starting={starting} progress={progress} permissionDenied={permissionDenied}
+              images={images.map(entry => ({ id: entry.id, uri: entry.image.uri, name: entry.image.name, bytes: entry.image.bytes }))}
+              onPick={camera => void pick(camera)} onMove={move} onRemove={id => setImages(current => current.filter(item => item.id !== id))}
+              onClear={() => setImages([])} onStart={() => void addToJob()} onOpenSettings={() => void Linking.openSettings()} />
+            <PrimaryButton label="Quay lại danh sách" variant="outline" disabled={busy} onPress={() => { setAddMode(false); setImages([]); setError(''); setProgress(''); }} />
+          </View>
+        ) : job ? (
           <ScanReview job={job} busy={busy} error={error}
             reviewDecision={reviewDecision} onReviewDecision={setPickedDecision} onRestore={item => void restoreExcluded(item)}
             onSave={drafts => void saveReview(drafts)}
             onEdit={candidate => { setError(''); setEditing(candidate); }}
             onRetry={() => void retry()} onCancel={() => { setError(''); setCancelling(true); }} />
         ) : null}
+        {jobId && job && !addMode && canAddImages ? <PrimaryButton label={`Thêm ảnh (${job.images.length}/${limit})`} variant="outline" disabled={busy} icon={<Plus size={16} color={colors.foreground} />} onPress={() => { setError(''); setImages([]); setAddMode(true); }} /> : null}
         {confirmation ? <View className="gap-2"><Text className="font-semibold text-foreground">Đã cập nhật tủ bếp</Text>{confirmation.changes.map(change => <Text key={change.candidateId} className="text-sm text-foreground">{change.action === 'CREATED' ? 'Đã thêm' : 'Đã cập nhật'}: {change.name} · {change.quantity} {change.unit}</Text>)}{confirmation.duplicateCount > 0 ? <Text className="text-xs text-muted-foreground">Đã bỏ qua {confirmation.duplicateCount} dòng vì đã có trong hóa đơn khác của bạn, không cộng thêm vào Tủ bếp.</Text> : null}</View> : null}
         {error && !(job && canEditScan(job)) ? <Text accessibilityRole="alert" className="text-sm text-destructive">{error}</Text> : null}
-        {jobId ? <PrimaryButton label="Quét ảnh mới" variant="outline" disabled={busy || (job && !['CONFIRMED', 'CANCELLED', 'FAILED'].includes(job.status))} onPress={() => { router.setParams({ jobId: '' }); setImages([]); setConfirmation(null); setPickedDecision(null); setError(''); }} /> : null}
+        {jobId ? <PrimaryButton label="Quét ảnh mới" variant="outline" disabled={busy || (job && !['CONFIRMED', 'CANCELLED', 'FAILED'].includes(job.status))} onPress={() => { router.setParams({ jobId: '' }); setAddMode(false); setImages([]); setConfirmation(null); setPickedDecision(null); setError(''); }} /> : null}
       </View>
       {editing ? <CandidateEditor key={`${editing.id}:${editing.version}`} candidate={editing} kind={kind} error={error} busy={mutations.edit.isPending} onClose={() => setEditing(null)} onSave={values => void save(editing, values)} /> : null}
       {cancelling ? <FormSheet title="Hủy tác vụ này?" busy={mutations.cancel.isPending} onClose={() => setCancelling(false)} variant="popup"><Text className="text-sm text-muted-foreground">Ảnh đã tải lên vẫn được tính vào dung lượng tài khoản.</Text>{error ? <Text className="text-sm text-destructive">{error}</Text> : null}<PrimaryButton label="Xác nhận hủy" loading={mutations.cancel.isPending} onPress={() => void cancel()} /></FormSheet> : null}

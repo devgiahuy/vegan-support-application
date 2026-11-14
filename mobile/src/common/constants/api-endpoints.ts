@@ -10,6 +10,7 @@ export const API_ENDPOINTS = {
     fridge: {
       JOBS: "/ingredient-recognition/jobs",
       JOB: (id: string) => `/ingredient-recognition/jobs/${id}`,
+      ADD_IMAGES: (id: string) => `/ingredient-recognition/jobs/${id}/images`,
       CANDIDATE: (id: string, candidateId: string) =>
         `/ingredient-recognition/jobs/${id}/candidates/${candidateId}`,
       CONFIRM: (id: string) => `/ingredient-recognition/jobs/${id}/confirm`,
@@ -19,6 +20,7 @@ export const API_ENDPOINTS = {
     receipt: {
       JOBS: "/receipt-jobs",
       JOB: (id: string) => `/receipt-jobs/${id}`,
+      ADD_IMAGES: (id: string) => `/receipt-jobs/${id}/images`,
       CANDIDATE: (id: string, candidateId: string) =>
         `/receipt-jobs/${id}/candidates/${candidateId}`,
       CONFIRM: (id: string) => `/receipt-jobs/${id}/confirm`,

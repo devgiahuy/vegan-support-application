@@ -59,7 +59,7 @@ function OriginBadge({ line }: { line: NutrientLine }) {
   );
 }
 
-function KeyMetric({ label, value }: { label: string; value: string }) {
+export function KeyMetric({ label, value }: { label: string; value: string }) {
   return (
     <View className="min-w-[30%] flex-1 items-center rounded-xl border border-border bg-muted/30 p-2.5">
       <Text className="text-[11px] text-muted-foreground">{label}</Text>
@@ -68,7 +68,7 @@ function KeyMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MacroBar({ estimate }: { estimate: RecipeNutritionEstimate }) {
+export function MacroBar({ estimate }: { estimate: RecipeNutritionEstimate }) {
   const split = estimate.macroSplit;
   if (!split) return null;
   const segments = [
@@ -98,7 +98,7 @@ function MacroBar({ estimate }: { estimate: RecipeNutritionEstimate }) {
   );
 }
 
-function Collapsible({ title, children }: { title: string; children: React.ReactNode }) {
+export function Collapsible({ title, children }: { title: string; children: React.ReactNode }) {
   const colors = useIconColors();
   const [open, setOpen] = React.useState(false);
   return (

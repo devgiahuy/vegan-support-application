@@ -70,6 +70,7 @@ export default function EditRecipeScreen() {
         <Text className="text-2xl font-extrabold tracking-tight text-foreground">Chỉnh sửa công thức</Text>
 
         <RecipeForm
+          postId={recipe.id}
           initial={{
             title: recipe.title,
             excerpt: recipe.description,

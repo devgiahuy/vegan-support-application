@@ -52,3 +52,10 @@ export function useRecalculateNutritionMutation(postId: string) {
     },
   });
 }
+
+/** Xem trước ước tính xác định, không lưu và không đổi bản chính thức. */
+export function usePreviewNutritionMutation(postId: string) {
+  return useMutation({
+    mutationFn: (vars: { useAiFallback: boolean }) => recipeNutritionApi.preview(postId, vars.useAiFallback),
+  });
+}

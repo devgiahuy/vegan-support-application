@@ -202,9 +202,21 @@ export function ScanReview({ job, busy, error, reviewDecision, onReviewDecision,
           return (
             <View key={draft.id} className={cn('gap-3 rounded-xl border p-3.5', draft.rejected ? 'border-dashed border-border bg-muted/30 opacity-60' : 'border-border bg-card')}>
               <View className="gap-1.5">
-                <TextInput accessibilityLabel={`Tên ${candidate.name}`} style={{ marginLeft: -8 }} textAlignVertical="center" editable={!locked} value={draft.name} placeholder="Tên nguyên liệu..." placeholderTextColor={colors.mutedForeground}
-                  onChangeText={value => update(draft.id, { name: value })} maxLength={160}
-                  className={cn('h-12 rounded-lg border border-transparent bg-transparent px-2 py-0 text-base font-semibold focus:border-input', draft.rejected ? 'text-muted-foreground line-through' : 'text-foreground')} />
+                <View className="flex-row items-center gap-1">
+                  <TextInput accessibilityLabel={`Tên ${candidate.name}`} style={{ marginLeft: -8 }} textAlignVertical="center" editable={!locked} value={draft.name} placeholder="Tên nguyên liệu..." placeholderTextColor={colors.mutedForeground}
+                    onChangeText={value => update(draft.id, { name: value })} maxLength={160}
+                    className={cn('h-12 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-0 text-base font-semibold focus:border-input', draft.rejected ? 'text-muted-foreground line-through' : 'text-foreground')} />
+                {editable ? (
+                  <View className="shrink-0 flex-row items-center">
+                    <Pressable accessibilityRole="button" accessibilityLabel={`Chỉnh sửa nâng cao ${candidate.name}`} disabled={busy} onPress={() => onEdit({ ...candidate, name: draft.name.trim() || candidate.name, unit: draft.unit.trim() || candidate.unit, quantity: Number(draft.quantity.replace(',', '.')) > 0 ? Number(draft.quantity.replace(',', '.')) : candidate.quantity })} className="h-10 w-10 items-center justify-center"><Pencil size={18} color={colors.mutedForeground} /></Pressable>
+                    {draft.rejected ? (
+                      <Pressable accessibilityRole="button" accessibilityLabel={`Khôi phục ${candidate.name}`} disabled={busy} onPress={() => update(draft.id, { rejected: false })} className="h-10 flex-row items-center gap-1 rounded-lg border border-border px-2.5"><RotateCcw size={14} color={colors.primary} /><Text className="text-xs text-emerald-600 dark:text-emerald-400">Khôi phục</Text></Pressable>
+                    ) : (
+                      <Pressable accessibilityRole="button" accessibilityLabel={`Loại bỏ ${candidate.name}`} disabled={busy} onPress={() => update(draft.id, { rejected: true })} className="h-10 w-10 items-center justify-center"><Trash2 size={18} color={colors.mutedForeground} /></Pressable>
+                    )}
+                  </View>
+              ) : null}
+                </View>
                 {!fridge ? (
                   <View className="flex-row flex-wrap items-center justify-between gap-x-4 gap-y-1.5 pl-0.5">
                     <View className="shrink flex-row items-center gap-1.5">
@@ -245,16 +257,6 @@ export function ScanReview({ job, busy, error, reviewDecision, onReviewDecision,
                     maxLength={40} autoCapitalize="none" onFocus={() => setUnitFocus(draft.id)} onBlur={() => setUnitFocus(current => current === draft.id ? null : current)}
                     onChangeText={value => update(draft.id, { unit: value })} className={inputClass} />
                 </View>
-                {editable ? (
-                  <View className="flex-row items-center">
-                    <Pressable accessibilityRole="button" accessibilityLabel={`Chỉnh sửa nâng cao ${candidate.name}`} disabled={busy} onPress={() => onEdit({ ...candidate, name: draft.name.trim() || candidate.name, unit: draft.unit.trim() || candidate.unit, quantity: Number(draft.quantity.replace(',', '.')) > 0 ? Number(draft.quantity.replace(',', '.')) : candidate.quantity })} className="h-10 w-10 items-center justify-center"><Pencil size={18} color={colors.mutedForeground} /></Pressable>
-                    {draft.rejected ? (
-                      <Pressable accessibilityRole="button" accessibilityLabel={`Khôi phục ${candidate.name}`} disabled={busy} onPress={() => update(draft.id, { rejected: false })} className="h-10 flex-row items-center gap-1 rounded-lg border border-border px-2.5"><RotateCcw size={14} color={colors.primary} /><Text className="text-xs text-emerald-600 dark:text-emerald-400">Khôi phục</Text></Pressable>
-                    ) : (
-                      <Pressable accessibilityRole="button" accessibilityLabel={`Loại bỏ ${candidate.name}`} disabled={busy} onPress={() => update(draft.id, { rejected: true })} className="h-10 w-10 items-center justify-center"><Trash2 size={18} color={colors.mutedForeground} /></Pressable>
-                    )}
-                  </View>
-                ) : null}
               </View>
               {unitFocus === draft.id ? (
                 <ScrollView horizontal keyboardShouldPersistTaps="always" showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>

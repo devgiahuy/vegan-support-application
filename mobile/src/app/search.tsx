@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { Link, type Href, useLocalSearchParams } from 'expo-router';
-import { Search as SearchIcon, X } from 'lucide-react-native';
+import { ArrowUpDown, Search as SearchIcon, X } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { LoadMoreButton } from '@/components/shared/load-more-button';
@@ -26,6 +26,19 @@ const TABS: { value: Tab; label: string }[] = [
   { value: 'videos', label: 'Video' },
 ];
 
+type SortBy = 'relevance' | 'newest';
+
+const SORT_OPTIONS: { value: SortBy; label: string }[] = [
+  { value: 'relevance', label: 'Phù hợp nhất' },
+  { value: 'newest', label: 'Mới nhất' },
+];
+
+/** "Mới nhất" sắp theo ngày xuất bản trên các kết quả đã tải; "Phù hợp nhất" giữ thứ tự backend trả về. */
+function sortItems<T extends { publishedAt: Date | null }>(items: T[], sortBy: SortBy): T[] {
+  if (sortBy !== 'newest') return items;
+  return [...items].sort((a, b) => (b.publishedAt?.getTime() ?? 0) - (a.publishedAt?.getTime() ?? 0));
+}
+
 const POPULAR_KEYWORDS = [
   'Phở nấm',
   'Vitamin B12',
@@ -45,6 +58,7 @@ export default function SearchScreen() {
   const [query, setQuery] = React.useState(params.q ?? '');
   const [submittedQuery, setSubmittedQuery] = React.useState(params.q ?? '');
   const [tab, setTab] = React.useState<Tab>('all');
+  const [sortBy, setSortBy] = React.useState<SortBy>('relevance');
   const trackEvent = useTrackBehaviorEvent();
 
   const hasQuery = submittedQuery.trim().length > 0;
@@ -62,9 +76,18 @@ export default function SearchScreen() {
   const recipesPages = recipesQuery.data?.pages;
   const articlesPages = articlesQuery.data?.pages;
   const videosPages = videosQuery.data?.pages;
-  const recipes = recipesActive ? recipesPages?.flatMap((page) => page.items) ?? [] : [];
-  const articles = articlesActive ? articlesPages?.flatMap((page) => page.items) ?? [] : [];
-  const videos = videosActive ? videosPages?.flatMap((page) => page.items) ?? [] : [];
+  const recipes = React.useMemo(
+    () => sortItems(recipesActive ? recipesPages?.flatMap((page) => page.items) ?? [] : [], sortBy),
+    [recipesActive, recipesPages, sortBy]
+  );
+  const articles = React.useMemo(
+    () => sortItems(articlesActive ? articlesPages?.flatMap((page) => page.items) ?? [] : [], sortBy),
+    [articlesActive, articlesPages, sortBy]
+  );
+  const videos = React.useMemo(
+    () => sortItems(videosActive ? videosPages?.flatMap((page) => page.items) ?? [] : [], sortBy),
+    [videosActive, videosPages, sortBy]
+  );
   const isRecipesLoading = recipesActive && recipesQuery.isLoading;
   const isArticlesLoading = articlesActive && articlesQuery.isLoading;
   const isVideosLoading = videosActive && videosQuery.isLoading;
@@ -165,6 +188,25 @@ export default function SearchScreen() {
                         selected ? 'font-semibold text-primary-foreground' : 'text-muted-foreground'
                       )}>
                       {t.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <View className="flex-row flex-wrap items-center gap-2">
+              <ArrowUpDown size={14} color={colors.primary} />
+              {SORT_OPTIONS.map((option) => {
+                const selected = sortBy === option.value;
+                return (
+                  <Pressable
+                    key={option.value}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    onPress={() => setSortBy(option.value)}
+                    className={cn('rounded-full border px-3 py-1.5', selected ? 'border-primary bg-primary/10' : 'border-border bg-card')}>
+                    <Text className={cn('text-xs font-medium', selected ? 'font-semibold text-primary' : 'text-muted-foreground')}>
+                      {option.label}
                     </Text>
                   </Pressable>
                 );

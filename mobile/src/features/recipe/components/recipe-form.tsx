@@ -1,8 +1,9 @@
 import * as React from 'react';
 import { Alert, Text, View } from 'react-native';
-import { ArrowLeft, ArrowRight, CircleAlert, Send } from 'lucide-react-native';
+import { Activity, ArrowLeft, ArrowRight, CircleAlert, Send } from 'lucide-react-native';
 
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { RecipeNutritionPreviewSheet } from '@/features/recipe-nutrition/components/recipe-nutrition-preview-sheet';
 import { CategoryType } from '@/common/enums';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { buildCategoryOptions } from '@/features/category/utils/category-options';
@@ -60,6 +61,7 @@ export function RecipeForm({
   onSubmit,
   enableAi = false,
   onStepChange,
+  postId,
 }: {
   initial?: RecipeFormInitial;
   submitLabel: string;
@@ -68,6 +70,8 @@ export function RecipeForm({
   enableAi?: boolean;
   /** Gọi khi đổi bước để màn hình cuộn lên đầu form. */
   onStepChange?: () => void;
+  /** Có khi sửa công thức đã lưu: cho phép xem trước dinh dưỡng của bản đã lưu. */
+  postId?: string;
 }) {
   const colors = useIconColors();
   const keySeq = React.useRef(0);
@@ -78,6 +82,7 @@ export function RecipeForm({
   const [attempted, setAttempted] = React.useState<ReadonlySet<RecipeContentStep>>(new Set());
   const [notice, setNotice] = React.useState('');
   const [submitError, setSubmitError] = React.useState('');
+  const [previewOpen, setPreviewOpen] = React.useState(false);
   const [cover, setCover] = React.useState<PickedImage | null>(null);
   const [coverBusy, setCoverBusy] = React.useState(false);
 
@@ -307,6 +312,16 @@ export function RecipeForm({
             onFixIssue={fixIssue}
           />
         ) : null}
+
+        {step === 'review' && postId ? (
+          <PrimaryButton
+            label="Xem trước dinh dưỡng"
+            variant="outline"
+            icon={<Activity size={16} color={colors.foreground} />}
+            onPress={() => setPreviewOpen(true)}
+          />
+        ) : null}
+        {previewOpen && postId ? <RecipeNutritionPreviewSheet postId={postId} onClose={() => setPreviewOpen(false)} /> : null}
 
         <View className="gap-2 border-t border-border pt-4">
           {step === 'review' ? (

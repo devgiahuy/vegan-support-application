@@ -18,6 +18,7 @@ import { SiteScreen } from '@/components/layout/site-screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/state-views';
 import { DropdownField, type DropdownOption } from '@/components/ui/dropdown-field';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { PantryAdjustmentSheet } from '@/features/pantry/components/pantry-adjustment-sheet';
 import { PantryItemCard } from '@/features/pantry/components/pantry-item-card';
 import {
   PantryCreateSheet,
@@ -38,7 +39,7 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useIconColors } from '@/lib/theme-colors';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
-import { DEV_SCANS_ENABLED } from '@/features/scanning/lib/scan-access';
+import { SCANS_ENABLED } from '@/features/scanning/lib/scan-access';
 
 type Tab = 'all' | 'expiring' | 'expired';
 type SourceFilter = 'ALL' | PantryItemSource;
@@ -278,7 +279,7 @@ export default function PantryScreen() {
           onPress={() => setCreating(true)}
         />
         <View className="flex-row gap-2">
-          {DEV_SCANS_ENABLED ? (
+          {SCANS_ENABLED ? (
             <>
               <Link href={'/receipt-scan' as Href} asChild>
                 <HeaderAction label="Quét hóa đơn" icon={Receipt} onPress={() => undefined} />
@@ -459,12 +460,22 @@ export default function PantryScreen() {
         ) : null}
       </View>
       {creating ? <PantryCreateSheet onClose={() => setCreating(false)} /> : null}
-      {active ? (
+      {active && active.mode === 'QUANTITY' ? (
+        <PantryAdjustmentSheet
+          key={`${active.item.id}:${active.type}`}
+          item={active.item}
+          initialType={active.type}
+          onClose={() => {
+            setActive(null);
+            setSelected([]);
+          }}
+        />
+      ) : null}
+      {active && active.mode !== 'QUANTITY' ? (
         <PantryItemSheet
           key={`${active.item.id}:${active.mode}:${active.type}`}
           item={active.item}
-          initialMode={active.mode}
-          initialType={active.type}
+          onAdjust={(value) => setActive({ item: value, mode: 'QUANTITY', type: 'CONSUME' })}
           onClose={() => {
             setActive(null);
             setSelected([]);

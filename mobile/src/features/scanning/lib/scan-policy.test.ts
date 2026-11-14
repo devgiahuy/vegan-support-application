@@ -1,12 +1,12 @@
 /// <reference types="node" />
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { isDevScanEnabled, scanProviderMode } from './scan-policy';
+import { isScanEnabled, scanProviderMode } from './scan-policy';
 
-test('development scans require explicit opt-in and cannot run in production', () => {
-  assert.equal(isDevScanEnabled(true, 'true'), true);
-  for (const flag of [undefined, '', 'false', 'TRUE']) assert.equal(isDevScanEnabled(true, flag), false);
-  assert.equal(isDevScanEnabled(false, 'true'), false);
+test('scans are enabled by default and only an explicit kill switch disables them', () => {
+  assert.equal(isScanEnabled(undefined), true);
+  for (const flag of ['', 'false', 'TRUE', '1']) assert.equal(isScanEnabled(flag), true);
+  assert.equal(isScanEnabled('true'), false);
 });
 
 test('real provider label is the default; fake mode must be explicitly configured', () => {
