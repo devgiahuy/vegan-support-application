@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Đồng nhất kết quả theo bán kính — Updated 2026-11-14
+
+SerpApi radius <=5km dùng chung bounded snapshot và lọc khoảng cách thật; partial retry giữ những quán đã tìm được. FE làm mới partial query khi quay lại và phân biệt lỗi dữ liệu với không có quán. Key mới của người dùng đã nạp vào runtime; API/browser thật quanh địa chỉ công khai Chi Cao đạt 15→12→39→12 quán cho 3→1→5→1km, nested IDs và chọn Chi Cao trên map 1km. Backend gates/OpenAPI/sync, chín isolated groups, FE typecheck/scoped lint/864 tests/build đạt. Truncation vẫn hiển thị, không cam kết phủ hết quán ngoài thực tế; không đổi % scaffold/mobile/schema/seed. Chi tiết tại WORK-LOG.
+
 ## Bán kính tìm quán 3–5 km — Updated 2026-11-14
 
 Dropdown web mặc định 3km, tối đa 5km; các mức cũ vượt giới hạn tự về 3km, lựa chọn hợp lệ được giữ. Mapper/map default/nút nới bán kính dùng cùng cấu hình. Typecheck/scoped lint, 152 restaurant tests, build và browser selector đạt; backend/mobile/bounds-search giữ nguyên, không đổi % scaffold. Chi tiết tại WORK-LOG.

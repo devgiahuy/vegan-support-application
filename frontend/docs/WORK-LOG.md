@@ -1,5 +1,14 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-14] — Giữ quán gần khi đổi bán kính 1–3–5 km
+
+- **Yêu cầu:** Tăng 3→5km mất quán, giảm 3→1km mất quán Chi Cao cách 132m; tiếp tục push và merge PR #59 vào dev.
+- **Nguyên nhân:** Mỗi radius gọi ranking SerpApi độc lập và partial response không được giữ, nên các tập kết quả không lồng nhau. Khi kiểm tra còn phát hiện key cũ hết lượt (HTTP429); người dùng cập nhật key mới, đã khởi động lại backend để nạp key. Không đưa key vào mã nguồn hoặc log.
+- **Backend:** Radius <=5km dùng chung pool 5km theo center/phrase/explicit filters; lấy trang đầu ba viewport 1/3/5km song song, cùng deadline, tối đa chín calls nearby. Giữ tối đa 60 IDs/phrase, service cap 1000 internal/200 external trước lọc đúng radius/bounds. Snapshot RAM tối đa 5 phút/100 keys; partial không rỗng retry sau 15 giây và merge những quán đã biết, không gia hạn expiry; lỗi retry giữ dữ liệu và cờ unavailable. Initial empty/failure không cache. Wider-radius paging, explicit dietary suppression, advanced filters, consent, attribution và pagination mặc định giữ tương thích. Không thêm persistence/schema/seed hay backend test infrastructure. Filtered keyword search dùng tối đa ba first-page calls thay vì một.
+- **Frontend:** Key v5 loại cache cũ; partial query stale ngay khi quay lại. Khi kết quả rỗng do nhà cung cấp lỗi, giải thích chưa tải được dữ liệu thay vì kết luận không có quán hoặc khuyên tăng bán kính. DTO/Model/Mapper và request shape không đổi; Swagger/catalog đã sync từ served schema. Docs plan 4.23, integration 4.77, phases 3.25.
+- **Kiểm chứng:** Backend lint/typecheck/build/OpenAPI, FE typecheck/scoped ESLint, 110 files/864 tests, production build 47 routes và diff check đạt. Chín nhóm assertions cô lập ngoài repo kiểm tra nested IDs, quán 132m, request coalescing, partial retry/merge/fallback/expiry, empty không cache, filter/isolation, wider paging, strict radius/consent/suppression. GitNexus không có index repo, dùng source trace; không tạo index hoặc hạ tầng test.
+- **Dữ liệu thật và browser:** Dùng tọa độ/địa chỉ công khai Chi Cao (không dùng GPS cá nhân), API và browser cùng xác nhận 3→1→5→1km = 15→12→39→12 quán; Chi Cao vẫn có trong 1km, IDs 1km ⊆ 3km ⊆ 5km, quay lại giữ đủ 12. Chọn Chi Cao trên map ở 1km thành công, map báo 12 quán. Ảnh `/tmp/vegan-radius-consistency/browser-1km.png`; API/DOM assertions trong cùng thư mục. Giữ tab kết quả, không đổi viewport. Không kiểm tra GPS/native mobile. SerpApi vẫn báo truncated: đây là toàn bộ kết quả tìm được trong snapshot, không phải cam kết mọi quán ngoài thực tế. Dữ liệu có thể thay đổi sau khi snapshot hết hạn. Không chạy lại full frontend lint do lỗi nền đã ghi ở các task trước; lint các file thay đổi đạt. Không đổi % scaffold hoặc phase status.
+
 ## [2026-11-14] — Bán kính web mặc định 3 km, tối đa 5 km
 
 - **Yêu cầu:** Giới hạn dropdown bán kính tìm quán tối đa 5 km và mặc định 3 km.

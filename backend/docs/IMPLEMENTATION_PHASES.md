@@ -1,12 +1,14 @@
 # Backend Implementation Phases
 
-**Version:** 3.24
+**Version:** 3.25
 
 **Updated:** 2026-11-14
 
 **Stack:** Node.js · Express · TypeScript · MongoDB replica set · Prisma · Zod · OpenAPI
 
 **Current baseline:** Phases 00–20 and 23–26 completed; Phases 21–22 and 27 are in progress. OpenAI image adapters are implemented for Phase 21/22, but live Vietnamese image and receipt validation remains before production readiness.
+
+**Phase 24 radius-consistency maintenance — 2026-11-14:** Fix same-center 1/3/5km discovery losing nearby places by using one bounded 5km SerpApi snapshot, first pages of three nested viewports, exact local radius filtering and retained partial observations with retry/expiry. Keep the nine-call nearby ceiling, explicit advanced filters, consent, partial/truncated metadata and no persistent content/location cache. Wider-radius clients retain bounded paging; no schema/seed/auth or phase-status change. Backend lint/typecheck/build/OpenAPI/served schema and nine isolated provider/service groups pass. Real API with the user's replacement key verifies 15→12→39→12 places at 3→1→5→1km around a public restaurant, with Chi Cao retained and nested IDs; result truncation remains visible. Integration 4.77 and frontend WORK-LOG carry consumer/browser evidence.
 
 **Phase 24 all-result maintenance — 2026-11-14:** User requests web map/list without pagination and removes the diet-type dropdown. Add optional all=true to nearby/search, returning the entire bounded discovery result with page=1 and limit=max(1,total), preserving default pagination and all provider/privacy/consent rules for other clients. No extra discovery pass, database/schema/seed/auth change or phase-status change. Backend lint/typecheck/build/OpenAPI/served schema, six isolated contract/service groups and live HTTP all-result/default-pagination checks pass. Web migration and browser proof recorded in integration 4.75 and frontend WORK-LOG.
 

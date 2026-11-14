@@ -32,8 +32,8 @@ export function retainRestaurantResults(scope: string) {
  * `all` là gốc để `invalidateQueries` xoá được mọi biến thể.
  */
 export const RESTAURANT_KEYS = {
-  // Drop cached discovery results produced by the former implicit profile filtering.
-  all: ['restaurants', 'v4'] as const,
+  // Drop results from the former independent provider search for each radius.
+  all: ['restaurants', 'v5'] as const,
   nearby: (state: RestaurantSearchState) =>
     [
       ...RESTAURANT_KEYS.all,
@@ -95,7 +95,7 @@ export function useNearbyRestaurantsQuery(state: RestaurantSearchState, enabled 
       scope,
     ],
     queryFn: ({ signal }) => restaurantApi.getNearby(state, signal),
-    staleTime: 2 * 60 * 1000,
+    staleTime: (query) => (query.state.data?.meta.externalDataUnavailable ? 0 : 2 * 60 * 1000),
     retry: 1,
     placeholderData: retainRestaurantResults(scope),
     enabled: enabled && (mode === 'NEARBY' || mode === 'BOUNDS'),
@@ -110,7 +110,7 @@ export function useRestaurantSearchQuery(state: RestaurantSearchState, enabled =
   return useQuery<RestaurantDiscoveryResult>({
     queryKey: [...RESTAURANT_KEYS.search(state), identity, scope],
     queryFn: ({ signal }) => restaurantApi.search(state, signal),
-    staleTime: 2 * 60 * 1000,
+    staleTime: (query) => (query.state.data?.meta.externalDataUnavailable ? 0 : 2 * 60 * 1000),
     retry: 1,
     placeholderData: retainRestaurantResults(scope),
     enabled: enabled && mode === 'KEYWORD',
@@ -143,7 +143,7 @@ export function useRestaurantDiscoveryQuery(state: RestaurantSearchState, enable
     ],
     queryFn: ({ signal }) =>
       isKeyword ? restaurantApi.search(state, signal) : restaurantApi.getNearby(state, signal),
-    staleTime: 2 * 60 * 1000,
+    staleTime: (query) => (query.state.data?.meta.externalDataUnavailable ? 0 : 2 * 60 * 1000),
     retry: 1,
     placeholderData: retainRestaurantResults(scope),
     enabled: enabled && mode !== null,

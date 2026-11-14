@@ -155,8 +155,13 @@ export default function RestaurantMapPage() {
   const advancedCount = countActiveAdvancedFilters(advanced);
   const hasFilters = query.length > 0 || advancedCount > 0 || radiusM !== DEFAULT_RADIUS_M;
   const emptyCopy = React.useMemo(
-    () => emptyStateCopy(resolvedMode, data?.meta.externalResultsSuppressed),
-    [resolvedMode, data?.meta.externalResultsSuppressed]
+    () =>
+      emptyStateCopy(
+        resolvedMode,
+        data?.meta.externalResultsSuppressed,
+        data?.meta.externalDataUnavailable
+      ),
+    [resolvedMode, data?.meta.externalResultsSuppressed, data?.meta.externalDataUnavailable]
   );
   const emptyActions = React.useMemo(() => {
     const handlers: Record<string, () => void> = {

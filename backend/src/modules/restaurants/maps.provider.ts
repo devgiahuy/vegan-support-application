@@ -306,7 +306,10 @@ const serpApiResponseSchema = z.object({
 export class SerpApiMapsProvider implements MapsProvider {
   readonly name = 'SERPAPI';
   private readonly searchCacheTtlMs = 5 * 60_000;
-  private readonly searchCache = new Map<string, { expiresAt: number; result: MapsSearchResult }>();
+  private readonly searchCache = new Map<
+    string,
+    { expiresAt: number; retryAt: number; result: MapsSearchResult }
+  >();
   private readonly pendingSearches = new Map<string, Promise<MapsSearchResult>>();
 
   constructor(
@@ -430,32 +433,67 @@ export class SerpApiMapsProvider implements MapsProvider {
     radiusMeters: number,
     filters?: MapsSearchFilters,
   ): Promise<MapsSearchResult> {
-    const discoveryRadiusMeters = radiusMeters;
+    // All nearby radius choices share one candidate pool; radius is a local filter,
+    // not a different provider ranking that could hide an already discovered place.
+    const discoveryRadiusMeters = Math.max(5000, radiusMeters);
     const cacheKey = JSON.stringify({
       query,
-      lat: lat.toFixed(5),
-      lng: lng.toFixed(5),
+      lat,
+      lng,
       radiusMeters: discoveryRadiusMeters,
       filters: filters ?? {},
     });
-    const cached = this.searchCache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) return cached.result;
+    const filterRadius = (result: MapsSearchResult): MapsSearchResult => ({
+      ...result,
+      places: result.places.filter(
+        (place) => distanceMeters(lat, lng, place.latitude, place.longitude) <= radiusMeters,
+      ),
+    });
+    const cachedEntry = this.searchCache.get(cacheKey);
+    const cached = cachedEntry && cachedEntry.expiresAt > Date.now() ? cachedEntry : undefined;
+    if (cached && cached.retryAt > Date.now()) return filterRadius(cached.result);
     const pending = this.pendingSearches.get(cacheKey);
-    if (pending) return pending;
-    const search = this.searchUncached(query, lat, lng, discoveryRadiusMeters, filters);
-    this.pendingSearches.set(cacheKey, search);
-    try {
-      const result = await search;
-      // Never turn a transient provider failure or empty response into a five-minute outage.
-      if (!result.partialFailure && result.places.length > 0) {
+    if (pending) return filterRadius(await pending);
+    const search = (async () => {
+      let result: MapsSearchResult;
+      try {
+        result = await this.searchUncached(query, lat, lng, discoveryRadiusMeters, filters);
+      } catch (error) {
+        if (!cached) throw error;
+        result = { ...cached.result, partialFailure: true };
+      }
+      // Keep successful observations during a short-lived partial snapshot. Retrying
+      // a failed viewport must not replace known nearby places with a smaller set.
+      if (discoveryRadiusMeters === 5000 && cached) {
+        const merged = new Map(cached.result.places.map((place) => [place.placeId, place]));
+        for (const place of result.places) merged.set(place.placeId, place);
+        const poolLimit = 60;
+        result = {
+          ...result,
+          places: [...merged.values()].slice(0, poolLimit),
+          truncated: result.truncated || cached.result.truncated || merged.size > poolLimit,
+        };
+      }
+      // Do not cache an initial empty/failing response. Partial nearby snapshots
+      // retry after 15 seconds, without extending the original five-minute expiry.
+      if (result.places.length > 0 && (!result.partialFailure || discoveryRadiusMeters === 5000)) {
         for (const [key, entry] of this.searchCache) {
           if (entry.expiresAt <= Date.now()) this.searchCache.delete(key);
         }
-        if (this.searchCache.size >= 100)
+        if (!this.searchCache.has(cacheKey) && this.searchCache.size >= 100)
           this.searchCache.delete(this.searchCache.keys().next().value!);
-        this.searchCache.set(cacheKey, { expiresAt: Date.now() + this.searchCacheTtlMs, result });
+        const expiresAt = cached?.expiresAt ?? Date.now() + this.searchCacheTtlMs;
+        this.searchCache.set(cacheKey, {
+          expiresAt,
+          retryAt: result.partialFailure ? Date.now() + 15_000 : expiresAt,
+          result,
+        });
       }
       return result;
+    })();
+    this.pendingSearches.set(cacheKey, search);
+    try {
+      return filterRadius(await search);
     } finally {
       this.pendingSearches.delete(cacheKey);
     }
@@ -468,6 +506,31 @@ export class SerpApiMapsProvider implements MapsProvider {
     discoveryRadiusMeters: number,
     filters?: MapsSearchFilters,
   ): Promise<MapsSearchResult> {
+    if (discoveryRadiusMeters === 5000) {
+      const signal = AbortSignal.timeout(this.timeoutMs);
+      // Fixed nested viewports improve local coverage without increasing the
+      // unfiltered request budget (three calls per phrase, nine for nearby).
+      const responses = await Promise.allSettled(
+        [1000, 3000, 5000].map((radius) =>
+          this.searchPage(query, lat, lng, radius, filters, 0, signal),
+        ),
+      );
+      const places = new Map<string, ExternalPlace>();
+      let successfulViewports = 0;
+      let truncated = false;
+      for (const response of responses) {
+        if (response.status === 'rejected') continue;
+        successfulViewports += 1;
+        truncated ||= response.value.hasNext;
+        for (const place of response.value.places) places.set(place.placeId, place);
+      }
+      if (successfulViewports === 0) throw new Error('SerpApi discovery viewports unavailable');
+      return {
+        places: [...places.values()].slice(0, 60),
+        partialFailure: successfulViewports < responses.length,
+        truncated: truncated || places.size > 60,
+      };
+    }
     const places: ExternalPlace[] = [];
     const seen = new Set<string>();
     const pageSize = 20;

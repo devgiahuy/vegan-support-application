@@ -182,8 +182,11 @@ export class RestaurantService {
         message: 'Location bounds are too large',
       });
     const text = 'q' in query ? query.q : undefined;
-    const latDelta = radiusMeters / 111_000;
-    const lngDelta = radiusMeters / Math.max(20_000, 111_000 * Math.cos((lat * Math.PI) / 180));
+    const discoveryRadiusMeters =
+      this.provider.name === 'SERPAPI' ? Math.max(5000, radiusMeters) : radiusMeters;
+    const latDelta = discoveryRadiusMeters / 111_000;
+    const lngDelta =
+      discoveryRadiusMeters / Math.max(20_000, 111_000 * Math.cos((lat * Math.PI) / 180));
     const internal = await this.prisma.restaurant.findMany({
       where: {
         status: RestaurantStatus.APPROVED,
@@ -251,7 +254,7 @@ export class RestaurantService {
         : ['chay restaurant', 'vegan restaurant', 'vegetarian restaurant'];
       const responses = await Promise.allSettled(
         providerQueries.map((providerQuery) =>
-          this.provider.search(providerQuery, lat, lng, radiusMeters, mapsFilters),
+          this.provider.search(providerQuery, lat, lng, discoveryRadiusMeters, mapsFilters),
         ),
       );
       for (const response of responses) {
@@ -262,20 +265,20 @@ export class RestaurantService {
         externalDataUnavailable ||= response.value.partialFailure;
         providerTruncated ||= response.value.truncated;
         for (const place of response.value.places) {
-          if (inArea(place.latitude, place.longitude)) {
-            if (
-              externalByPlaceId.size >= providerResultLimit &&
-              !externalByPlaceId.has(place.placeId)
-            ) {
-              providerTruncated = true;
-              continue;
-            }
-            externalByPlaceId.set(place.placeId, fromExternal(place, this.provider.name, lat, lng));
+          if (
+            externalByPlaceId.size >= providerResultLimit &&
+            !externalByPlaceId.has(place.placeId)
+          ) {
+            providerTruncated = true;
+            continue;
           }
+          externalByPlaceId.set(place.placeId, fromExternal(place, this.provider.name, lat, lng));
         }
       }
     }
-    const external = [...externalByPlaceId.values()];
+    const external = [...externalByPlaceId.values()].filter((place) =>
+      inArea(place.latitude, place.longitude),
+    );
     const result = [...selected];
     for (const candidate of external) {
       if (

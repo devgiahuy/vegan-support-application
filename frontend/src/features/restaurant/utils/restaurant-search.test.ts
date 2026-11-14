@@ -237,6 +237,16 @@ describe('sanitizeAdvancedFilters', () => {
 
 describe('emptyStateCopy', () => {
   it.each(['NEARBY', 'BOUNDS', 'KEYWORD'] as const)(
+    '%s không kết luận không có quán khi nhà cung cấp lỗi',
+    (mode) => {
+      const copy = emptyStateCopy(mode, false, true);
+      expect(copy.title).toBe('Chưa tải được kết quả tìm quán');
+      expect(copy.description).toContain('Chưa thể xác định');
+      expect(copy.actions).not.toContain('Nới bán kính');
+    }
+  );
+
+  it.each(['NEARBY', 'BOUNDS', 'KEYWORD'] as const)(
     '%s giải thích kết quả bị giới hạn bởi bộ lọc chế độ ăn đã chọn',
     (mode) => {
       const copy = emptyStateCopy(mode, true);
