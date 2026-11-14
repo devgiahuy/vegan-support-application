@@ -49728,7 +49728,7 @@
           "AI Chat"
         ],
         "summary": "Stream nutrition answer qua SSE",
-        "description": "OpenAI Responses API được bọc sau internal SSE contract. Quota chỉ consume sau provider completion; fallback, validation, moderation block, timeout, abort và partial error không consume. Khi moderation provider bị tắt hoặc không khả dụng, generated answer bị giữ lại và trả static unavailable advisory với fallback=true. Reset 00:00 Asia/Ho_Chi_Minh. Retry cùng idempotencyKey replay completed response hoặc tiếp tục an toàn mà không trừ quota hai lần.",
+        "description": "OpenAI Responses API được bọc sau internal SSE contract. Quota chỉ consume sau provider completion; fallback, validation, moderation block, timeout, abort và partial error không consume. Kiểm duyệt chạy trước sinh câu trả lời. Nếu gateway báo rõ moderation model/endpoint không được hỗ trợ, backend phân loại an toàn bằng Responses với AI_MODERATION_FALLBACK_MODEL (mặc định AI_MODEL_CHAT), strict boolean JSON và cùng timeout/abort signal. Lỗi xác thực, rate limit hoặc lỗi tạm thời khác không kích hoạt nhánh tương thích này. Khi moderation bị tắt, cả hai phương thức không khả dụng hoặc kết quả phân loại sai schema/incomplete, generated answer bị giữ lại và trả static unavailable advisory với fallback=true. Reset 00:00 Asia/Ho_Chi_Minh. Retry cùng idempotencyKey replay completed response hoặc tiếp tục an toàn mà không trừ quota hai lần.",
         "operationId": "streamChatMessage",
         "security": [
           {
@@ -65530,7 +65530,7 @@
           "Restaurants"
         ],
         "summary": "Nearby approved internal and live provider places; explicit search filters only",
-        "description": "Coordinates are explicit. DEVICE requires locationConsent=true. Personal diet preferences, allergies, ingredient exclusions and tradition rules are not read or applied to restaurant discovery. An explicitly supplied dietPattern filters reviewed internal places and suppresses unreviewed provider results. Without that filter, guests and signed-in users search the same public place sources. Live provider content must be attributed in the UI and is not evidence of dietary or allergy compatibility. Nearby keyword queries run concurrently; SerpApi shares MAPS_TIMEOUT_MS across all pages/zooms per query and retains successful pages after a later failure. Results are deduplicated, radius-filtered and paginated (limit <= 20).",
+        "description": "Coordinates are explicit. DEVICE requires locationConsent=true. Personal diet preferences, allergies, ingredient exclusions and tradition rules are not read or applied to restaurant discovery. An explicitly supplied dietPattern filters reviewed internal places and suppresses unreviewed provider results. Without that filter, guests and signed-in users search the same public place sources. Live provider content must be attributed in the UI and is not evidence of dietary or allergy compatibility. Nearby keyword queries run concurrently. SerpApi uses one viewport with map height equal to twice the requested radius and up to three pages per query, sharing MAPS_TIMEOUT_MS and retaining successful pages after a later failure. Advanced-filter queries use only the first page because provider pagination does not support these filters; further available pages set resultsTruncated=true. Results are deduplicated, radius-filtered and paginated (limit <= 20). SerpApi list and single-place search responses are both supported, including string or array category types.",
         "operationId": "nearbyRestaurants",
         "parameters": [
           {
@@ -65732,7 +65732,7 @@
           "Restaurants"
         ],
         "summary": "Search nearby restaurants and shops",
-        "description": "Only explicit query filters are applied; the caller dietary profile is ignored. An explicitly supplied dietPattern filters reviewed internal places and excludes unreviewed provider data. Provider price/rating/open filters are forwarded to SerpApi; internal records without those assertions are excluded when such filters are requested. Pagination and partial provider failure metadata match nearby discovery.",
+        "description": "Only explicit query filters are applied; the caller dietary profile is ignored. An explicitly supplied dietPattern filters reviewed internal places and excludes unreviewed provider data. Provider price/rating/open filters are forwarded to SerpApi; filtered provider requests stop after the first page and signal truncation when more pages exist. Returned provider candidates must satisfy explicit minRating locally; missing ratings are excluded. Internal records without those assertions are excluded when such filters are requested. Pagination and partial provider failure metadata match nearby discovery. SerpApi may return either a list or one place; both are normalized into the same result array.",
         "operationId": "searchRestaurants",
         "parameters": [
           {
@@ -66091,7 +66091,7 @@
           "Restaurants"
         ],
         "summary": "Get approved internal or live external place",
-        "description": "Public place details do not apply the caller dietary profile. Internal records must be APPROVED. External places resolve through the configured provider and remain dietary-unverified.",
+        "description": "Public place details do not apply the caller dietary profile. Internal records must be APPROVED. External places resolve through the configured provider and remain dietary-unverified. distanceMeters is null because this endpoint receives no search origin; it must not imply the caller is at the restaurant.",
         "operationId": "getRestaurant",
         "parameters": [
           {
@@ -66343,6 +66343,7 @@
           "Location"
         ],
         "summary": "Geocode an explicitly entered address without retaining it",
+        "description": "Resolves explicit addresses and landmarks from SerpApi list or single-place responses. Missing/invalid coordinates never fall back to a default location. A provider failure returns data=null and externalDataUnavailable=true.",
         "operationId": "geocodeAddress",
         "parameters": [
           {

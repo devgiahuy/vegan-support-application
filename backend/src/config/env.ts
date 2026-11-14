@@ -84,6 +84,10 @@ const environmentSchema = z
     ),
     AI_MODEL_CHAT: z.string().trim().min(1).max(100).default('gpt-5.6-terra'),
     AI_MODEL_MODERATION: z.string().trim().min(1).max(100).default('omni-moderation-latest'),
+    AI_MODERATION_FALLBACK_MODEL: z.preprocess(
+      (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+      z.string().trim().min(1).max(100).optional(),
+    ),
     AI_FALLBACK_MODEL: z.string().trim().min(1).max(100).default('static-fallback-v1'),
     AI_CHAT_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('chat-v1'),
     AI_NUTRITION_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('nutrition-v1'),
@@ -274,6 +278,7 @@ const environmentSchema = z
       openAiBaseUrl: environment.OPENAI_BASE_URL,
       chatModel: environment.AI_MODEL_CHAT,
       moderationModel: environment.AI_MODEL_MODERATION,
+      moderationFallbackModel: environment.AI_MODERATION_FALLBACK_MODEL ?? environment.AI_MODEL_CHAT,
       fallbackModel: environment.AI_FALLBACK_MODEL,
       chatTemplateVersion: environment.AI_CHAT_TEMPLATE_VERSION,
       nutritionTemplateVersion: environment.AI_NUTRITION_TEMPLATE_VERSION,

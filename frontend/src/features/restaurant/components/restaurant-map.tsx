@@ -1,13 +1,31 @@
 'use client';
 
 import * as React from 'react';
-import { Search } from 'lucide-react';
+import Link from 'next/link';
+import {
+  ArrowUpRight,
+  Layers,
+  LocateFixed,
+  MapPin,
+  RefreshCw,
+  Search,
+  Star,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { Restaurant } from '../types/restaurant.model';
-import type { RestaurantBounds } from '../types/restaurant.model';
-import { areBoundsEqual } from '../utils/restaurant-bounds';
-import { useGoogleMaps } from './use-google-maps';
-import { MapFallback } from './map-fallback';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import type { DiscoveryNotice, Restaurant, RestaurantBounds } from '../types/restaurant.model';
+import { getRestaurantDirectionsUrl } from '../utils/restaurant-links';
+import { toRestaurantMapData } from '../utils/restaurant-map-data';
+import { useRestaurantStreetMap } from './use-restaurant-street-map';
 
 export interface RestaurantMapProps {
   items: Restaurant[];
@@ -15,293 +33,279 @@ export interface RestaurantMapProps {
   radiusM?: number;
   selectedId?: string | null;
   onSelectRestaurant?: (id: string) => void;
-  onRadiusChange?: (radiusM: number) => void;
-  /**
-   * Báo khung vùng đang xem mỗi khi người dùng ngừng kéo/thu phóng.
-   * Parent PHẢI lưu vào ref, tuyệt đối không nối vào `queryKey` — nếu không, mỗi cử chỉ kéo
-   * chuột sẽ phát sinh một request mới (vi phạm SC-011).
-   */
+  onClearSelection?: () => void;
   onBoundsChange?: (bounds: RestaurantBounds | null) => void;
-  /** Người dùng bấm nút "Tìm trong vùng đang xem". */
   onSearchThisArea?: () => void;
-  /** Đã có khung vùng để tìm hay chưa — dùng để vô hiệu hoá nút, tránh bấm không có phản hồi. */
   canSearchThisArea?: boolean;
-  /** Đang ở chế độ tìm theo vùng → hiện nút quay lại tìm lân cận. */
   isSearchingArea?: boolean;
-  /** Trạng thái đang gọi API lấy dữ liệu. */
   isLoading?: boolean;
+  page?: number;
+  notices?: DiscoveryNotice[];
   emptyTitle?: string;
   emptyDescription?: string;
 }
 
-/**
- * Bản đồ tương tác Google Maps kèm cơ chế suy giảm êm dịm:
- * - Có SDK hợp lệ: khởi tạo map, render marker, bám theo quán được chọn.
- * - Thiếu API key / lỗi mạng / lỗi runtime: tự chuyển sang `MapFallback`, không để trống.
- */
 export function RestaurantMap({
   items,
   userLocation,
   radiusM = 5000,
   selectedId,
   onSelectRestaurant,
-  onRadiusChange,
+  onClearSelection,
   onBoundsChange,
   onSearchThisArea,
-  canSearchThisArea = true,
+  canSearchThisArea = false,
   isSearchingArea = false,
   isLoading = false,
+  page = 1,
+  notices = [],
   emptyTitle,
   emptyDescription,
 }: RestaurantMapProps) {
-  const mapRef = React.useRef<HTMLDivElement>(null);
-  const { isLoaded, loadError } = useGoogleMaps();
-  const [hasMapError, setHasMapError] = React.useState(false);
-  const googleMapInstance = React.useRef<google.maps.Map | null>(null);
-  const markersRef = React.useRef<google.maps.Marker[]>([]);
-  const radiusCircleRef = React.useRef<google.maps.Circle | null>(null);
-  const lastBoundsRef = React.useRef<RestaurantBounds | null>(null);
-
-  const handleSelect = React.useCallback(
-    (id: string) => {
-      onSelectRestaurant?.(id);
-    },
-    [onSelectRestaurant]
+  const [chooser, setChooser] = React.useState<string[] | null>(null);
+  const center = userLocation ?? { lat: 10.7725, lng: 106.698 };
+  const { containerRef, ready, error, tileWarning, retry, resetView } = useRestaurantStreetMap({
+    items,
+    center,
+    radiusM,
+    selectedId,
+    isSearchingArea,
+    onSelect: onSelectRestaurant,
+    onClearSelection,
+    onBoundsChange,
+    onCluster: setChooser,
+  });
+  const validItems = toRestaurantMapData(items).features;
+  const selected = items.find((item) => item.id === selectedId);
+  const chosenItems = chooser ? items.filter((item) => chooser.includes(item.id)) : [];
+  const warning = notices.find(
+    (notice) => notice.kind === 'UNAVAILABLE' || notice.kind === 'SUPPRESSED'
   );
-
-  // Tâm bản đồ: vị trí người dùng → quán đầu tiên có tọa độ → mặc định Bến Thành.
-  const center = React.useMemo(() => {
-    if (userLocation?.lat !== undefined && userLocation?.lng !== undefined) {
-      return userLocation;
-    }
-    const firstWithCoords = items.find((item) => item.hasCoordinates);
-    if (firstWithCoords?.lat !== null && firstWithCoords?.lat !== undefined) {
-      return { lat: firstWithCoords.lat, lng: firstWithCoords.lng ?? 0 };
-    }
-    return { lat: 10.7725, lng: 106.698 };
-  }, [userLocation, items]);
-
-  // Khởi tạo Google Map an toàn khi SDK tải xong.
-  React.useEffect(() => {
-    if (!isLoaded || !mapRef.current || typeof window.google === 'undefined' || hasMapError) return;
-
-    try {
-      if (!googleMapInstance.current) {
-        googleMapInstance.current = new window.google.maps.Map(mapRef.current, {
-          center,
-          zoom: 14,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: true,
-        });
-      } else {
-        googleMapInstance.current.setCenter(center);
-      }
-    } catch {
-      setHasMapError(true);
-    }
-  }, [isLoaded, center, hasMapError]);
-
-  // Vẽ marker. Chỉ dựng marker cho quán có tọa độ hợp lệ.
-  React.useEffect(() => {
-    if (
-      !isLoaded ||
-      !googleMapInstance.current ||
-      typeof window.google === 'undefined' ||
-      hasMapError
-    ) {
-      return;
-    }
-
-    try {
-      markersRef.current.forEach((marker) => marker.setMap(null));
-      markersRef.current = [];
-
-      const map = googleMapInstance.current;
-
-      if (userLocation?.lat !== undefined && userLocation?.lng !== undefined) {
-        markersRef.current.push(
-          new window.google.maps.Marker({
-            position: userLocation,
-            map,
-            title: 'Vị trí của bạn',
-            icon: {
-              path: window.google.maps.SymbolPath.CIRCLE,
-              scale: 8,
-              fillColor: '#22c55e',
-              fillOpacity: 1,
-              strokeColor: '#ffffff',
-              strokeWeight: 2,
-            },
-          })
-        );
-      }
-
-      items.forEach((restaurant) => {
-        if (!restaurant.hasCoordinates || restaurant.lat === null || restaurant.lng === null)
-          return;
-        const isSelected = restaurant.id === selectedId;
-        const hasRating = restaurant.rating !== null;
-        const markerSvg = hasRating
-          ? `<svg xmlns="http://www.w3.org/2000/svg" width="54" height="34" viewBox="0 0 54 34"><rect x="1" y="1" width="52" height="25" rx="12.5" fill="${isSelected ? '#166534' : '#171717'}" stroke="white" stroke-width="2"/><path d="M23 25h8l-4 7z" fill="${isSelected ? '#166534' : '#171717'}"/></svg>`
-          : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="6" fill="#171717" stroke="white" stroke-width="2"/></svg>';
-        const marker = new window.google.maps.Marker({
-          position: { lat: restaurant.lat, lng: restaurant.lng },
-          map,
-          title: restaurant.name,
-          icon: {
-            url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(markerSvg)}`,
-            scaledSize: new window.google.maps.Size(hasRating ? 54 : 16, hasRating ? 34 : 16),
-            labelOrigin: new window.google.maps.Point(27, 13),
-          },
-          ...(hasRating
-            ? {
-                label: {
-                  text: `★ ${restaurant.ratingLabel}`,
-                  color: '#ffffff',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                },
-              }
-            : {}),
-          zIndex: isSelected ? 100 : undefined,
-        });
-        marker.addListener('click', () => handleSelect(restaurant.id));
-        markersRef.current.push(marker);
-      });
-    } catch {
-      setHasMapError(true);
-    }
-  }, [isLoaded, items, userLocation, selectedId, handleSelect, hasMapError]);
-
-  // Bám theo quán đang được chọn từ danh sách (đồng bộ hai chiều).
-  React.useEffect(() => {
-    if (!selectedId || !googleMapInstance.current || !isLoaded || hasMapError) return;
-    const restaurant = items.find((item) => item.id === selectedId);
-    if (!restaurant?.hasCoordinates || restaurant.lat === null || restaurant.lng === null) return;
-    try {
-      googleMapInstance.current.panTo({ lat: restaurant.lat, lng: restaurant.lng });
-    } catch {
-      // Bỏ qua lỗi panTo; không được phép làm hỏng vòng chọn quán.
-    }
-  }, [selectedId, items, isLoaded, hasMapError]);
-
-  // Vẽ vòng tròn bán kính tìm kiếm để bản đồ phản ánh ranh giới khu vực đang tìm (FR-004),
-  // giống hệt cách `MapFallback` hiển thị. Ở chế độ tìm theo vùng thì vòng bán kính không còn ý nghĩa.
-  React.useEffect(() => {
-    const map = googleMapInstance.current;
-    if (!isLoaded || !map || typeof window.google === 'undefined' || hasMapError) return;
-    if (!userLocation || userLocation.lat === undefined || userLocation.lng === undefined) return;
-    if (isSearchingArea || radiusM <= 0) return;
-
-    try {
-      radiusCircleRef.current?.setMap(null);
-      radiusCircleRef.current = new window.google.maps.Circle({
-        map,
-        center: userLocation,
-        radius: radiusM,
-        strokeColor: '#10b981',
-        strokeOpacity: 0.5,
-        strokeWeight: 1,
-        fillColor: '#10b981',
-        fillOpacity: 0.06,
-        clickable: false,
-        zIndex: 5,
-      });
-    } catch {
-      // Không có thư viện drawing hoặc runtime lỗi: bỏ qua, marker vẫn phải hiển thị.
-    }
-
-    return () => {
-      radiusCircleRef.current?.setMap(null);
-      radiusCircleRef.current = null;
-    };
-  }, [isLoaded, hasMapError, userLocation, radiusM, isSearchingArea]);
-
-  // Báo khung vùng đang xem khi người dùng ngừng tương tác. Chỉ gọi callback, KHÔNG refetch.
-  React.useEffect(() => {
-    const map = googleMapInstance.current;
-    if (!isLoaded || !map || !onBoundsChange || hasMapError) return;
-
-    const listener = map.addListener('idle', () => {
-      try {
-        const bounds = map.getBounds();
-        if (!bounds) {
-          if (lastBoundsRef.current !== null) {
-            lastBoundsRef.current = null;
-            onBoundsChange(null);
-          }
-          return;
-        }
-        const next: RestaurantBounds = {
-          north: bounds.getNorthEast().lat(),
-          south: bounds.getSouthWest().lat(),
-          east: bounds.getNorthEast().lng(),
-          west: bounds.getSouthWest().lng(),
-        };
-        if (areBoundsEqual(lastBoundsRef.current, next)) return;
-        lastBoundsRef.current = next;
-        onBoundsChange(next);
-      } catch {
-        // Bỏ qua lỗi đọc bounds; không được phép làm hỏng vòng tương tác bản đồ.
-      }
-    });
-
-    return () => {
-      listener.remove();
-    };
-  }, [isLoaded, hasMapError, onBoundsChange]);
-
-  if (loadError || !isLoaded || hasMapError) {
-    return (
-      <MapFallback
-        items={items}
-        userLocation={userLocation}
-        radiusM={radiusM}
-        selectedId={selectedId}
-        onSelect={onSelectRestaurant}
-        onRadiusChange={onRadiusChange}
-        onBoundsChange={onBoundsChange}
-        onSearchThisArea={onSearchThisArea}
-        canSearchThisArea={canSearchThisArea}
-        isSearchingArea={isSearchingArea}
-        isLoading={isLoading}
-        emptyTitle={emptyTitle}
-        emptyDescription={emptyDescription}
-      />
-    );
-  }
+  const attribution = [
+    ...new Set(
+      items
+        .filter((item) => item.isExternal)
+        .map((item) => item.attribution)
+        .filter(Boolean)
+    ),
+  ].join(' · ');
 
   return (
-    <div className="relative size-full min-h-[400px] overflow-hidden rounded-2xl border bg-muted/20">
-      <div ref={mapRef} className="size-full" />
-      {isLoading && (
-        <div className="pointer-events-none absolute inset-x-0 top-14 z-20 flex justify-center px-3">
-          <div className="inline-flex items-center gap-2 rounded-full border bg-background/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-md backdrop-blur-xs">
-            <span className="size-2 animate-ping rounded-full bg-emerald-500" />
-            Đang tìm kiếm quán chay...
-          </div>
+    <div
+      className="restaurant-street-map relative size-full min-h-[440px] overflow-hidden rounded-2xl bg-muted"
+      role="region"
+      aria-label="Bản đồ đường phố các quán chay"
+    >
+      <div ref={containerRef} className="absolute inset-0" data-restaurant-street-map />
+      {!ready && !error && (
+        <div className="absolute inset-0 flex flex-col gap-3 bg-muted p-5" role="status">
+          <Skeleton className="h-10 w-48 motion-reduce:animate-none" />
+          <Skeleton className="min-h-64 flex-1 motion-reduce:animate-none" />
+          <p className="text-sm text-muted-foreground">Đang tải bản đồ đường phố…</p>
         </div>
       )}
-      {onSearchThisArea && (
-        <div className="absolute inset-x-0 top-3 flex justify-center px-3">
-          <Button
-            size="sm"
-            className="gap-1.5 rounded-full shadow-lg"
-            onClick={onSearchThisArea}
-            disabled={!canSearchThisArea}
-            title={
-              canSearchThisArea
-                ? 'Tìm các quán trong vùng bạn đang xem trên bản đồ'
-                : 'Hãy kéo hoặc thu phóng bản đồ để chọn vùng cần tìm'
-            }
-            aria-label="Tìm trong vùng đang xem trên bản đồ"
-          >
-            <Search className="size-3.5" aria-hidden="true" />
-            Tìm trong vùng đang xem
+      {error && (
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-background px-6 text-center"
+          role="alert"
+        >
+          <MapPin className="size-8 text-muted-foreground" aria-hidden />
+          <p className="max-w-sm text-pretty text-sm leading-relaxed">{error}</p>
+          <Button variant="outline" onClick={retry}>
+            <RefreshCw data-icon="inline-start" />
+            Tải lại bản đồ
           </Button>
+          <p className="text-xs text-muted-foreground">
+            Bạn vẫn có thể xem danh sách quán và mở chỉ đường.
+          </p>
         </div>
       )}
+      {ready && (
+        <>
+          <div className="pointer-events-none absolute inset-x-3 top-3 flex flex-col items-start gap-2 pr-14">
+            <div className="max-w-full rounded-xl bg-background px-3 py-2 shadow-md">
+              <p className="text-sm font-semibold tabular-nums">
+                {validItems.length} ghim · Trang {page}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {isLoading
+                  ? 'Đang cập nhật quán…'
+                  : 'Chạm cụm số để phóng to, chọn ghim để xem quán.'}
+              </p>
+            </div>
+            <Button
+              className="pointer-events-auto h-11 rounded-xl shadow-md"
+              size="sm"
+              onClick={onSearchThisArea}
+              disabled={!canSearchThisArea || isLoading}
+              aria-label="Tìm trong vùng đang xem trên bản đồ"
+            >
+              <Search data-icon="inline-start" />
+              {isSearchingArea ? 'Tìm lại vùng này' : 'Tìm trong vùng đang xem'}
+            </Button>
+            {!canSearchThisArea && (
+              <p className="rounded-lg bg-background px-2 py-1 text-xs text-muted-foreground shadow-sm">
+                Phóng to để thu hẹp vùng tìm kiếm.
+              </p>
+            )}
+          </div>
+          <div className="absolute right-3 top-44 flex flex-col gap-1.5">
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-11 bg-background shadow-sm"
+              onClick={resetView}
+              aria-label="Về vùng tìm kiếm"
+              title="Về vùng tìm kiếm"
+            >
+              <LocateFixed />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-11 bg-background shadow-sm"
+              onClick={() => setChooser(validItems.map((item) => item.properties.id))}
+              disabled={validItems.length === 0}
+              aria-label="Danh sách ghim trên bản đồ"
+              title="Chọn quán bằng danh sách"
+            >
+              <Layers />
+            </Button>
+          </div>
+          <div className="pointer-events-none absolute inset-x-3 bottom-16 flex flex-col gap-2 pr-0">
+            {(warning || tileWarning) && (
+              <Alert className="pointer-events-auto bg-background py-2 shadow-sm">
+                <AlertDescription
+                  className="flex items-center justify-between gap-2 text-xs"
+                  aria-label={warning?.message}
+                >
+                  <span>
+                    {warning?.kind === 'UNAVAILABLE'
+                      ? 'Một phần kết quả chưa tải được.'
+                      : warning?.kind === 'SUPPRESSED'
+                        ? 'Bộ lọc chỉ giữ quán đã được kiểm duyệt.'
+                        : 'Một phần nền bản đồ chưa tải được.'}
+                  </span>
+                  {tileWarning && (
+                    <Button variant="ghost" size="sm" onClick={retry}>
+                      Tải lại nền
+                    </Button>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+            {!isLoading && items.length === 0 && !warning && (
+              <div className="rounded-xl bg-background p-3 shadow-sm" role="status">
+                <p className="text-sm font-semibold">
+                  {emptyTitle ?? 'Chưa có quán trong kết quả này'}
+                </p>
+                <p className="mt-1 text-pretty text-xs text-muted-foreground">
+                  {emptyDescription ?? 'Di chuyển bản đồ rồi tìm lại trong vùng đang xem.'}
+                </p>
+              </div>
+            )}
+            {selected && (
+              <div className="pointer-events-auto flex flex-col gap-2 rounded-xl bg-background p-3 shadow-md">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <Link
+                      href={`/restaurants/${selected.id}`}
+                      className="line-clamp-2 text-sm font-semibold hover:underline"
+                    >
+                      {selected.name}
+                    </Link>
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                      {selected.address}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-9 shrink-0"
+                    onClick={onClearSelection}
+                    aria-label="Bỏ chọn quán"
+                  >
+                    <X />
+                  </Button>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs tabular-nums">
+                    {selected.rating !== null && (
+                      <span className="inline-flex items-center gap-1">
+                        <Star className="size-3.5" aria-hidden />
+                        {selected.ratingLabel}
+                      </span>
+                    )}
+                    {selected.distanceLabel && <span>{selected.distanceLabel}</span>}
+                  </div>
+                  <Button asChild size="sm" className="h-10">
+                    <a
+                      href={getRestaurantDirectionsUrl(selected)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Chỉ đường
+                      <ArrowUpRight data-icon="inline-end" />
+                    </a>
+                  </Button>
+                </div>
+                {selected.requiresDietaryWarning && (
+                  <p className="text-xs text-muted-foreground">
+                    Nhãn ăn chay chưa được kiểm duyệt. Hãy xác nhận với quán.
+                  </p>
+                )}
+              </div>
+            )}
+            {attribution && (
+              <p className="self-start rounded-md bg-background px-2 py-1 text-[11px] text-muted-foreground">
+                Quán: {attribution}
+              </p>
+            )}
+          </div>
+        </>
+      )}
+      <Dialog
+        open={chooser !== null}
+        onOpenChange={(open) => {
+          if (!open) setChooser(null);
+        }}
+      >
+        <DialogContent
+          className="max-h-[80dvh] overflow-y-auto sm:max-w-md"
+          data-restaurant-cluster-dialog
+        >
+          <DialogHeader>
+            <DialogTitle>Chọn quán trên bản đồ</DialogTitle>
+            <DialogDescription>
+              {chosenItems.length} quán trên trang hiện tại. Chọn một quán để định vị và xem chỉ
+              đường.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-1">
+            {chosenItems.map((item) => (
+              <Button
+                key={item.id}
+                variant={item.id === selectedId ? 'secondary' : 'ghost'}
+                className="h-auto min-h-12 justify-start gap-3 whitespace-normal py-3 text-left"
+                onClick={() => {
+                  onSelectRestaurant?.(item.id);
+                  setChooser(null);
+                }}
+              >
+                <MapPin className="shrink-0" aria-hidden />
+                <span className="flex min-w-0 flex-col gap-1">
+                  <span>{item.name}</span>
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {item.distanceLabel}
+                    {item.distanceLabel ? ' · ' : ''}
+                    {item.address}
+                  </span>
+                </span>
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

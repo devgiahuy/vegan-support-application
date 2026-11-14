@@ -1,6 +1,6 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.18
+**Version:** 4.20
 
 **Updated:** 2026-11-14
 
@@ -42,6 +42,7 @@ The current API contract may still contain legacy Contributor subtype fields unt
 | D22 | Safety | Nutrition, freshness, compatibility, BMI, and AI answers are educational support, not diagnosis or guaranteed safety. |
 | D23 | Usage billing | User-approved 2026-10-13 and payOS conversion 2026-10-14: payOS exclusively for new one-time cumulative AI usage/Pantry capacity packages and, since 2026-10-27, a non-renewing combo with 1-month/3-month/1-year durations (BL-20.1). App rollout remains development/test; payOS checkout is real money, without sandbox or mock fallback. No recurring or media-storage purchase. |
 | D24 | AI recipe draft | Accept ordered ingredient names and optional author-supplied title, description, servings and preparation/cooking times. Preserve supplied values and suggest missing values; return an editable draft for the existing DRAFT content flow. Cover images are supplied separately. AI output does not publish or become canonical nutrition data. Updated at user request 2026-11-07. |
+| D25 | Restaurant map | User-approved 2026-11-14: web street map uses key-free MapLibre/OpenFreeMap with clustered current-page SerpApi results, distinct attribution, explicit area-search action and accessible list/chooser. No new location persistence or verified dietary claim. |
 
 ## 3. MVP scope
 
@@ -366,6 +367,7 @@ Maintenance clarification 2026-10-26: titles and bodies need not be unique. Auto
 - Authenticated users may hide their own chat sessions from history by soft deletion. Deleted sessions and their messages remain stored for existing retention/audit needs but are excluded from history and cannot be opened. An active answer blocks deletion until processing finishes. Guests cannot delete sessions through this endpoint.
 - Guest quota is smaller than authenticated quota and protected from trivial bypass.
 - AI provider/model is configuration and logged per request.
+- Chat keeps pre-generation safety classification. A gateway that explicitly lacks the dedicated moderation model/endpoint may use the configured Responses classifier; invalid/unavailable classification or disabled moderation retains the static response without consuming quota. The compatibility classifier does not assert equivalence to the dedicated moderation model (maintenance 2026-11-14).
 - Health/profile context is used only for the requested purpose.
 - Answers provide uncertainty/safety guidance and never mutate canonical data automatically.
 - Saved/shareable outputs become versioned AI artifacts and enter the applicable review flow.
@@ -607,6 +609,10 @@ A phase is complete only when:
 | Phase 2 ideas are forgotten or accidentally claimed READY | Dedicated roadmap plus explicit status taxonomy |
 
 ## 13. Change record
+
+- **4.20 — 2026-11-14:** Fix chat's permanent fallback when the configured gateway supports Responses but rejects the moderation model. Preserve pre-generation moderation with a strict, configured compatibility classifier, fail-closed behavior, shared timeout, quota release/replay and redacted governance metadata. No new product scope, route, schema or authorization rule.
+
+- **4.19 — 2026-11-14:** User requests a real free/open street map for restaurant discovery with SerpApi retained as primary. Web uses MapLibre/OpenFreeMap with clustered current-page pins, explicit area searches, separate basemap/provider attribution and no new coordinate persistence. SerpApi uses a radius-matched viewport with bounded paging; explicit minimum rating is enforced locally on returned candidates. Existing personal-profile exception and dietary-unverified provider status remain unchanged.
 
 - **4.18 — 2026-11-14:** Reconcile the author-nutrition branch with current `dev`: retain BL-05.2 author values and required recipe fields, preserve the later approved BL-06 Contributor publication rule for all content types and its database role/profile recheck, and preserve D24 optional title/description and linked ingredients. No new scope approval or deployment is implied; mobile migration and schema rollout remain pending.
 

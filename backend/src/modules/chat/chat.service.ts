@@ -432,7 +432,7 @@ export class ChatService {
           assistantMessageId: data.assistantMessage.id,
           content: SAFETY_RESPONSE,
           provider: this.provider.name,
-          modelId: this.config.ai.moderationModel,
+          modelId: moderation.modelId ?? this.config.ai.moderationModel,
           requestMessageId: data.requestMessage.id,
           requestStatus: AiRequestStatus.BLOCKED,
           latencyMs: Date.now() - data.startedAt.getTime(),

@@ -1,7 +1,34 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import 'maplibre-gl/dist/maplibre-gl.css';
 
 @custom-variant dark (&:is(.dark *));
+
+.restaurant-street-map .maplibregl-ctrl-top-right {
+  top: 8px;
+  right: 8px;
+}
+.restaurant-street-map > .maplibregl-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.restaurant-street-map .maplibregl-ctrl-group button {
+  width: 44px;
+  height: 44px;
+}
+.restaurant-street-map .maplibregl-canvas:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -3px;
+}
+.restaurant-street-map .maplibregl-ctrl-attrib {
+  max-width: calc(100% - 76px);
+}
+.restaurant-street-map:fullscreen {
+  width: 100%;
+  height: 100dvh;
+}
 
 @theme inline {
   --color-background: var(--background);

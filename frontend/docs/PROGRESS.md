@@ -1,5 +1,17 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Chat fallback trên gateway tương thích — Updated 2026-11-14
+
+Đã tái hiện lỗi thiếu model moderation (503 model_not_found) trong khi Responses vẫn thành công. Thêm phân loại an toàn bằng model cấu hình khi gateway báo rõ không hỗ trợ moderation; giữ kiểm duyệt bắt buộc, admin disable, timeout/abort, quota và contract SSE. 25 nhóm kiểm tra cô lập, classifier thật, HTTP SSE/replay/history/quota và browser gửi/tải lại đạt; backend lint/typecheck/build/OpenAPI/sync đạt. Không đổi consumer hoặc % scaffold; các giới hạn và bằng chứng tại WORK-LOG.
+
+## Bản đồ đường phố và tối ưu SerpApi — Updated 2026-11-14
+
+Đã thay sơ đồ web bằng MapLibre/OpenFreeMap không cần key, cụm ghim và số thứ tự đồng bộ danh sách, giữ viewport khi refresh/chuyển chế độ mobile và sửa header 375 px. SerpApi dùng viewport theo bán kính, giảm trần fan-out 27 → 9, giới hạn phân trang advanced filter và kiểm tra minRating cục bộ. Backend lint/typecheck/build/OpenAPI, frontend typecheck/scoped lint/849 tests/build và browser desktop/mobile thực tế đạt. Giữ READY và % scaffold; không đổi native mobile. GPS/login, provider timeout và nền công cộng còn giới hạn trong WORK-LOG. Bản đồ đường phố hiện tại không cần Google Maps frontend key; mục E2E bên dưới là lần kiểm thử trước nâng cấp.
+
+## Kiểm thử E2E và sửa tìm quán trên bản đồ — Updated 2026-11-14
+
+Đã kiểm thử guest discovery với SerpApi thật trên desktop/mobile browser, sửa parser list/single-place và category arrays, giữ viewport khi quay lại lân cận, bỏ khoảng cách 0 m giả ở chi tiết. 8 HTTP cases và 11 isolated assertions đạt; backend lint/typecheck/build, frontend typecheck/scoped lint/841 tests/build đạt. Giữ nguyên % scaffold và trạng thái READY. Cần Google Maps frontend key để kiểm thử street map; partial provider timeout, GPS/native mobile và header ở 375 px còn giới hạn ghi trong WORK-LOG.
+
 ## Đồng bộ nhánh phát triển với dev — Updated 2026-11-14
 
 Rebase nhánh `fix/combined-nutrition-pantry-meal-plan` lên `origin/dev` (`9e3842a`), giữ bốn commit và xử lý conflict dinh dưỡng, trạng thái xuất bản, bản nháp AI và tài liệu. Backend lint/typecheck/build, frontend typecheck/841 tests/build và kiểm tra diff đạt. Scoped frontend lint còn lỗi đã có trước rebase ở pantry dialog. Giữ nguyên tỷ lệ hoàn thành; submit vẫn CHANGING chờ mobile/schema rollout. Chi tiết tại WORK-LOG.

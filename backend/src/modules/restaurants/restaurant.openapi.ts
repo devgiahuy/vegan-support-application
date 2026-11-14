@@ -139,10 +139,9 @@ export function registerRestaurantOpenApi(registry: OpenAPIRegistry, error: z.Zo
     method: 'get',
     path: '/api/v1/restaurants/nearby',
     tags: ['Restaurants'],
-    summary:
-      'Nearby approved internal and live provider places; explicit search filters only',
+    summary: 'Nearby approved internal and live provider places; explicit search filters only',
     description:
-      'Coordinates are explicit. DEVICE requires locationConsent=true. Personal diet preferences, allergies, ingredient exclusions and tradition rules are not read or applied to restaurant discovery. An explicitly supplied dietPattern filters reviewed internal places and suppresses unreviewed provider results. Without that filter, guests and signed-in users search the same public place sources. Live provider content must be attributed in the UI and is not evidence of dietary or allergy compatibility. Nearby keyword queries run concurrently; SerpApi shares MAPS_TIMEOUT_MS across all pages/zooms per query and retains successful pages after a later failure. Results are deduplicated, radius-filtered and paginated (limit <= 20).',
+      'Coordinates are explicit. DEVICE requires locationConsent=true. Personal diet preferences, allergies, ingredient exclusions and tradition rules are not read or applied to restaurant discovery. An explicitly supplied dietPattern filters reviewed internal places and suppresses unreviewed provider results. Without that filter, guests and signed-in users search the same public place sources. Live provider content must be attributed in the UI and is not evidence of dietary or allergy compatibility. Nearby keyword queries run concurrently. SerpApi uses one viewport with map height equal to twice the requested radius and up to three pages per query, sharing MAPS_TIMEOUT_MS and retaining successful pages after a later failure. Advanced-filter queries use only the first page because provider pagination does not support these filters; further available pages set resultsTruncated=true. Results are deduplicated, radius-filtered and paginated (limit <= 20). SerpApi list and single-place search responses are both supported, including string or array category types.',
     operationId: 'nearbyRestaurants',
     request: { query: nearbyQuerySchema },
     responses: {
@@ -159,7 +158,7 @@ export function registerRestaurantOpenApi(registry: OpenAPIRegistry, error: z.Zo
     tags: ['Restaurants'],
     summary: 'Search nearby restaurants and shops',
     description:
-      'Only explicit query filters are applied; the caller dietary profile is ignored. An explicitly supplied dietPattern filters reviewed internal places and excludes unreviewed provider data. Provider price/rating/open filters are forwarded to SerpApi; internal records without those assertions are excluded when such filters are requested. Pagination and partial provider failure metadata match nearby discovery.',
+      'Only explicit query filters are applied; the caller dietary profile is ignored. An explicitly supplied dietPattern filters reviewed internal places and excludes unreviewed provider data. Provider price/rating/open filters are forwarded to SerpApi; filtered provider requests stop after the first page and signal truncation when more pages exist. Returned provider candidates must satisfy explicit minRating locally; missing ratings are excluded. Internal records without those assertions are excluded when such filters are requested. Pagination and partial provider failure metadata match nearby discovery. SerpApi may return either a list or one place; both are normalized into the same result array.',
     operationId: 'searchRestaurants',
     request: { query: searchQuerySchema },
     responses: {
@@ -188,7 +187,7 @@ export function registerRestaurantOpenApi(registry: OpenAPIRegistry, error: z.Zo
     tags: ['Restaurants'],
     summary: 'Get approved internal or live external place',
     description:
-      'Public place details do not apply the caller dietary profile. Internal records must be APPROVED. External places resolve through the configured provider and remain dietary-unverified.',
+      'Public place details do not apply the caller dietary profile. Internal records must be APPROVED. External places resolve through the configured provider and remain dietary-unverified. distanceMeters is null because this endpoint receives no search origin; it must not imply the caller is at the restaurant.',
     operationId: 'getRestaurant',
     request: { params: restaurantIdParamsSchema },
     responses: {
@@ -214,6 +213,8 @@ export function registerRestaurantOpenApi(registry: OpenAPIRegistry, error: z.Zo
     path: '/api/v1/location/geocode',
     tags: ['Location'],
     summary: 'Geocode an explicitly entered address without retaining it',
+    description:
+      'Resolves explicit addresses and landmarks from SerpApi list or single-place responses. Missing/invalid coordinates never fall back to a default location. A provider failure returns data=null and externalDataUnavailable=true.',
     operationId: 'geocodeAddress',
     request: { query: geocodeQuerySchema },
     responses: {

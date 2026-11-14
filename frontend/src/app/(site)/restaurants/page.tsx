@@ -13,6 +13,7 @@ import {
   MapPin,
   Navigation,
   Plus,
+  RefreshCw,
   RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -42,7 +43,8 @@ import {
   MIN_KEYWORD_LENGTH,
   resolveSearchMode,
 } from '@/features/restaurant/utils/restaurant-search';
-import { formatBoundsLabel, isBoundsUsable } from '@/features/restaurant/utils/restaurant-bounds';
+import { formatBoundsLabel } from '@/features/restaurant/utils/restaurant-bounds';
+import { isRestaurantSearchArea } from '@/features/restaurant/utils/restaurant-map-data';
 import {
   persistSearchFilters,
   readPersistedFilters,
@@ -127,18 +129,21 @@ export default function RestaurantMapPage() {
   }, []);
   const handleBoundsChange = React.useCallback((bounds: RestaurantBounds | null) => {
     boundsRef.current = bounds;
-    setHasViewBounds(isBoundsUsable(bounds));
+    setHasViewBounds(isRestaurantSearchArea(bounds));
   }, []);
   const handleSearchThisArea = React.useCallback(() => {
-    if (!boundsRef.current) return;
+    if (!isRestaurantSearchArea(boundsRef.current)) return;
     setActiveBounds(boundsRef.current);
     setSearchingArea(true);
   }, []);
   const handleBackToNearby = React.useCallback(() => {
     setSearchingArea(false);
     setActiveBounds(undefined);
-    boundsRef.current = null;
-    setHasViewBounds(false);
+  }, []);
+  const handleRadiusChange = React.useCallback((next: number) => {
+    setRadiusM(next);
+    setSearchingArea(false);
+    setActiveBounds(undefined);
   }, []);
   const clearAllFilters = React.useCallback(() => {
     setQuery('');
@@ -147,8 +152,8 @@ export default function RestaurantMapPage() {
     setRadiusM(DEFAULT_RADIUS_M);
   }, []);
   const expandRadius = React.useCallback(
-    () => setRadiusM((current) => Math.min(current * 2, MAX_RADIUS_M)),
-    []
+    () => handleRadiusChange(Math.min(radiusM * 2, MAX_RADIUS_M)),
+    [handleRadiusChange, radiusM]
   );
   const advancedCount = countActiveAdvancedFilters(advanced);
   const hasFilters =
@@ -366,7 +371,7 @@ export default function RestaurantMapPage() {
             advanced={advanced}
             searchMode={resolvedMode}
             onQueryChange={setQuery}
-            onRadiusChange={setRadiusM}
+            onRadiusChange={handleRadiusChange}
             onDietPatternChange={setDietPattern}
             onAdvancedChange={setAdvanced}
             onClearAll={clearAllFilters}
@@ -398,10 +403,16 @@ export default function RestaurantMapPage() {
                 )}
               </p>
             </div>
-            <p className="hidden items-center gap-2 text-xs text-muted-foreground lg:flex">
-              <MapPin className="size-4" aria-hidden="true" />
-              Chọn ghim trên thẻ để định vị quán
-            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-11"
+              onClick={() => void refetch()}
+              disabled={isFetching}
+            >
+              <RefreshCw data-icon="inline-start" aria-hidden="true" />
+              {isFetching ? 'Đang cập nhật…' : 'Làm mới kết quả'}
+            </Button>
             <ToggleGroup
               type="single"
               value={mobileView}
@@ -506,28 +517,28 @@ export default function RestaurantMapPage() {
               aria-label="Bản đồ các quán"
             >
               <div className="h-[65dvh] min-h-[480px] overflow-hidden rounded-2xl lg:h-[calc(100dvh-144px)] lg:max-h-[760px]">
-                {(isDesktop || mobileView === 'map') && (
-                  <RestaurantMap
-                    items={restaurants}
-                    userLocation={location}
-                    radiusM={radiusM}
-                    selectedId={selectedId}
-                    onSelectRestaurant={setSelectedId}
-                    onRadiusChange={setRadiusM}
-                    onBoundsChange={handleBoundsChange}
-                    onSearchThisArea={handleSearchThisArea}
-                    canSearchThisArea={hasViewBounds}
-                    isSearchingArea={searchingArea}
-                    isLoading={isQueryLoading || isFetching}
-                    emptyTitle={isError ? 'Chưa tải được vị trí các quán' : emptyCopy.title}
-                    emptyDescription={
-                      isError ? 'Thử tải lại ở phần danh sách quán.' : emptyCopy.description
-                    }
-                  />
-                )}
+                <RestaurantMap
+                  items={restaurants}
+                  userLocation={location}
+                  radiusM={radiusM}
+                  selectedId={selectedId}
+                  onSelectRestaurant={setSelectedId}
+                  onClearSelection={() => setSelectedId(null)}
+                  onBoundsChange={handleBoundsChange}
+                  onSearchThisArea={handleSearchThisArea}
+                  canSearchThisArea={hasViewBounds}
+                  isSearchingArea={searchingArea}
+                  isLoading={isQueryLoading || isFetching}
+                  page={data?.meta.page ?? page}
+                  notices={data?.notices}
+                  emptyTitle={isError ? 'Chưa tải được vị trí các quán' : emptyCopy.title}
+                  emptyDescription={
+                    isError ? 'Thử tải lại ở phần danh sách quán.' : emptyCopy.description
+                  }
+                />
               </div>
               <p className="mt-3 flex items-center justify-between gap-3 px-1 text-xs leading-relaxed text-muted-foreground">
-                <span>Vị trí và khoảng cách mang tính tham khảo.</span>
+                <span>Ghim hiển thị quán trên trang hiện tại. Vị trí mang tính tham khảo.</span>
                 <Navigation className="size-4 shrink-0" aria-hidden="true" />
               </p>
             </aside>

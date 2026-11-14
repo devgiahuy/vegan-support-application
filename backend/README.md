@@ -160,6 +160,17 @@ Phase 11 uses the official OpenAI SDK and Responses API behind an `AiProvider` b
 quotas, and the optional `OPENAI_BASE_URL` are configuration. Missing/unavailable access degrades to
 a static safe response without consuming daily quota.
 
+Chat checks moderation before generating an answer. Some OpenAI-compatible gateways support
+Responses but return `model_not_found` for `AI_MODEL_MODERATION`. Only an explicit unsupported
+model/endpoint error enables a Responses safety classifier, using `AI_MODERATION_FALLBACK_MODEL`
+(defaults to `AI_MODEL_CHAT`). It requires a completed response with strict `{ "flagged": boolean }`
+JSON; invalid, refused, incomplete or failed classification retains the static fallback. Authentication,
+rate-limit and other transient errors do not enable this compatibility path. Admin MODERATION
+disable still blocks both methods. Both calls share the chat timeout/abort signal, use `store: false`
+where supported, and classification model/method/token metadata is recorded without prompt content.
+This classifier is an advisory compatibility mechanism, not a claim of equivalence to the dedicated
+moderation model. No frontend change or new credential is needed with an existing Responses-capable gateway.
+
 ## Seed data for local API and frontend development
 
 `npm run seed` is idempotent and uses only the existing `SEED_*` credentials. Seeded Contributor
