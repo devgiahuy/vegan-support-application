@@ -6,9 +6,6 @@ export interface GenerateRecipeDraftRequestDto {
   title: string;
   /** Mô tả ngắn, để trống để AI gợi ý. */
   description: string;
-  servings?: number;
-  prepTimeMinutes?: number;
-  cookTimeMinutes?: number;
   /** Danh sách tên các nguyên liệu chính (1 - 50 nguyên liệu) */
   ingredientNames: string[];
   /** Giá trị tác giả đã nhập ở bước 1 (tuỳ chọn): AI định lượng theo số khẩu phần này */

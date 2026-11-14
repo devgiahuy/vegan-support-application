@@ -719,6 +719,7 @@ export class ContentRepository {
         author.contributorProfile.revokedAt === null;
       const autoPublish =
         activeContributor || (decision.autoPublished && author.role === Role.ADMIN);
+      if (decision.autoPublished && !autoPublish) throw new ContentVersionConflictError();
       const recipeAutoPublish =
         autoPublish &&
         (await transaction.recipeDetail.findUnique({ where: { revisionId } })) !== null;
@@ -736,8 +737,7 @@ export class ContentRepository {
             : { reviewNote: null, reviewedById: null, reviewedAt: null }),
         },
       });
-      if (recipeAutoPublish)
-        await this.applyAutoPublish(transaction, revisionId, postId, actorId);
+      if (recipeAutoPublish) await this.applyAutoPublish(transaction, revisionId, postId, actorId);
       if (decision.moderationFlag) {
         await transaction.aiFlag.create({
           data: { postRevisionId: revisionId, ...decision.moderationFlag },

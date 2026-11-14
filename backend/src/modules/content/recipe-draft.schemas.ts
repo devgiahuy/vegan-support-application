@@ -3,17 +3,17 @@ import { createRecipePostRequestSchema } from './content.schemas.js';
 
 export const generateRecipeDraftRequestSchema = z
   .object({
-    title: z.string().trim().max(200).refine((value) => !value || value.length >= 3).default(''),
+    title: z
+      .string()
+      .trim()
+      .max(200)
+      .refine((value) => !value || value.length >= 3)
+      .default(''),
     description: z.string().trim().max(500).default(''),
     servings: z.number().int().min(1).max(100).optional(),
     prepTimeMinutes: z.number().int().min(0).max(10_080).optional(),
     cookTimeMinutes: z.number().int().min(0).max(10_080).optional(),
     ingredientNames: z.array(z.string().trim().min(1).max(160)).min(1).max(50),
-    // Optional author values from step 1 (2026-10-29): amounts are scaled to these servings and
-    // the returned draft keeps them instead of the AI's own numbers.
-    servings: z.number().int().min(1).max(100).optional(),
-    prepTimeMinutes: z.number().int().min(0).max(10_080).optional(),
-    cookTimeMinutes: z.number().int().min(0).max(10_080).optional(),
   })
   .strict();
 

@@ -6,9 +6,6 @@ import { RecipeDifficulty } from '@/common/enums';
 export interface RecipeDraftPrompt {
   title: string;
   description: string;
-  servings?: number;
-  prepTimeMinutes?: number;
-  cookTimeMinutes?: number;
   ingredientNames: string[];
   /** Số tác giả đã nhập ở bước 1; để trống thì AI tự đề xuất */
   servings?: number;

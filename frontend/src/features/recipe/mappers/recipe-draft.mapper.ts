@@ -111,9 +111,6 @@ export class RecipeDraftMapper extends BaseMapper<
     return {
       title: prompt.title.trim(),
       description: prompt.description.trim(),
-      servings: prompt.servings,
-      prepTimeMinutes: prompt.prepTimeMinutes,
-      cookTimeMinutes: prompt.cookTimeMinutes,
       ingredientNames: prompt.ingredientNames.map((n) => n.trim()).filter(Boolean),
       // Chỉ gửi số hợp lệ tác giả đã nhập; ô trống để AI đề xuất.
       ...(isWholeNumber(prompt.servings, 1, 100) ? { servings: prompt.servings } : {}),

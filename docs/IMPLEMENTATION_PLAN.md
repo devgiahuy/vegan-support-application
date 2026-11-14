@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.17
+**Version:** 4.18
 
-**Updated:** 2026-11-09
+**Updated:** 2026-11-14
 
 **Status:** Approved implementation baseline
 
@@ -272,8 +272,8 @@ Agreed by the user with team member Ngô Gia Huy; refines BL-05.1.
 1. The recipe form shows six per-serving fields: calories, protein, carbohydrate, fat, fiber and vitamin B12. The revision stores exactly what the author typed (`authorNutrition`) as `USER_PROVIDED` provenance.
 2. Members may leave any field blank. On submit, typed values are kept and only blank metrics are calculated (BL-05.1 pipeline). The system estimate is still computed for comparison, including the AI gap-filling job when reviewed data is insufficient. Review still requires the five metrics of BL-05.1; vitamin B12 is optional, stored when typed and never estimated by AI.
 3. Reviewer precedence per metric: reviewer override > author value > system estimate. The panel shows the author value, the system value and a warning when they differ by more than 30% of the system value. Clearing an override returns to the author value when present.
-4. Approved Contributors (role and active profile authorised by the backend; all Contributors have the same permission) and Admins must declare all six values before a recipe can be submitted (`RECIPE_NUTRITION_REQUIRED`). Their recipe revision — including edits of a published recipe — is then published immediately with an audited moderation action, without the review queue. This is a user-approved exception to BL-06 for recipes only; articles and videos still go through review.
-5. If automated moderation flags a trusted author's recipe, it is not auto-published and waits in the Admin queue.
+4. Approved Contributors (role and active profile authorised by the backend; all Contributors have the same permission) and Admins must declare all six values before a recipe can be submitted (`RECIPE_NUTRITION_REQUIRED`). Their recipe revision — including edits of a published recipe — is then published immediately with an audited moderation action, without the review queue. This recipe-specific rule is combined with the later approved Contributor publication rule in BL-06: active Contributors also auto-publish their own articles and videos.
+5. For Admin recipe authors, an automated moderation flag keeps the recipe in the Admin queue. The later approved Contributor publication rule in BL-06 takes precedence for active Contributors: moderation signals are retained for Admin review without preventing automatic publication.
 6. Auto-published recipes store a canonical-only reference estimate (no AI call). The author-declared values become the published values.
 7. Editors prefill only the author's own typed values, so values calculated or overridden for an earlier revision are never carried into a new revision (BL-05.1 rule 7 still holds).
 
@@ -607,6 +607,8 @@ A phase is complete only when:
 | Phase 2 ideas are forgotten or accidentally claimed READY | Dedicated roadmap plus explicit status taxonomy |
 
 ## 13. Change record
+
+- **4.18 — 2026-11-14:** Reconcile the author-nutrition branch with current `dev`: retain BL-05.2 author values and required recipe fields, preserve the later approved BL-06 Contributor publication rule for all content types and its database role/profile recheck, and preserve D24 optional title/description and linked ingredients. No new scope approval or deployment is implied; mobile migration and schema rollout remain pending.
 
 - **4.17 — 2026-10-29:** D24 refinement: the AI recipe draft uses and preserves the author's servings/prep/cook times; blanks are filled by the AI; differing AI times are only hinted.
 

@@ -1,5 +1,14 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+
+## [2026-11-14] — Rebase nhánh dinh dưỡng/tủ bếp/thực đơn lên dev
+
+- **Yêu cầu:** Rebase `fix/combined-nutrition-pantry-meal-plan` lên `origin/dev` mới nhất để tiếp tục phát triển trên nhánh này.
+- **Mốc:** base `origin/dev` là `9e3842a`; backup trước rebase là `backup/combined-fixes-before-rebase-20261114` tại `cc9a301`. Giữ cả bốn commit tính năng; merge `dev` cũ được thay bằng lịch sử tuyến tính.
+- **Xử lý:** Ghép tài liệu và contract; giữ luồng Contributor tự xuất bản từ dev cùng dinh dưỡng tác giả của nhánh, kiểm tra lại role/profile trong transaction; giữ response/revision status mapping mới và shared review API; bỏ các trường khẩu phần/thời gian bị khai báo trùng do auto-merge; chuyển mapper tests sang data DTO theo kiến trúc hiện tại. Giữ mô tả/tên AI tùy chọn và liên kết nguyên liệu đã chọn. Đồng bộ OpenAPI và catalog 195 endpoints.
+- **Kiểm chứng:** Backend lint, typecheck, build pass; smoke 6 trường hợp xuất bản bằng transaction stub pass (không ghi DB); frontend typecheck, 105 files/841 tests, production build 47 routes pass; `git diff --check` pass. Scoped frontend lint còn 4 lỗi/1 warning có sẵn trong `pantry-item-dialog.tsx` (2 `as any`, 2 unescaped quotes, React Hook Form warning); đã đối chiếu với dev/commit gốc. Build cảnh báo middleware deprecated có sẵn.
+- **Phạm vi:** Không triển khai DB, seed hoặc chạy kiểm thử trình duyệt/live API. Endpoint submit vẫn `CHANGING` chờ mobile migration và schema rollout; không thay đổi tỷ lệ scaffold. Rebase local, chưa force-push remote.
+
 ## [2026-11-10] — Sửa lỗi hiển thị lặp `30 ngày`, `90 ngày`, `360 ngày` trên card gói tiện ích ở `/billing`
 
 - **Mục tiêu**: khắc phục lỗi trên card `Gói tiện ích theo thời hạn` tại `/billing` hiển thị lặp thời hạn ở các nút chọn gói (`Gói tiện ích 30 ngày · 30 ngày`, `Gói tiện ích 90 ngày · 90 ngày`, `Gói tiện ích 360 ngày · 360 ngày`), đồng thời giữ hiển thị đầy đủ tên + thời hạn khi có gói tùy chỉnh không chứa thời hạn trong tên.

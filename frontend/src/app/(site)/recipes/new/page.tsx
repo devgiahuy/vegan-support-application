@@ -120,8 +120,7 @@ export default function CreateRecipePage() {
     }
   };
 
-  const publishesDirectly =
-    user?.role === UserRole.CONTRIBUTOR || user?.role === UserRole.ADMIN;
+  const publishesDirectly = user?.role === UserRole.CONTRIBUTOR || user?.role === UserRole.ADMIN;
   const effectiveSubmittedStatus = createdRecipe?.revisionStatus ?? createdRecipe?.status;
   const isPublished = effectiveSubmittedStatus === PostStatus.PUBLISHED;
   const isFlaggedOrQuarantined =
@@ -264,8 +263,8 @@ export default function CreateRecipePage() {
                   <span>Đã hiển thị công khai trên kho công thức</span>
                 </p>
                 <p className="leading-relaxed text-pretty">
-                  Công thức của bạn đã được tự động xuất bản và chia sẻ
-                  ngay tới cộng đồng ăn chay mà không cần chờ kiểm duyệt thủ công.
+                  Công thức của bạn đã được tự động xuất bản và chia sẻ ngay tới cộng đồng ăn chay
+                  mà không cần chờ kiểm duyệt thủ công.
                 </p>
               </div>
             ) : isFlaggedOrQuarantined ? (

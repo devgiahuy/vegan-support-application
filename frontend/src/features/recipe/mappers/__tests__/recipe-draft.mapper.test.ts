@@ -201,11 +201,8 @@ describe('RecipeDraftMapper', () => {
   describe('suggestedTiming', () => {
     it('ánh xạ gợi ý thời gian của AI và tạo câu gợi ý khi khác số đã nhập', () => {
       const model = mapper.toModel({
-        ...mockResponseDto,
-        data: {
-          ...mockResponseDto.data,
-          suggestedTiming: { servings: 4, prepTimeMinutes: 10, cookTimeMinutes: 25 },
-        },
+        ...mockResponseDto.data,
+        suggestedTiming: { servings: 4, prepTimeMinutes: 10, cookTimeMinutes: 25 },
       });
       expect(model.suggestedTiming).toEqual({
         servings: 4,
@@ -218,7 +215,7 @@ describe('RecipeDraftMapper', () => {
     });
 
     it('không có gợi ý khi backend không gửi hoặc thời gian trùng', () => {
-      const model = mapper.toModel(mockResponseDto);
+      const model = mapper.toModel(mockResponseDto.data);
       expect(model.suggestedTiming).toBeNull();
       expect(mapper.timingHint(model)).toBeNull();
       expect(

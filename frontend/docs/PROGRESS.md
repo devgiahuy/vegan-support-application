@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Đồng bộ nhánh phát triển với dev — Updated 2026-11-14
+
+Rebase nhánh `fix/combined-nutrition-pantry-meal-plan` lên `origin/dev` (`9e3842a`), giữ bốn commit và xử lý conflict dinh dưỡng, trạng thái xuất bản, bản nháp AI và tài liệu. Backend lint/typecheck/build, frontend typecheck/841 tests/build và kiểm tra diff đạt. Scoped frontend lint còn lỗi đã có trước rebase ở pantry dialog. Giữ nguyên tỷ lệ hoàn thành; submit vẫn CHANGING chờ mobile/schema rollout. Chi tiết tại WORK-LOG.
+
 ## Sửa lỗi hiển thị lặp thời hạn 30/90/360 ngày trên card gói tiện ích — Updated 2026-11-10
 
 Bổ sung chuẩn hóa nhãn hiển thị theo thời hạn trong `billing.mapper.ts` / `billing.model.ts` (`BillingProduct.displayName` và `BillingOrder.durationSuffixLabel`) để chỉ ghép thêm `durationLabel` khi tên gói chưa chứa sẵn thông tin thời hạn. Khắc phục tình trạng nút chọn gói trong `DurationPlanCard` (và dòng đơn hàng `OrderRow`) ở `/billing` hiển thị lặp `Gói tiện ích 30 ngày · 30 ngày`, `Gói tiện ích 90 ngày · 90 ngày`, `Gói tiện ích 360 ngày · 360 ngày`; giữ được khả năng phân biệt khi quản trị viên tạo nhiều gói cùng thời hạn và giữ ổn định bố cục `ToggleGroup` khi có từ 4 gói trở lên. Giữ nguyên tỷ lệ hoàn thành tính năng. Chi tiết kiểm chứng tại WORK-LOG.

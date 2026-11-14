@@ -42,7 +42,7 @@ export default function EditRecipePage() {
   const isAuthor = Boolean(
     !currentUser || !recipe?.author?.id || currentUser.id === recipe.author.id
   );
-  
+
   const initialFormValues = React.useMemo<Partial<RecipeFormValues> | undefined>(
     () => (recipe ? recipeToFormValues(recipe) : undefined),
     [recipe]

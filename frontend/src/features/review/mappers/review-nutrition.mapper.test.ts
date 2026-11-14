@@ -150,7 +150,7 @@ describe('ReviewNutritionMapper', () => {
   });
 
   it('maps author value, deviation and warning; defaults when absent', () => {
-    const [calories, protein] = reviewNutritionMapper.toResponse(response).metrics;
+    const [calories, protein] = reviewNutritionMapper.toModel(response.data).metrics;
 
     expect(protein.authorValue).toBe(9);
     expect(protein.deviationPercent).toBe(50);
