@@ -33,7 +33,7 @@ export function retainRestaurantResults(scope: string) {
  */
 export const RESTAURANT_KEYS = {
   // Drop cached discovery results produced by the former implicit profile filtering.
-  all: ['restaurants', 'v3'] as const,
+  all: ['restaurants', 'v4'] as const,
   nearby: (state: RestaurantSearchState) =>
     [
       ...RESTAURANT_KEYS.all,
@@ -45,6 +45,7 @@ export const RESTAURANT_KEYS = {
       state.dietPattern,
       state.page,
       state.limit,
+      state.allResults,
       state.locationSource,
       state.locationConsent,
     ] as const,
@@ -57,6 +58,7 @@ export const RESTAURANT_KEYS = {
       state.dietPattern,
       state.page,
       state.limit,
+      state.allResults,
       state.locationSource,
       state.locationConsent,
     ] as const,
@@ -73,6 +75,7 @@ export const RESTAURANT_KEYS = {
       state.lng,
       state.page,
       state.limit,
+      state.allResults,
       state.locationSource,
       state.locationConsent,
     ] as const,

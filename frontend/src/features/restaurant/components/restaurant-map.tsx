@@ -39,7 +39,6 @@ export interface RestaurantMapProps {
   canSearchThisArea?: boolean;
   isSearchingArea?: boolean;
   isLoading?: boolean;
-  page?: number;
   notices?: DiscoveryNotice[];
   emptyTitle?: string;
   emptyDescription?: string;
@@ -57,7 +56,6 @@ export function RestaurantMap({
   canSearchThisArea = false,
   isSearchingArea = false,
   isLoading = false,
-  page = 1,
   notices = [],
   emptyTitle,
   emptyDescription,
@@ -125,7 +123,7 @@ export function RestaurantMap({
           <div className="pointer-events-none absolute inset-x-3 top-3 flex flex-col items-start gap-2 pr-14">
             <div className="max-w-full rounded-xl bg-background px-3 py-2 shadow-md">
               <p className="text-sm font-semibold tabular-nums">
-                {validItems.length} ghim · Trang {page}
+                {validItems.length} quán trên bản đồ
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {isLoading
@@ -277,7 +275,7 @@ export function RestaurantMap({
           <DialogHeader>
             <DialogTitle>Chọn quán trên bản đồ</DialogTitle>
             <DialogDescription>
-              {chosenItems.length} quán trên trang hiện tại. Chọn một quán để định vị và xem chỉ
+              {chosenItems.length} quán trong kết quả tìm kiếm. Chọn một quán để định vị và xem chỉ
               đường.
             </DialogDescription>
           </DialogHeader>

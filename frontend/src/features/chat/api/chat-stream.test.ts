@@ -21,6 +21,42 @@ afterEach(() => {
 });
 
 describe('chat stream authentication and completion', () => {
+  it('keeps Vietnamese words and Markdown tables intact while streaming across network chunks', async () => {
+    const tokens = [
+      '###',
+      ' Thực đơn chay',
+      '\n\n',
+      '| Bữa |',
+      ' Món ăn |\n',
+      '| --- | --- |\n',
+      '| Sáng |',
+      ' Đậu hũ |\n',
+    ];
+    const wire =
+      tokens
+        .map((delta) => `event: content_delta\ndata: ${JSON.stringify({ delta })}\n\n`)
+        .join('') + 'event: message_complete\ndata: {}\n\n';
+    const bytes = new TextEncoder().encode(wire);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              for (let i = 0; i < bytes.length; i += 7) controller.enqueue(bytes.slice(i, i + 7));
+              controller.close();
+            },
+          })
+        )
+      )
+    );
+    const onDelta = vi.fn();
+    const result = await streamChatMessage('session', 'Test', 'key', new AbortController().signal, {
+      onDelta,
+    });
+    expect(result.content).toBe(tokens.join(''));
+    expect(onDelta.mock.calls.map((call) => call[0])).toEqual(tokens);
+  });
   it('sends the access token and handles quota after completion', async () => {
     auth.token = 'access';
     const fetchMock = vi

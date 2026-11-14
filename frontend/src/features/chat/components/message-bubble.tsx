@@ -41,7 +41,12 @@ export function MessageBubble({
   };
 
   return (
-    <div className={cn('group flex w-full gap-3 py-2', isUser ? 'justify-end' : 'justify-start')}>
+    <div
+      className={cn(
+        'group flex w-full min-w-0 gap-2 py-2 sm:gap-3',
+        isUser ? 'justify-end' : 'justify-start'
+      )}
+    >
       {/* Assistant Avatar */}
       {!isUser && (
         <Avatar className="size-8 shrink-0 border border-emerald-500/20 shadow-xs">
@@ -54,8 +59,8 @@ export function MessageBubble({
       {/* Content Container */}
       <div
         className={cn(
-          'flex flex-col gap-1.5 max-w-[88%] sm:max-w-[80%]',
-          isUser ? 'items-end' : 'items-start'
+          'flex min-w-0 flex-col gap-2',
+          isUser ? 'max-w-[85%] items-end' : 'w-full flex-1 items-start'
         )}
       >
         {/* Role Label */}
@@ -66,14 +71,16 @@ export function MessageBubble({
         {/* Bubble */}
         <div
           className={cn(
-            'relative text-sm',
+            'relative min-w-0 max-w-full text-sm',
             isUser
               ? 'rounded-2xl rounded-tr-xs bg-primary px-4 py-2.5 text-primary-foreground shadow-xs'
-              : 'rounded-2xl rounded-tl-xs border border-border/80 bg-card/80 px-4 py-3.5 text-card-foreground shadow-xs dark:bg-muted/40'
+              : 'w-full rounded-2xl rounded-tl-xs border border-border/80 bg-card px-4 py-4 text-card-foreground sm:px-5 sm:py-5'
           )}
         >
           {isUser ? (
-            <p className="whitespace-pre-wrap leading-relaxed">{text}</p>
+            <p className="whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]">
+              {text}
+            </p>
           ) : (
             <div>
               {text.length > 0 ? (
@@ -90,7 +97,10 @@ export function MessageBubble({
 
               {/* Streaming Cursor */}
               {isStreaming && (
-                <span className="ml-1 inline-block h-4 w-1.5 translate-y-0.5 animate-pulse rounded-full bg-emerald-500" />
+                <span
+                  aria-hidden="true"
+                  className="ml-1 inline-block h-4 w-1.5 translate-y-0.5 rounded-full bg-primary motion-safe:animate-pulse"
+                />
               )}
             </div>
           )}

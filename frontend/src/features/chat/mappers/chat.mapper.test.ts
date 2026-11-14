@@ -135,6 +135,12 @@ describe('ChatMapper feedback + quota + dto', () => {
 });
 
 describe('parseSseEvent', () => {
+  it('preserves whitespace-only tokens, Markdown newlines and leading spaces', () => {
+    expect(extractDeltaText({ delta: ' ' })).toBe(' ');
+    expect(extractDeltaText({ delta: '\n\n' })).toBe('\n\n');
+    expect(extractDeltaText({ delta: ' đậu hũ\n' })).toBe(' đậu hũ\n');
+    expect(extractDeltaText({ delta: 42 })).toBe('');
+  });
   it('parse content_delta chuẩn + alias delta/text', () => {
     const event = parseSseEvent('event: content_delta\ndata: {"content": "Xin chào"}');
     expect(event.type).toBe('content_delta');

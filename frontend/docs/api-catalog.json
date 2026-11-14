@@ -1,7 +1,7 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "../backend/openapi.json",
-  "generatedAt": "2026-11-14T12:10:22.307Z",
+  "generatedAt": "2026-11-14T12:47:09.028Z",
   "stats": {
     "operations": 195,
     "groups": 42,
@@ -8290,6 +8290,12 @@
         },
         {
           "in": "query",
+          "name": "all",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
           "name": "dietPattern",
           "required": false,
           "type": "string"
@@ -8393,6 +8399,12 @@
           "name": "limit",
           "required": false,
           "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "all",
+          "required": false,
+          "type": "string"
         },
         {
           "in": "query",

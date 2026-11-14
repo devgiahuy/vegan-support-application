@@ -304,11 +304,12 @@ export class RestaurantService {
       );
     });
     const start = (query.page - 1) * query.limit;
+    const allResults = query.all === 'true';
     return {
-      data: result.slice(start, start + query.limit),
+      data: allResults ? result : result.slice(start, start + query.limit),
       meta: {
-        page: query.page,
-        limit: query.limit,
+        page: allResults ? 1 : query.page,
+        limit: allResults ? Math.max(1, result.length) : query.limit,
         total: result.length,
         resultsTruncated: resultsTruncated || providerTruncated,
         externalResultsSuppressed,

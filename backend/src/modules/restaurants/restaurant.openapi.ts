@@ -141,12 +141,12 @@ export function registerRestaurantOpenApi(registry: OpenAPIRegistry, error: z.Zo
     tags: ['Restaurants'],
     summary: 'Nearby approved internal and live provider places; explicit search filters only',
     description:
-      'Coordinates are explicit. DEVICE requires locationConsent=true. Personal diet preferences, allergies, ingredient exclusions and tradition rules are not read or applied to restaurant discovery. An explicitly supplied dietPattern filters reviewed internal places and suppresses unreviewed provider results. Without that filter, guests and signed-in users search the same public place sources. Live provider content must be attributed in the UI and is not evidence of dietary or allergy compatibility. Nearby keyword queries run concurrently. SerpApi uses one viewport with map height equal to twice the requested radius and up to three pages per query, sharing MAPS_TIMEOUT_MS and retaining successful pages after a later failure. Advanced-filter queries use only the first page because provider pagination does not support these filters; further available pages set resultsTruncated=true. Results are deduplicated, radius-filtered and paginated (limit <= 20). SerpApi list and single-place search responses are both supported, including string or array category types.',
+      'Coordinates are explicit. DEVICE requires locationConsent=true. Personal diet preferences, allergies, ingredient exclusions and tradition rules are not read or applied to restaurant discovery. An explicitly supplied dietPattern filters reviewed internal places and suppresses unreviewed provider results. Without that filter, guests and signed-in users search the same public place sources. Live provider content must be attributed in the UI and is not evidence of dietary or allergy compatibility. Nearby keyword queries run concurrently. SerpApi uses one viewport with map height equal to twice the requested radius and up to three pages per query, sharing MAPS_TIMEOUT_MS and retaining successful pages after a later failure. Advanced-filter queries use only the first page because provider pagination does not support these filters; further available pages set resultsTruncated=true. Results are deduplicated and radius-filtered. Default pagination has limit <= 20. Optional all=true returns the entire bounded discovery set in one response, ignoring page/limit slicing, with meta.page=1 and meta.limit=max(1,total). Discovery retains the existing 1000-internal/200-provider caps and partial/truncated notices; it is not an exhaustive directory of every real-world place. SerpApi list and single-place search responses are both supported, including string or array category types.',
     operationId: 'nearbyRestaurants',
     request: { query: nearbyQuerySchema },
     responses: {
       200: {
-        description: 'Paginated nearby results and provider degradation',
+        description: 'Nearby results (all=true or paginated) and provider degradation',
         content: json(discoverySchema),
       },
       ...errors([400, 401, 403]),
@@ -158,11 +158,14 @@ export function registerRestaurantOpenApi(registry: OpenAPIRegistry, error: z.Zo
     tags: ['Restaurants'],
     summary: 'Search nearby restaurants and shops',
     description:
-      'Only explicit query filters are applied; the caller dietary profile is ignored. An explicitly supplied dietPattern filters reviewed internal places and excludes unreviewed provider data. Provider price/rating/open filters are forwarded to SerpApi; filtered provider requests stop after the first page and signal truncation when more pages exist. Returned provider candidates must satisfy explicit minRating locally; missing ratings are excluded. Internal records without those assertions are excluded when such filters are requested. Pagination and partial provider failure metadata match nearby discovery. SerpApi may return either a list or one place; both are normalized into the same result array.',
+      'Only explicit query filters are applied; the caller dietary profile is ignored. An explicitly supplied dietPattern filters reviewed internal places and excludes unreviewed provider data. Provider price/rating/open filters are forwarded to SerpApi; filtered provider requests stop after the first page and signal truncation when more pages exist. Returned provider candidates must satisfy explicit minRating locally; missing ratings are excluded. Internal records without those assertions are excluded when such filters are requested. Optional all=true and partial/truncated metadata match nearby discovery; default paginated behavior remains compatible. SerpApi may return either a list or one place; both are normalized into the same result array.',
     operationId: 'searchRestaurants',
     request: { query: searchQuerySchema },
     responses: {
-      200: { description: 'Paginated search results', content: json(discoverySchema) },
+      200: {
+        description: 'Search results (all=true or paginated)',
+        content: json(discoverySchema),
+      },
       ...errors([400, 401, 403]),
     },
   });

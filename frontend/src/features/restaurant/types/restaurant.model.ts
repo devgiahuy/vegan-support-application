@@ -149,6 +149,8 @@ export type RestaurantLocationSource = 'MANUAL' | 'DEVICE';
 
 /** Toàn bộ state của một phiên tìm kiếm. Chỉ `lat`/`lng`/`bounds` mới là dữ liệu vị trí. */
 export interface RestaurantSearchState {
+  /** Return the full bounded discovery set in one request instead of page slicing. */
+  allResults?: boolean;
   page?: number;
   limit?: number;
   mode: RestaurantSearchMode;

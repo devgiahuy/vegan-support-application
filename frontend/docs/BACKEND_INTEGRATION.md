@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.74
+**Version:** 4.75
 
 **Cập nhật:** 14/11/2026
 
@@ -37,6 +37,16 @@ Changelog 2026-11-05 (4.59): cập nhật quy ước vị trí endpoint theo fea
 ---
 
 ## 1. Source of truth và status
+
+### All-result web restaurant discovery — 2026-11-14 (4.75, READY)
+
+User requests all discovered restaurants together without pagination and removes the web diet-type dropdown. `GET /restaurants/nearby` and `/restaurants/search` add optional `all=true`: return the entire filtered/deduplicated/sorted discovery set from one provider pass, `meta.page=1`, `meta.limit=max(1,total)`. Default clients retain page/limit behavior; no breaking change. Existing 1000 internal candidate/200 provider result bounds, explicit diet filtering for other clients, location consent, attribution, partial/truncated metadata and no-persistence rules remain. This does not claim every real-world place is known. No schema/seed/auth change. OpenAPI and backend lint/typecheck/build complete before consumer migration; FE status and browser evidence recorded below after validation.
+
+FE integrated 2026-11-14: web discovery sends all=true without page/limit, the map/list/chooser use the entire returned set, query keys distinguish all-result requests and cluster leaves are no longer limited to 20. Pagination and the diet-type dropdown are removed; saved diet-type selections are ignored and overwritten without that filter. Native mobile keeps its existing paginated behavior. Six isolated backend groups, real HTTP returning 93 results vs 20 by default, and browser desktop/mobile showing 85 matching cards/pins (partial provider response) passed. Selection of pin 85 worked through the chooser. Truncation/partial notices remain visible.
+
+Chat consumer polish 2026-11-14: SSE delta mapping preserves whitespace/newlines instead of trimming each chunk. CommonMark/GFM rendering supports tables, semantic headings, nested lists and safe links; tables scroll within the bubble on narrow screens. Raw HTML is skipped and generated images are not automatically fetched. Purchased chat balance is presented separately and neutrally; zero purchased credits does not imply free quota exhaustion. Existing backend quota/SSE/entitlement contracts and charging are unchanged. Frontend typecheck/scoped lint, 110 files/860 tests and build passed; real browser chat stream/history/table and responsive map checks passed. No API consumer migration is needed for mobile chat in this web-only polish.
+
+Changelog 2026-11-14 (4.75): all-result web restaurant discovery, removed diet-type UI, preserved streaming Markdown whitespace, responsive answer tables and unambiguous free/purchased chat allowance labels. Endpoint states remain READY; no billing/quota/auth/schema change.
 
 ### Chat moderation gateway compatibility — 2026-11-14 (4.74, READY)
 

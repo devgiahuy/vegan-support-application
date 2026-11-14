@@ -13,6 +13,29 @@
  */
 
 /** Quán chay (thô từ API backend). */
+export interface RestaurantDiscoveryRequestDto {
+  radiusMeters: number;
+  all?: 'true';
+  page?: number;
+  limit?: number;
+  q?: string;
+  lat?: number;
+  lng?: number;
+  north?: number;
+  south?: number;
+  east?: number;
+  west?: number;
+  dietPattern?: 'VEGAN' | 'LACTO_OVO';
+  minPrice?: number;
+  maxPrice?: number;
+  minRating?: number;
+  openState?: 'now' | '24h';
+  openOnDay?: string;
+  openAtHour?: number;
+  locationSource?: 'MANUAL' | 'DEVICE';
+  locationConsent?: 'true' | 'false';
+}
+
 export interface RestaurantDto {
   id?: string;
   name?: string;

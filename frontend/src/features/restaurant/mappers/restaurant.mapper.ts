@@ -20,6 +20,7 @@ import { MAX_RADIUS_M, MIN_RADIUS_M } from '../schemas/restaurant.schema';
 import type {
   GeocodeResponseDto,
   RestaurantDiscoveryMetaDto,
+  RestaurantDiscoveryRequestDto,
   RestaurantDto,
   RestaurantListResponseDto,
   ReviewRestaurantRequestDto,
@@ -525,8 +526,8 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
    * - Lọc nâng cao chỉ có tác dụng ở chế độ tìm theo từ khóa.
    * - Gửi `page`/`limit` khi chuyển trang; backend mặc định 20 kết quả mỗi trang.
    */
-  toDiscoveryParams(state: RestaurantSearchState): Record<string, string | number> {
-    const params: Record<string, string | number> = {
+  toDiscoveryParams(state: RestaurantSearchState): RestaurantDiscoveryRequestDto {
+    const params: RestaurantDiscoveryRequestDto = {
       radiusMeters: Math.min(
         MAX_RADIUS_M,
         Math.max(MIN_RADIUS_M, Math.round(state.radiusM || MIN_RADIUS_M))
@@ -582,8 +583,11 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
     if (state.locationConsent !== undefined && state.locationSource === 'DEVICE') {
       params.locationConsent = state.locationConsent ? 'true' : 'false';
     }
-    if (state.page !== undefined) params.page = state.page;
-    if (state.limit !== undefined) params.limit = state.limit;
+    if (state.allResults) params.all = 'true';
+    else {
+      if (state.page !== undefined) params.page = state.page;
+      if (state.limit !== undefined) params.limit = state.limit;
+    }
 
     return params;
   }

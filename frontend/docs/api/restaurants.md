@@ -4,14 +4,14 @@
 ## GET `/api/v1/restaurants/nearby`
 Nearby approved internal and live provider places; explicit search filters only
 - operationId: `nearbyRestaurants`
-- Params: `query:lat (number,null)`, `query:lng (number,null)`, `query:north (number,null)`, `query:south (number,null)`, `query:east (number,null)`, `query:west (number,null)`, `query:radiusMeters (integer)`, `query:page (integer)`, `query:limit (integer)`, `query:dietPattern (string)`, `query:locationSource (string)`, `query:locationConsent (string)`
+- Params: `query:lat (number,null)`, `query:lng (number,null)`, `query:north (number,null)`, `query:south (number,null)`, `query:east (number,null)`, `query:west (number,null)`, `query:radiusMeters (integer)`, `query:page (integer)`, `query:limit (integer)`, `query:all (string)`, `query:dietPattern (string)`, `query:locationSource (string)`, `query:locationConsent (string)`
 - Request: —
 - Responses: `200` → RestaurantDiscoveryResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse
 
 ## GET `/api/v1/restaurants/search`
 Search nearby restaurants and shops
 - operationId: `searchRestaurants`
-- Params: `query:lat (number,null)`, `query:lng (number,null)`, `query:north (number,null)`, `query:south (number,null)`, `query:east (number,null)`, `query:west (number,null)`, `query:radiusMeters (integer)`, `query:page (integer)`, `query:limit (integer)`, `query:dietPattern (string)`, `query:locationSource (string)`, `query:locationConsent (string)`, `query:q* (string)`, `query:minPrice (integer,null)`, `query:maxPrice (integer,null)`, `query:minRating (number)`, `query:openState (string)`, `query:openOnDay (string)`, `query:openAtHour (integer,null)`
+- Params: `query:lat (number,null)`, `query:lng (number,null)`, `query:north (number,null)`, `query:south (number,null)`, `query:east (number,null)`, `query:west (number,null)`, `query:radiusMeters (integer)`, `query:page (integer)`, `query:limit (integer)`, `query:all (string)`, `query:dietPattern (string)`, `query:locationSource (string)`, `query:locationConsent (string)`, `query:q* (string)`, `query:minPrice (integer,null)`, `query:maxPrice (integer,null)`, `query:minRating (number)`, `query:openState (string)`, `query:openOnDay (string)`, `query:openAtHour (integer,null)`
 - Request: —
 - Responses: `200` → RestaurantDiscoveryResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse
 

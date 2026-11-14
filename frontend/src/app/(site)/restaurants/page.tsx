@@ -5,8 +5,6 @@ import Link from 'next/link';
 import {
   ArrowLeft,
   ArrowUpRight,
-  ChevronLeft,
-  ChevronRight,
   Compass,
   List,
   Map as MapIcon,
@@ -30,7 +28,6 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
-import type { DietPattern } from '@/common/enums';
 import { DEFAULT_RADIUS_M, MAX_RADIUS_M } from '@/features/restaurant/schemas/restaurant.schema';
 import type {
   RestaurantBounds,
@@ -68,9 +65,6 @@ export default function RestaurantMapPage() {
   const [persistedFilters] = React.useState(readPersistedFilters);
   const [query, setQuery] = React.useState(persistedFilters?.query ?? '');
   const [radiusM, setRadiusM] = React.useState(persistedFilters?.radiusM ?? DEFAULT_RADIUS_M);
-  const [dietPattern, setDietPattern] = React.useState<DietPattern | undefined>(
-    persistedFilters?.dietPattern
-  );
   const [advanced, setAdvanced] = React.useState<RestaurantSearchState['advanced']>(
     persistedFilters?.advanced ?? {}
   );
@@ -84,14 +78,14 @@ export default function RestaurantMapPage() {
 
   // Remember filters only. Coordinates, addresses and device consent stay in this page's memory.
   React.useEffect(() => {
-    persistSearchFilters({ radiusM, query, dietPattern, advanced });
-  }, [radiusM, query, dietPattern, advanced]);
+    persistSearchFilters({ radiusM, query, advanced });
+  }, [radiusM, query, advanced]);
   const debouncedQuery = useDebounce(query, 400);
   const baseSearchState = React.useMemo<RestaurantSearchState>(() => {
     const state: Omit<RestaurantSearchState, 'mode'> = {
       radiusM,
       query: debouncedQuery,
-      dietPattern,
+      allResults: true,
       advanced,
       ...(location
         ? {
@@ -104,13 +98,10 @@ export default function RestaurantMapPage() {
       ...(searchingArea && activeBounds ? { bounds: activeBounds } : {}),
     };
     return { ...state, mode: resolveSearchMode(state) ?? 'NEARBY' };
-  }, [radiusM, debouncedQuery, dietPattern, advanced, location, searchingArea, activeBounds]);
+  }, [radiusM, debouncedQuery, advanced, location, searchingArea, activeBounds]);
   const resolvedMode = baseSearchState.mode;
-  const [pagination, setPagination] = React.useState({ scope: '', page: 1 });
-  const searchScope = JSON.stringify(baseSearchState);
-  const page = pagination.scope === searchScope ? pagination.page : 1;
   const { data, isLoading, isFetching, isError, refetch } = useRestaurantDiscoveryQuery(
-    { ...baseSearchState, page, limit: 20 },
+    baseSearchState,
     location !== null
   );
   const restaurants = data?.restaurants ?? [];
@@ -147,7 +138,6 @@ export default function RestaurantMapPage() {
   }, []);
   const clearAllFilters = React.useCallback(() => {
     setQuery('');
-    setDietPattern(undefined);
     setAdvanced({});
     setRadiusM(DEFAULT_RADIUS_M);
   }, []);
@@ -156,11 +146,7 @@ export default function RestaurantMapPage() {
     [handleRadiusChange, radiusM]
   );
   const advancedCount = countActiveAdvancedFilters(advanced);
-  const hasFilters =
-    query.length > 0 ||
-    dietPattern !== undefined ||
-    advancedCount > 0 ||
-    radiusM !== DEFAULT_RADIUS_M;
+  const hasFilters = query.length > 0 || advancedCount > 0 || radiusM !== DEFAULT_RADIUS_M;
   const emptyCopy = React.useMemo(
     () => emptyStateCopy(resolvedMode, data?.meta.externalResultsSuppressed),
     [resolvedMode, data?.meta.externalResultsSuppressed]
@@ -367,12 +353,10 @@ export default function RestaurantMapPage() {
           <RestaurantFilters
             query={query}
             radiusM={radiusM}
-            dietPattern={dietPattern}
             advanced={advanced}
             searchMode={resolvedMode}
             onQueryChange={setQuery}
             onRadiusChange={handleRadiusChange}
-            onDietPatternChange={setDietPattern}
             onAdvancedChange={setAdvanced}
             onClearAll={clearAllFilters}
           />
@@ -465,47 +449,6 @@ export default function RestaurantMapPage() {
                 emptyDescription={emptyCopy.description}
                 emptyActions={emptyActions}
               />
-              {data && data.meta.totalPages > 1 && (
-                <nav
-                  aria-label="Phân trang quán"
-                  className="mt-6 flex items-center justify-between gap-3 border-t pt-5"
-                >
-                  <Button
-                    variant="outline"
-                    className="h-11 rounded-xl"
-                    disabled={!data.meta.hasPrevPage || isQueryLoading || isFetching}
-                    onClick={() => {
-                      setPagination({ scope: searchScope, page: page - 1 });
-                      setSelectedId(null);
-                      document
-                        .getElementById('restaurant-results')
-                        ?.scrollIntoView({ block: 'start' });
-                    }}
-                  >
-                    <ChevronLeft className="size-4" aria-hidden="true" />
-                    Trước
-                  </Button>
-                  <span className="text-sm tabular-nums text-muted-foreground" aria-live="polite">
-                    Trang <span className="font-medium text-foreground">{page}</span> /{' '}
-                    {data.meta.totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    className="h-11 rounded-xl"
-                    disabled={!data.meta.hasNextPage || isQueryLoading || isFetching}
-                    onClick={() => {
-                      setPagination({ scope: searchScope, page: page + 1 });
-                      setSelectedId(null);
-                      document
-                        .getElementById('restaurant-results')
-                        ?.scrollIntoView({ block: 'start' });
-                    }}
-                  >
-                    Sau
-                    <ChevronRight className="size-4" aria-hidden="true" />
-                  </Button>
-                </nav>
-              )}
             </section>
             <aside
               id="restaurant-map-panel"
@@ -529,7 +472,6 @@ export default function RestaurantMapPage() {
                   canSearchThisArea={hasViewBounds}
                   isSearchingArea={searchingArea}
                   isLoading={isQueryLoading || isFetching}
-                  page={data?.meta.page ?? page}
                   notices={data?.notices}
                   emptyTitle={isError ? 'Chưa tải được vị trí các quán' : emptyCopy.title}
                   emptyDescription={
@@ -538,7 +480,7 @@ export default function RestaurantMapPage() {
                 />
               </div>
               <p className="mt-3 flex items-center justify-between gap-3 px-1 text-xs leading-relaxed text-muted-foreground">
-                <span>Ghim hiển thị quán trên trang hiện tại. Vị trí mang tính tham khảo.</span>
+                <span>Hiển thị toàn bộ kết quả tìm được. Vị trí mang tính tham khảo.</span>
                 <Navigation className="size-4 shrink-0" aria-hidden="true" />
               </p>
             </aside>

@@ -1,12 +1,14 @@
 # Backend Implementation Phases
 
-**Version:** 3.23
+**Version:** 3.24
 
 **Updated:** 2026-11-14
 
 **Stack:** Node.js · Express · TypeScript · MongoDB replica set · Prisma · Zod · OpenAPI
 
 **Current baseline:** Phases 00–20 and 23–26 completed; Phases 21–22 and 27 are in progress. OpenAI image adapters are implemented for Phase 21/22, but live Vietnamese image and receipt validation remains before production readiness.
+
+**Phase 24 all-result maintenance — 2026-11-14:** User requests web map/list without pagination and removes the diet-type dropdown. Add optional all=true to nearby/search, returning the entire bounded discovery result with page=1 and limit=max(1,total), preserving default pagination and all provider/privacy/consent rules for other clients. No extra discovery pass, database/schema/seed/auth change or phase-status change. Backend lint/typecheck/build/OpenAPI/served schema, six isolated contract/service groups and live HTTP all-result/default-pagination checks pass. Web migration and browser proof recorded in integration 4.75 and frontend WORK-LOG.
 
 **Phase 11/26 chat maintenance — 2026-11-14:** Configured gateway rejected the moderation model with 503 model_not_found while Responses succeeded. Explicit unsupported model/endpoint failures now select a strict Responses safety classifier configured by AI_MODERATION_FALLBACK_MODEL (default AI_MODEL_CHAT). Moderation stays mandatory; invalid/unavailable results, administrative disable and auth/rate-limit/transient failures retain fail-closed behavior. Shared timeout/abort, quota and SSE contracts remain; governance records actual classification model/template/tokens. Backend lint/typecheck/build/OpenAPI, 25 isolated provider/governance groups, live SSE/replay/history/quota and browser chat/reload pass. No schema/seed/auth or numbered-phase status change; integration 4.74 and frontend WORK-LOG record details.
 

@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { DietPattern } from '@/common/enums';
 import { DEFAULT_RADIUS_M, MAX_RADIUS_M, MIN_RADIUS_M } from '../schemas/restaurant.schema';
 import { countActiveAdvancedFilters } from '../utils/restaurant-search';
 import type { RestaurantAdvancedFilters, RestaurantSearchMode } from '../types/restaurant.model';
@@ -27,21 +26,13 @@ import { AdvancedFiltersSheet } from './advanced-filters';
 
 const RADIUS_OPTIONS = [100, 300, 500, 1000, 3000, 5000, 10000, 20000, 50000];
 const KEYWORD_SUGGESTIONS = ['Cơm chay', 'Phở chay', 'Lẩu chay'];
-const DIET_PATTERN_OPTIONS = [
-  { value: DietPattern.VEGAN, label: 'Thuần chay (Vegan)' },
-  { value: DietPattern.LACTO_OVO, label: 'Chay có sữa và trứng' },
-];
-const DIET_PATTERN_NONE = 'none';
-
 export interface RestaurantFiltersProps {
   query: string;
   radiusM: number;
-  dietPattern?: DietPattern;
   advanced: RestaurantAdvancedFilters;
   searchMode: RestaurantSearchMode | null;
   onQueryChange: (query: string) => void;
   onRadiusChange: (radiusM: number) => void;
-  onDietPatternChange: (dietPattern: DietPattern | undefined) => void;
   onAdvancedChange: (filters: RestaurantAdvancedFilters) => void;
   onClearAll: () => void;
 }
@@ -49,30 +40,24 @@ export interface RestaurantFiltersProps {
 export function RestaurantFilters({
   query,
   radiusM,
-  dietPattern,
   advanced,
   searchMode,
   onQueryChange,
   onRadiusChange,
-  onDietPatternChange,
   onAdvancedChange,
   onClearAll,
 }: RestaurantFiltersProps) {
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
   const advancedCount = countActiveAdvancedFilters(advanced);
-  const hasFilters =
-    query.length > 0 ||
-    dietPattern !== undefined ||
-    advancedCount > 0 ||
-    radiusM !== DEFAULT_RADIUS_M;
+  const hasFilters = query.length > 0 || advancedCount > 0 || radiusM !== DEFAULT_RADIUS_M;
 
   return (
     <section
       aria-label="Bộ lọc tìm quán"
       className="flex flex-col gap-3 rounded-2xl border bg-card p-4"
     >
-      <FieldGroup className="grid grid-cols-2 gap-4 xl:grid-cols-[minmax(0,1fr)_160px_200px_auto]">
-        <Field className="col-span-2 gap-2 xl:col-span-1">
+      <FieldGroup className="grid grid-cols-2 gap-4 xl:grid-cols-[minmax(0,1fr)_160px_auto]">
+        <Field className="gap-2">
           <FieldLabel htmlFor="restaurant-query">Tìm theo tên quán hoặc món ăn</FieldLabel>
           <InputGroup className="h-11 rounded-xl bg-background">
             <InputGroupAddon>
@@ -132,32 +117,6 @@ export function RestaurantFilters({
           </Select>
         </Field>
         <Field className="gap-2">
-          <FieldLabel htmlFor="restaurant-diet">Loại quán chay</FieldLabel>
-          <Select
-            value={dietPattern ?? DIET_PATTERN_NONE}
-            onValueChange={(value) =>
-              onDietPatternChange(value === DIET_PATTERN_NONE ? undefined : (value as DietPattern))
-            }
-          >
-            <SelectTrigger
-              id="restaurant-diet"
-              className="w-full rounded-xl bg-background data-[size=default]:h-11"
-            >
-              <SelectValue placeholder="Tất cả" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value={DIET_PATTERN_NONE}>Tất cả</SelectItem>
-                {DIET_PATTERN_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field className="col-span-2 gap-2 xl:col-span-1">
           <FieldLabel className="sr-only xl:not-sr-only">Tùy chọn</FieldLabel>
           <Button
             type="button"

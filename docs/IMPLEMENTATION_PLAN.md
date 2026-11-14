@@ -1,6 +1,6 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.20
+**Version:** 4.21
 
 **Updated:** 2026-11-14
 
@@ -42,7 +42,7 @@ The current API contract may still contain legacy Contributor subtype fields unt
 | D22 | Safety | Nutrition, freshness, compatibility, BMI, and AI answers are educational support, not diagnosis or guaranteed safety. |
 | D23 | Usage billing | User-approved 2026-10-13 and payOS conversion 2026-10-14: payOS exclusively for new one-time cumulative AI usage/Pantry capacity packages and, since 2026-10-27, a non-renewing combo with 1-month/3-month/1-year durations (BL-20.1). App rollout remains development/test; payOS checkout is real money, without sandbox or mock fallback. No recurring or media-storage purchase. |
 | D24 | AI recipe draft | Accept ordered ingredient names and optional author-supplied title, description, servings and preparation/cooking times. Preserve supplied values and suggest missing values; return an editable draft for the existing DRAFT content flow. Cover images are supplied separately. AI output does not publish or become canonical nutrition data. Updated at user request 2026-11-07. |
-| D25 | Restaurant map | User-approved 2026-11-14: web street map uses key-free MapLibre/OpenFreeMap with clustered current-page SerpApi results, distinct attribution, explicit area-search action and accessible list/chooser. No new location persistence or verified dietary claim. |
+| D25 | Restaurant map | User-approved 2026-11-14: web street map uses key-free MapLibre/OpenFreeMap with all bounded discovery results together, clustered pins, distinct attribution, explicit area-search action and accessible list/chooser. Web removes pagination and diet-type filtering; provider/internal caps and incomplete-result notices remain. No new location persistence or verified dietary claim. |
 
 ## 3. MVP scope
 
@@ -609,6 +609,8 @@ A phase is complete only when:
 | Phase 2 ideas are forgotten or accidentally claimed READY | Dedicated roadmap plus explicit status taxonomy |
 
 ## 13. Change record
+
+- **4.21 — 2026-11-14:** User requests all discovered restaurants on the web map/list without pagination and removes the diet-type dropdown. Add opt-in all=true to return one bounded discovery set while retaining the existing paginated contract for other clients. Web no longer restores/sends a diet filter; explicit backend filtering remains available to other clients. No dietary verification, complete-directory or quota rule change.
 
 - **4.20 — 2026-11-14:** Fix chat's permanent fallback when the configured gateway supports Responses but rejects the moderation model. Preserve pre-generation moderation with a strict, configured compatibility classifier, fail-closed behavior, shared timeout, quota release/replay and redacted governance metadata. No new product scope, route, schema or authorization rule.
 

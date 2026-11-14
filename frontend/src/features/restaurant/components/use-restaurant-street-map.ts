@@ -297,7 +297,11 @@ export function useRestaurantStreetMap(options: StreetMapOptions) {
             try {
               const source = liveMap.getSource(POINTS) as GeoJSONSource;
               const id = Number(cluster.properties.cluster_id);
-              const leaves = await source.getClusterLeaves(id, 20, 0);
+              const leaves = await source.getClusterLeaves(
+                id,
+                Math.max(1, optionsRef.current.items.length),
+                0
+              );
               if (disposed) return;
               const ids = leaves.flatMap((leaf) =>
                 typeof leaf.properties?.id === 'string' ? [leaf.properties.id] : []

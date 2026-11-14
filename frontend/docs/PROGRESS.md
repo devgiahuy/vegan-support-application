@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Chat response, toàn bộ quán và nhãn quota — Updated 2026-11-14
+
+Giữ whitespace/newlines khi stream; render GFM table/list/heading/link an toàn, responsive và cuộn ngang bảng bằng bàn phím. Web map/list lấy toàn bộ tập kết quả qua all=true, bỏ pagination/dropdown diet-type và không áp dụng lựa chọn diet cũ; backend giữ pagination cho client cũ cùng provider caps/notices. Lượt chat mua thêm=0 hiển thị trung tính, phân biệt với lượt miễn phí; không đổi quota backend. Backend gates/OpenAPI, sáu isolated groups, FE typecheck/scoped lint/860 tests/build và browser desktop/mobile đạt. Giữ READY và % scaffold; bằng chứng, giới hạn tại WORK-LOG.
+
 ## Chat fallback trên gateway tương thích — Updated 2026-11-14
 
 Đã tái hiện lỗi thiếu model moderation (503 model_not_found) trong khi Responses vẫn thành công. Thêm phân loại an toàn bằng model cấu hình khi gateway báo rõ không hỗ trợ moderation; giữ kiểm duyệt bắt buộc, admin disable, timeout/abort, quota và contract SSE. 25 nhóm kiểm tra cô lập, classifier thật, HTTP SSE/replay/history/quota và browser gửi/tải lại đạt; backend lint/typecheck/build/OpenAPI/sync đạt. Không đổi consumer hoặc % scaffold; các giới hạn và bằng chứng tại WORK-LOG.
