@@ -20,6 +20,36 @@ function baseState(overrides: Partial<RestaurantSearchState> = {}): RestaurantSe
   };
 }
 
+describe('unpaginated restaurant discovery', () => {
+  it('requests one complete result set and omits page slicing parameters', () => {
+    const params = restaurantMapper.toDiscoveryParams(
+      baseState({ lat: 10.77, lng: 106.69, allResults: true, page: 4, limit: 20 })
+    );
+    expect(params.all).toBe('true');
+    expect(params).not.toHaveProperty('page');
+    expect(params).not.toHaveProperty('limit');
+    expect(params).not.toHaveProperty('dietPattern');
+  });
+  it('maps all records with no next page and retains provider truncation notices', () => {
+    const items = Array.from({ length: 65 }, (_, index) => ({
+      id: String(index),
+      name: `Quán ${index}`,
+      latitude: 10.77,
+      longitude: 106.69,
+    }));
+    const model = restaurantMapper.toDiscoveryModel(items, {
+      page: 1,
+      limit: 65,
+      total: 65,
+      resultsTruncated: true,
+    });
+    expect(model.restaurants).toHaveLength(65);
+    expect(model.meta.hasNextPage).toBe(false);
+    expect(model.meta.totalPages).toBe(1);
+    expect(model.meta.resultsTruncated).toBe(true);
+  });
+});
+
 describe('RestaurantMapper.toModel — field theo contract', () => {
   it('parse latitude/longitude dạng chuỗi và ưu tiên tên contract', () => {
     const fromContract = restaurantMapper.toModel({

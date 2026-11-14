@@ -1,7 +1,7 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "..\\backend\\openapi.json",
-  "generatedAt": "2026-11-10T10:08:06.080Z",
+  "source": "http://localhost:4000/api-docs.json",
+  "generatedAt": "2026-11-14T13:30:33.869Z",
   "stats": {
     "operations": 195,
     "groups": 42,
@@ -1254,6 +1254,7 @@
         "404": "ErrorResponse",
         "409": "ErrorResponse",
         "410": "ErrorResponse",
+        "422": "ErrorResponse",
         "423": "ErrorResponse"
       }
     },
@@ -8289,6 +8290,12 @@
         },
         {
           "in": "query",
+          "name": "all",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
           "name": "dietPattern",
           "required": false,
           "type": "string"
@@ -8392,6 +8399,12 @@
           "name": "limit",
           "required": false,
           "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "all",
+          "required": false,
+          "type": "string"
         },
         {
           "in": "query",

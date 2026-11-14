@@ -99,8 +99,8 @@ function fromInternal(
 function fromExternal(
   place: ExternalPlace,
   provider: string,
-  lat: number,
-  lng: number,
+  lat?: number,
+  lng?: number,
 ): ResultPlace {
   return {
     id: `${provider.toLowerCase()}:${place.placeId}`,
@@ -123,7 +123,10 @@ function fromExternal(
     externalPlaceId: place.placeId,
     attribution: place.attribution,
     fetchedAt: place.fetchedAt,
-    distanceMeters: Math.round(distanceMeters(lat, lng, place.latitude, place.longitude)),
+    distanceMeters:
+      lat !== undefined && lng !== undefined
+        ? Math.round(distanceMeters(lat, lng, place.latitude, place.longitude))
+        : null,
     matchReasons: ['PROVIDER_TEXT_MATCH', 'DIETARY_UNREVIEWED'],
     dietaryReviewed: false,
   };
@@ -179,8 +182,11 @@ export class RestaurantService {
         message: 'Location bounds are too large',
       });
     const text = 'q' in query ? query.q : undefined;
-    const latDelta = radiusMeters / 111_000;
-    const lngDelta = radiusMeters / Math.max(20_000, 111_000 * Math.cos((lat * Math.PI) / 180));
+    const discoveryRadiusMeters =
+      this.provider.name === 'SERPAPI' ? Math.max(5000, radiusMeters) : radiusMeters;
+    const latDelta = discoveryRadiusMeters / 111_000;
+    const lngDelta =
+      discoveryRadiusMeters / Math.max(20_000, 111_000 * Math.cos((lat * Math.PI) / 180));
     const internal = await this.prisma.restaurant.findMany({
       where: {
         status: RestaurantStatus.APPROVED,
@@ -248,7 +254,7 @@ export class RestaurantService {
         : ['chay restaurant', 'vegan restaurant', 'vegetarian restaurant'];
       const responses = await Promise.allSettled(
         providerQueries.map((providerQuery) =>
-          this.provider.search(providerQuery, lat, lng, radiusMeters, mapsFilters),
+          this.provider.search(providerQuery, lat, lng, discoveryRadiusMeters, mapsFilters),
         ),
       );
       for (const response of responses) {
@@ -259,20 +265,20 @@ export class RestaurantService {
         externalDataUnavailable ||= response.value.partialFailure;
         providerTruncated ||= response.value.truncated;
         for (const place of response.value.places) {
-          if (inArea(place.latitude, place.longitude)) {
-            if (
-              externalByPlaceId.size >= providerResultLimit &&
-              !externalByPlaceId.has(place.placeId)
-            ) {
-              providerTruncated = true;
-              continue;
-            }
-            externalByPlaceId.set(place.placeId, fromExternal(place, this.provider.name, lat, lng));
+          if (
+            externalByPlaceId.size >= providerResultLimit &&
+            !externalByPlaceId.has(place.placeId)
+          ) {
+            providerTruncated = true;
+            continue;
           }
+          externalByPlaceId.set(place.placeId, fromExternal(place, this.provider.name, lat, lng));
         }
       }
     }
-    const external = [...externalByPlaceId.values()];
+    const external = [...externalByPlaceId.values()].filter((place) =>
+      inArea(place.latitude, place.longitude),
+    );
     const result = [...selected];
     for (const candidate of external) {
       if (
@@ -301,11 +307,12 @@ export class RestaurantService {
       );
     });
     const start = (query.page - 1) * query.limit;
+    const allResults = query.all === 'true';
     return {
-      data: result.slice(start, start + query.limit),
+      data: allResults ? result : result.slice(start, start + query.limit),
       meta: {
-        page: query.page,
-        limit: query.limit,
+        page: allResults ? 1 : query.page,
+        limit: allResults ? Math.max(1, result.length) : query.limit,
         total: result.length,
         resultsTruncated: resultsTruncated || providerTruncated,
         externalResultsSuppressed,
@@ -334,7 +341,7 @@ export class RestaurantService {
       }
       if (!place)
         throw new AppError({ statusCode: 404, code: 'NOT_FOUND', message: 'Place not found' });
-      return fromExternal(place, this.provider.name, place.latitude, place.longitude);
+      return fromExternal(place, this.provider.name);
     }
     const place = await this.prisma.restaurant.findUnique({
       where: { id },

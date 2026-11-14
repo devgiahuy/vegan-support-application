@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { getApiErrorCode, toastApiError } from '@/lib/api-error';
+import { getApiErrorCode, getApiErrorFields, toastApiError } from '@/lib/api-error';
 import { mealPlanApi } from '../api/meal-plan.api';
+import { mealPlanMapper } from '../mappers/meal-plan.mapper';
 import type { GenerateMealPlanInput, MealPlanListQueryParams } from '../types/meal-plan.model';
 import type { ManualAddMealPlanItemRequestDto } from '../types/meal-plan.dto';
 import { MEAL_ANALYSIS_KEYS } from '@/features/meal-analysis/queries/meal-analysis.queries';
@@ -117,8 +118,20 @@ export function useManualAddMealItemMutation() {
     },
     onError: (err: unknown) => {
       const code = getApiErrorCode(err);
+      const constraintError = mealPlanMapper.toConstraintError(code, getApiErrorFields(err));
+      if (constraintError?.kind === 'UNVERIFIED') {
+        const names = constraintError.unverifiedIngredients;
+        toast.error('Chưa thể kiểm tra món này', {
+          description: `${
+            names.length
+              ? `Nguyên liệu chưa liên kết với Ngân hàng Thực phẩm: ${names.join(', ')}.`
+              : 'Món có nguyên liệu chưa liên kết với Ngân hàng Thực phẩm.'
+          } Hệ thống chưa phát hiện vi phạm, nhưng chưa thể kiểm tra dị ứng và chế độ ăn của bạn. Hãy liên kết nguyên liệu trong món hoặc chọn món khác.`,
+        });
+        return;
+      }
       if (
-        code === 'MEAL_PLAN_HARD_CONSTRAINT_VIOLATION' ||
+        constraintError?.kind === 'VIOLATION' ||
         code === 'ALLERGY_VIOLATION' ||
         code === 'DIET_CONSTRAINT_VIOLATION'
       ) {

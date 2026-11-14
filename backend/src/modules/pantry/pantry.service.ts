@@ -183,7 +183,10 @@ export class PantryService {
         message: 'Ingredient is not active or does not exist',
       });
     }
-    if (input.unmatchedText && !normalizeVietnameseText(input.unmatchedText)) {
+    const normalizedUnmatchedText = input.unmatchedText
+      ? normalizeVietnameseText(input.unmatchedText)
+      : '';
+    if (input.unmatchedText && !normalizedUnmatchedText) {
       throw new AppError({
         statusCode: 422,
         code: 'PANTRY_UNMATCHED_TEXT_INVALID',
@@ -191,21 +194,20 @@ export class PantryService {
       });
     }
     this.validateDates(input.purchasedAt, input.openedAt, input.expiresAt);
+    // Free text that exactly names a canonical ingredient or an approved alias is linked to it.
+    const ingredientId =
+      input.ingredientId ??
+      (normalizedUnmatchedText
+        ? (await this.repository.resolveIngredientByName(normalizedUnmatchedText))?.id
+        : undefined);
     const normalizedUnit = normalizeDisplayUnit(input.unit);
-    const conversion = await this.resolveConversion(
-      input.ingredientId,
-      input.quantity,
-      normalizedUnit,
-    );
+    const conversion = await this.resolveConversion(ingredientId, input.quantity, normalizedUnit);
     try {
       const result = await this.repository.create({
         ownerId,
-        ...(input.ingredientId ? { ingredientId: input.ingredientId } : {}),
-        ...(input.unmatchedText
-          ? {
-              unmatchedText: input.unmatchedText,
-              normalizedUnmatchedText: normalizeVietnameseText(input.unmatchedText),
-            }
+        ...(ingredientId ? { ingredientId } : {}),
+        ...(!ingredientId && input.unmatchedText
+          ? { unmatchedText: input.unmatchedText, normalizedUnmatchedText }
           : {}),
         quantity: input.quantity,
         unit: normalizedUnit,

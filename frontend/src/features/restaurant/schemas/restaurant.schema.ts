@@ -1,9 +1,10 @@
 import { z } from 'zod';
 
-/** Backend `radiusMeters` là `z.coerce.number().int().min(100).max(50000).default(5000)`. */
+/** Web discovery choices; the backend's wider contract remains available to other clients. */
 export const MIN_RADIUS_M = 100;
-export const MAX_RADIUS_M = 50000;
-export const DEFAULT_RADIUS_M = 5000;
+export const MAX_RADIUS_M = 5000;
+export const DEFAULT_RADIUS_M = 3000;
+export const RESTAURANT_RADIUS_OPTIONS = [100, 300, 500, 1000, 3000, 5000] as const;
 
 /** Backend `searchQuerySchema.q` là `z.string().trim().min(2).max(160)`. */
 export const MAX_QUERY_LENGTH = 160;

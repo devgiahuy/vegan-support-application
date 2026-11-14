@@ -8,6 +8,28 @@ import { billingErrorMessage } from '@/features/billing/lib/billing-errors';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+/** Purchased balance is supplemental; only the chat quota determines whether all turns are exhausted. */
+export function ChatPurchasedAllowance({ credits }: { credits: number }) {
+  return (
+    <Alert className="border-border bg-muted/30">
+      <MessageSquare aria-hidden="true" />
+      <AlertTitle className="flex flex-wrap items-center justify-between gap-2">
+        <span>
+          Lượt chat mua thêm: <span className="tabular-nums">{credits}</span>
+        </span>
+        <Button asChild variant="outline" size="sm" className="h-9">
+          <Link href="/billing">Xem gói tiện ích</Link>
+        </Button>
+      </AlertTitle>
+      <AlertDescription className="text-xs leading-relaxed">
+        Số này không bao gồm lượt miễn phí hằng ngày. Hệ thống dùng lượt miễn phí trước, sau đó mới
+        dùng lượt mua thêm.
+      </AlertDescription>
+    </Alert>
+  );
+}
 
 export function AllowanceNotice({
   feature = 'PANTRY',
@@ -40,6 +62,7 @@ export function AllowanceNotice({
   }
 
   if (!query.data?.enabled) return null;
+  if (feature === 'CHAT') return <ChatPurchasedAllowance credits={query.data.chatAvailable} />;
 
   // Trích xuất số lượt và nhãn hiển thị tương ứng
   let credits = 0;
@@ -51,11 +74,6 @@ export function AllowanceNotice({
     quotaLabel = query.data.pantryLabel;
     policyText = 'Vật phẩm chưa xóa, kể cả số lượng bằng 0, đều chiếm một ô trong kho.';
     Icon = Boxes;
-  } else if (feature === 'CHAT') {
-    credits = query.data.chatAvailable;
-    quotaLabel = 'lượt chat mua thêm';
-    policyText = 'Lượt miễn phí được dùng trước; kết quả lỗi không mất lượt mua thêm.';
-    Icon = MessageSquare;
   } else if (feature === 'FRIDGE') {
     credits = query.data.fridgeAvailable;
     quotaLabel = 'lượt quét tủ lạnh';

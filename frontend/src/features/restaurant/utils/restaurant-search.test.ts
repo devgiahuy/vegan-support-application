@@ -144,7 +144,7 @@ describe('sanitizePersistedFilters', () => {
     expect(JSON.stringify(result)).not.toContain('10.8231');
     expect(JSON.stringify(result)).not.toContain('Hồ Gươm');
 
-    expect(result.radiusM).toBe(15000);
+    expect(result.radiusM).toBe(DEFAULT_RADIUS_M);
     expect(result.query).toBe('phở chay');
   });
 
@@ -197,6 +197,13 @@ describe('sanitizePersistedFilters', () => {
     expect(sanitizePersistedFilters({ radiusM: 'x' }).radiusM).toBe(DEFAULT_RADIUS_M);
     expect(sanitizePersistedFilters({ radiusM: NaN }).radiusM).toBe(DEFAULT_RADIUS_M);
   });
+
+  it('resets previous wide or unsupported radius choices to 3km while keeping an explicit 5km choice', () => {
+    for (const radiusM of [10000, 20000, 50000, 2000, -1, Infinity]) {
+      expect(sanitizePersistedFilters({ radiusM }).radiusM).toBe(3000);
+    }
+    expect(sanitizePersistedFilters({ radiusM: 5000 }).radiusM).toBe(5000);
+  });
 });
 
 describe('sanitizeAdvancedFilters', () => {
@@ -229,6 +236,16 @@ describe('sanitizeAdvancedFilters', () => {
 });
 
 describe('emptyStateCopy', () => {
+  it.each(['NEARBY', 'BOUNDS', 'KEYWORD'] as const)(
+    '%s không kết luận không có quán khi nhà cung cấp lỗi',
+    (mode) => {
+      const copy = emptyStateCopy(mode, false, true);
+      expect(copy.title).toBe('Chưa tải được kết quả tìm quán');
+      expect(copy.description).toContain('Chưa thể xác định');
+      expect(copy.actions).not.toContain('Nới bán kính');
+    }
+  );
+
   it.each(['NEARBY', 'BOUNDS', 'KEYWORD'] as const)(
     '%s giải thích kết quả bị giới hạn bởi bộ lọc chế độ ăn đã chọn',
     (mode) => {

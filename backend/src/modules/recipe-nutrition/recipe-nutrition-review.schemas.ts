@@ -51,6 +51,19 @@ const metricSchema = z
         confidence: z.number().min(0).max(1).nullable(),
       })
       .strict(),
+    author: z
+      .number()
+      .nonnegative()
+      .nullable()
+      .describe('Per-serving value the author typed (USER_PROVIDED); null when left blank.'),
+    deviationPercent: z
+      .number()
+      .nonnegative()
+      .nullable()
+      .describe('|author − system estimate| / system estimate × 100; null without both values.'),
+    deviationWarning: z
+      .boolean()
+      .describe('True when deviationPercent exceeds 30 (reviewer should double-check).'),
     override: z
       .object({
         value: z.number().nonnegative(),

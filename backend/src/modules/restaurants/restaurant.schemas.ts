@@ -32,6 +32,12 @@ const locationQuery = z
     radiusMeters: z.coerce.number().int().min(100).max(50000).default(5000),
     page: z.coerce.number().int().min(1).max(100).default(1),
     limit: z.coerce.number().int().min(1).max(20).default(20),
+    all: z
+      .enum(['true', 'false'])
+      .optional()
+      .describe(
+        'Return the entire bounded discovery set when true; ignore page/limit for slicing.',
+      ),
     dietPattern: z.nativeEnum(DietPattern).optional(),
     locationSource: z.enum(['MANUAL', 'DEVICE']).default('MANUAL'),
     locationConsent: z.enum(['true', 'false']).optional(),

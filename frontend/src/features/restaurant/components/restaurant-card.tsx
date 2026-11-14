@@ -24,6 +24,7 @@ export interface RestaurantCardProps {
   restaurant: Restaurant;
   isSelected?: boolean;
   onSelect?: (id: string) => void;
+  position?: number;
 }
 
 function RestaurantPhoto({ restaurant }: { restaurant: Restaurant }) {
@@ -50,7 +51,12 @@ function RestaurantPhoto({ restaurant }: { restaurant: Restaurant }) {
   );
 }
 
-export function RestaurantCard({ restaurant, isSelected = false, onSelect }: RestaurantCardProps) {
+export function RestaurantCard({
+  restaurant,
+  isSelected = false,
+  onSelect,
+  position,
+}: RestaurantCardProps) {
   const websiteUrl = getExternalHttpUrl(restaurant.websiteUrl);
 
   return (
@@ -66,6 +72,14 @@ export function RestaurantCard({ restaurant, isSelected = false, onSelect }: Res
       <div className="flex items-start gap-4 p-4 sm:gap-5 sm:p-5">
         <div className="relative aspect-square w-28 shrink-0 overflow-hidden rounded-xl bg-secondary/50 sm:w-40">
           <RestaurantPhoto key={restaurant.thumbnailUrl ?? restaurant.id} restaurant={restaurant} />
+          {position !== undefined && (
+            <span
+              className="absolute left-2 top-2 flex size-7 items-center justify-center rounded-full bg-background text-xs font-semibold tabular-nums text-foreground"
+              aria-label={`Ghim số ${position}`}
+            >
+              {position}
+            </span>
+          )}
           {onSelect && (
             <Button
               type="button"

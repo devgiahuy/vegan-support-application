@@ -348,6 +348,7 @@ Generate an editable recipe draft from ingredient names and optional basic infor
         "ingredientConfidence",
         "confidence",
         "assumptions",
+        "suggestedTiming",
         "provenance"
       ],
       "properties": {
@@ -416,6 +417,28 @@ Generate an editable recipe draft from ingredient names and optional basic infor
             "_truncated": true
           }
         },
+        "suggestedTiming": {
+          "type": "object",
+          "required": [
+            "servings",
+            "prepTimeMinutes",
+            "cookTimeMinutes"
+          ],
+          "properties": {
+            "servings": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "prepTimeMinutes": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "cookTimeMinutes": {
+              "type": "integer",
+              "_truncated": true
+            }
+          }
+        },
         "provenance": {
           "type": "object",
           "required": [
@@ -434,14 +457,7 @@ Generate an editable recipe draft from ingredient names and optional basic infor
             },
             "templateVersion": {
               "type": "string",
-              "_truncated": true
-            }
-          }
-        }
-      }
-    }
-  }
-}
+  …(truncated — xem api-catalog.json)
 ```
 
 #### MyPostListResponse

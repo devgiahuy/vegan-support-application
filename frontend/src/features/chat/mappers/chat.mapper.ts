@@ -92,7 +92,9 @@ export function parseSseEvent(rawBlock: string): StreamEvent {
 
 /** Tách text tăng thêm từ payload `content_delta`. */
 export function extractDeltaText(payload: Record<string, unknown>): string {
-  return safeString(pickField<string>(payload, ['content', 'delta', 'text'], ''));
+  const text: unknown = pickField(payload, ['content', 'delta', 'text'], '');
+  // A token can contain only whitespace; trimming chunks corrupts words and Markdown structure.
+  return typeof text === 'string' ? text : '';
 }
 
 /**

@@ -52,6 +52,15 @@ API key for live answers; without one it returns a documented static advisory fa
 Maps can use the local fake provider, Google Places/Geocoding, or SerpApi's Google Maps engine. For SerpApi,
 set `MAPS_PROVIDER=serpapi`, `SERPAPI_API_KEY`, and optionally `SERPAPI_BASE_URL`.
 
+SerpApi searches up to 5km share a bounded five-minute candidate snapshot for the same
+center, phrase and explicit filters, populated from first pages of 1/3/5km viewports.
+The requested radius/bounds is checked locally. Partial snapshots retain known places,
+retry after 15 seconds without extending expiry, and continue reporting degradation.
+The nearby ceiling remains nine calls; filtered keyword search uses up to three first-page
+calls. Wider searches retain bounded paging. Truncated results are not an exhaustive directory.
+If SerpApi returns HTTP 429 with `Your account has run out of searches.`, update/replenish
+the provider account and restart the backend to load a replaced key; never expose it in the frontend.
+
 Local endpoints:
 
 - API health: `http://localhost:4000/api/v1/health`
@@ -159,6 +168,17 @@ run before ranking and pagination. Current query limitations are recorded in `do
 Phase 11 uses the official OpenAI SDK and Responses API behind an `AiProvider` boundary. Model IDs,
 quotas, and the optional `OPENAI_BASE_URL` are configuration. Missing/unavailable access degrades to
 a static safe response without consuming daily quota.
+
+Chat checks moderation before generating an answer. Some OpenAI-compatible gateways support
+Responses but return `model_not_found` for `AI_MODEL_MODERATION`. Only an explicit unsupported
+model/endpoint error enables a Responses safety classifier, using `AI_MODERATION_FALLBACK_MODEL`
+(defaults to `AI_MODEL_CHAT`). It requires a completed response with strict `{ "flagged": boolean }`
+JSON; invalid, refused, incomplete or failed classification retains the static fallback. Authentication,
+rate-limit and other transient errors do not enable this compatibility path. Admin MODERATION
+disable still blocks both methods. Both calls share the chat timeout/abort signal, use `store: false`
+where supported, and classification model/method/token metadata is recorded without prompt content.
+This classifier is an advisory compatibility mechanism, not a claim of equivalence to the dedicated
+moderation model. No frontend change or new credential is needed with an existing Responses-capable gateway.
 
 ## Seed data for local API and frontend development
 
