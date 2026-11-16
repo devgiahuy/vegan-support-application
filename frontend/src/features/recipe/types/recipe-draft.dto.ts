@@ -6,11 +6,12 @@ export interface GenerateRecipeDraftRequestDto {
   title: string;
   /** Mô tả ngắn, để trống để AI gợi ý. */
   description: string;
+  /** Danh sách tên các nguyên liệu chính (1 - 50 nguyên liệu) */
+  ingredientNames: string[];
+  /** Giá trị tác giả đã nhập ở bước 1 (tuỳ chọn): AI định lượng theo số khẩu phần này */
   servings?: number;
   prepTimeMinutes?: number;
   cookTimeMinutes?: number;
-  /** Danh sách tên các nguyên liệu chính (1 - 50 nguyên liệu) */
-  ingredientNames: string[];
 }
 
 /**
@@ -65,6 +66,12 @@ export interface GenerateRecipeDraftResponseDto {
     ingredientConfidence: number[];
     confidence: number;
     assumptions: string[];
+    /** Khẩu phần/thời gian AI tự đề xuất (chỉ để hiển thị khi khác số tác giả nhập) */
+    suggestedTiming?: {
+      servings?: number;
+      prepTimeMinutes?: number;
+      cookTimeMinutes?: number;
+    } | null;
     provenance: {
       provider: string;
       model: string;

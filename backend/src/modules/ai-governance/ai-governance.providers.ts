@@ -1,5 +1,6 @@
 import {
   AiProviderUnavailableError,
+  AiModerationFallbackError,
   type AiProvider,
   type AiChatInput,
   type AiChatChunk,
@@ -139,9 +140,12 @@ export function governAiProvider(
         await governance.record({
           capability: 'MODERATION',
           provider: provider.name,
-          modelId: moderationModel,
+          modelId: result.modelId ?? moderationModel,
+          templateVersion: result.method === 'responses' ? 'safety-classifier-v1' : null,
           status: result.flagged ? 'BLOCKED' : 'SUCCESS',
           safetyOutcome: result.flagged ? 'FLAGGED' : 'CLEAR',
+          inputTokens: result.inputTokens ?? null,
+          outputTokens: result.outputTokens ?? null,
           startedAt,
         });
         return result;
@@ -149,7 +153,9 @@ export function governAiProvider(
         await governance.record({
           capability: 'MODERATION',
           provider: provider.name,
-          modelId: moderationModel,
+          modelId: error instanceof AiModerationFallbackError ? error.modelId : moderationModel,
+          templateVersion:
+            error instanceof AiModerationFallbackError ? 'safety-classifier-v1' : null,
           status: 'FAILED',
           errorClass: 'PROVIDER_UNAVAILABLE',
           safetyOutcome: 'LOCAL_SAFETY_HOLD',

@@ -90,9 +90,11 @@ export const DayMealChecklist: React.FC<DayMealChecklistProps> = ({ programId, w
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {days.map((day) => {
-            const dayTitle = day.dayOfWeekLabel
-              ? `${day.dayOfWeekLabel} (${day.formattedDate || day.date})`
-              : day.formattedDate || day.date;
+            const dayTitle =
+              day.formattedLabel ||
+              (day.dayOfWeekLabel
+                ? `${day.dayOfWeekLabel}, ${day.formattedDate || day.date}`
+                : day.formattedDate || day.date);
 
             return (
               <div

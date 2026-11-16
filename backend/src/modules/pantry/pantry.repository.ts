@@ -97,6 +97,24 @@ export class PantryRepository {
     });
   }
 
+  /** Exact canonical name first, then an approved alias; never a partial match. */
+  async resolveIngredientByName(normalizedName: string) {
+    const direct = await this.prisma.ingredient.findFirst({
+      where: { normalizedName, status: 'ACTIVE' },
+      select: { id: true, canonicalName: true },
+    });
+    if (direct) return direct;
+    const alias = await this.prisma.ingredientAlias.findFirst({
+      where: {
+        normalizedAlias: normalizedName,
+        reviewStatus: FoodDataReviewStatus.APPROVED,
+        ingredient: { status: 'ACTIVE' },
+      },
+      select: { ingredient: { select: { id: true, canonicalName: true } } },
+    });
+    return alias?.ingredient ?? null;
+  }
+
   async findReviewedConversions(ingredientId: string) {
     const now = new Date();
     return this.prisma.ingredientFoodProfile.findMany({

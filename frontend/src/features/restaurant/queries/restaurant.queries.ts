@@ -4,15 +4,36 @@ import { toastApiError } from '@/lib/api-error';
 import { useAuthStore } from '@/store/useAuthStore';
 import { restaurantApi } from '../api/restaurant.api';
 import { resolveSearchMode } from '../utils/restaurant-search';
-import type { RestaurantSearchState, SubmitRestaurantInput } from '../types/restaurant.model';
+import type {
+  RestaurantDiscoveryResult,
+  RestaurantSearchState,
+  SubmitRestaurantInput,
+} from '../types/restaurant.model';
+
+/** Keep results during refresh only for the same viewer, location and explicit diet filter. */
+export function restaurantRefreshScope(state: RestaurantSearchState, identity: string) {
+  return JSON.stringify({
+    identity,
+    lat: state.lat,
+    lng: state.lng,
+    dietPattern: state.dietPattern,
+  });
+}
+
+export function retainRestaurantResults(scope: string) {
+  return (
+    data: RestaurantDiscoveryResult | undefined,
+    query: { queryKey: readonly unknown[] } | undefined
+  ) => (query?.queryKey.at(-1) === scope ? data : undefined);
+}
 
 /**
  * Query Key Factory — bắt buộc theo docs/ARCHITECTURE.md §4.
  * `all` là gốc để `invalidateQueries` xoá được mọi biến thể.
  */
 export const RESTAURANT_KEYS = {
-  // Drop cached discovery results produced by the former implicit profile filtering.
-  all: ['restaurants', 'v2'] as const,
+  // Drop results from the former independent provider search for each radius.
+  all: ['restaurants', 'v5'] as const,
   nearby: (state: RestaurantSearchState) =>
     [
       ...RESTAURANT_KEYS.all,
@@ -24,6 +45,7 @@ export const RESTAURANT_KEYS = {
       state.dietPattern,
       state.page,
       state.limit,
+      state.allResults,
       state.locationSource,
       state.locationConsent,
     ] as const,
@@ -36,6 +58,7 @@ export const RESTAURANT_KEYS = {
       state.dietPattern,
       state.page,
       state.limit,
+      state.allResults,
       state.locationSource,
       state.locationConsent,
     ] as const,
@@ -52,6 +75,7 @@ export const RESTAURANT_KEYS = {
       state.lng,
       state.page,
       state.limit,
+      state.allResults,
       state.locationSource,
       state.locationConsent,
     ] as const,
@@ -63,14 +87,17 @@ export const RESTAURANT_KEYS = {
 export function useNearbyRestaurantsQuery(state: RestaurantSearchState, enabled = true) {
   const mode = resolveSearchMode(state);
   const identity = useAuthStore((auth) => auth.user?.id ?? 'guest');
-  return useQuery({
+  const scope = restaurantRefreshScope(state, identity);
+  return useQuery<RestaurantDiscoveryResult>({
     queryKey: [
       ...(state.mode === 'BOUNDS' ? RESTAURANT_KEYS.bounds(state) : RESTAURANT_KEYS.nearby(state)),
       identity,
+      scope,
     ],
     queryFn: ({ signal }) => restaurantApi.getNearby(state, signal),
-    staleTime: 2 * 60 * 1000,
+    staleTime: (query) => (query.state.data?.meta.externalDataUnavailable ? 0 : 2 * 60 * 1000),
     retry: 1,
+    placeholderData: retainRestaurantResults(scope),
     enabled: enabled && (mode === 'NEARBY' || mode === 'BOUNDS'),
   });
 }
@@ -79,11 +106,13 @@ export function useNearbyRestaurantsQuery(state: RestaurantSearchState, enabled 
 export function useRestaurantSearchQuery(state: RestaurantSearchState, enabled = true) {
   const mode = resolveSearchMode(state);
   const identity = useAuthStore((auth) => auth.user?.id ?? 'guest');
-  return useQuery({
-    queryKey: [...RESTAURANT_KEYS.search(state), identity],
+  const scope = restaurantRefreshScope(state, identity);
+  return useQuery<RestaurantDiscoveryResult>({
+    queryKey: [...RESTAURANT_KEYS.search(state), identity, scope],
     queryFn: ({ signal }) => restaurantApi.search(state, signal),
-    staleTime: 2 * 60 * 1000,
+    staleTime: (query) => (query.state.data?.meta.externalDataUnavailable ? 0 : 2 * 60 * 1000),
     retry: 1,
+    placeholderData: retainRestaurantResults(scope),
     enabled: enabled && mode === 'KEYWORD',
   });
 }
@@ -100,8 +129,9 @@ export function useRestaurantDiscoveryQuery(state: RestaurantSearchState, enable
   const isKeyword = mode === 'KEYWORD';
   const isBounds = mode === 'BOUNDS';
   const identity = useAuthStore((auth) => auth.user?.id ?? 'guest');
+  const scope = restaurantRefreshScope(state, identity);
 
-  return useQuery({
+  return useQuery<RestaurantDiscoveryResult>({
     queryKey: [
       ...(isKeyword
         ? RESTAURANT_KEYS.search(state)
@@ -109,11 +139,13 @@ export function useRestaurantDiscoveryQuery(state: RestaurantSearchState, enable
           ? RESTAURANT_KEYS.bounds(state)
           : RESTAURANT_KEYS.nearby(state)),
       identity,
+      scope,
     ],
     queryFn: ({ signal }) =>
       isKeyword ? restaurantApi.search(state, signal) : restaurantApi.getNearby(state, signal),
-    staleTime: 2 * 60 * 1000,
+    staleTime: (query) => (query.state.data?.meta.externalDataUnavailable ? 0 : 2 * 60 * 1000),
     retry: 1,
+    placeholderData: retainRestaurantResults(scope),
     enabled: enabled && mode !== null,
   });
 }

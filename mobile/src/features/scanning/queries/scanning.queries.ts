@@ -3,7 +3,7 @@ import { BILLING_QUERY_KEYS } from '@/features/billing/queries/billing.queries';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/useAuthStore';
 import { scanningApi } from '../api/scanning.api';
-import { DEV_SCANS_ENABLED } from '../lib/scan-access';
+import { SCANS_ENABLED } from '../lib/scan-access';
 import type {
   CandidateEdit,
   ScanConfirm,
@@ -24,7 +24,7 @@ export function useScanJobQuery(kind: ScanKind, id: string) {
   const result = useQuery({
     queryKey: SCAN_QUERY_KEYS.job(owner, kind, id),
     queryFn: () => scanningApi.get(kind, id),
-    enabled: DEV_SCANS_ENABLED && authenticated && Boolean(id),
+    enabled: SCANS_ENABLED && authenticated && Boolean(id),
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       return status === 'QUEUED' || status === 'PROCESSING' ? 1500 : false;
@@ -62,6 +62,11 @@ export function useScanMutations(kind: ScanKind) {
     mutationFn: (input: ScanCreate) => scanningApi.create(kind, input),
     onSuccess: cacheJob,
   });
+  const addImages = useMutation({
+    mutationFn: (input: { id: string; assetIds: string[] }) => scanningApi.addImages(kind, input.id, input.assetIds),
+    onSuccess: cacheJob,
+    onError: refresh,
+  });
   const edit = useMutation({
     mutationFn: (input: { id: string; candidateId: string; values: CandidateEdit }) =>
       scanningApi.edit(kind, input.id, input.candidateId, input.values),
@@ -96,5 +101,5 @@ export function useScanMutations(kind: ScanKind) {
       await Promise.all([refresh(), inventory()]);
     },
   });
-  return { create, edit, restore, cancel, retry, confirm };
+  return { create, addImages, edit, restore, cancel, retry, confirm };
 }

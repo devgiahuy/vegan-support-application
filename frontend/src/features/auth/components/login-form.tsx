@@ -3,7 +3,8 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, Eye, EyeOff, Lock, LogIn, Mail } from 'lucide-react';
+import { Eye, EyeOff, Lock, LogIn, Mail } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,8 +14,8 @@ import { getApiErrorCode, getApiErrorFields } from '@/lib/api-error';
 
 /**
  * Form đăng nhập email/mật khẩu. Lỗi nghiệp vụ đọc theo `error.code`:
- * - `INVALID_CREDENTIALS` → inline "Email hoặc mật khẩu không đúng."
- * - `ACCOUNT_LOCKED` / `ACCOUNT_BANNED` → thông báo lỗi đăng nhập thất bại chung
+ * - `INVALID_CREDENTIALS` → toast "Email hoặc mật khẩu không đúng. Vui lòng thử lại."
+ * - `ACCOUNT_LOCKED` / `ACCOUNT_BANNED` → toast thông báo lỗi đăng nhập thất bại chung
  *   (không CAPTCHA, không đếm ngược — Clarifications spec 2026-09-15).
  */
 export function LoginForm({
@@ -26,7 +27,6 @@ export function LoginForm({
 }) {
   const loginMutation = useLoginMutation();
   const [showPassword, setShowPassword] = React.useState(false);
-  const [formError, setFormError] = React.useState<string | null>(null);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -34,18 +34,17 @@ export function LoginForm({
   });
 
   const onSubmit = async (values: LoginFormValues) => {
-    setFormError(null);
     try {
       await loginMutation.mutateAsync(values);
       onSuccess?.();
     } catch (error) {
       const code = getApiErrorCode(error);
       if (code === 'INVALID_CREDENTIALS') {
-        setFormError('Email hoặc mật khẩu không đúng. Vui lòng thử lại.');
+        toast.error('Email hoặc mật khẩu không đúng. Vui lòng thử lại.');
         return;
       }
       if (code === 'ACCOUNT_LOCKED' || code === 'ACCOUNT_BANNED') {
-        setFormError('Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin và thử lại.');
+        toast.error('Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin và thử lại.');
         return;
       }
       if (code === 'VALIDATION_ERROR') {
@@ -65,22 +64,12 @@ export function LoginForm({
         }
         if (mapped) return;
       }
-      setFormError('Đăng nhập thất bại. Vui lòng thử lại.');
+      toast.error('Đăng nhập thất bại. Vui lòng thử lại.');
     }
   };
 
   return (
     <form onSubmit={(e) => void form.handleSubmit(onSubmit)(e)} className="space-y-4" noValidate>
-      {formError && (
-        <div
-          role="alert"
-          className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
-        >
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>{formError}</span>
-        </div>
-      )}
-
       <div className="space-y-1.5">
         <Label
           htmlFor="login-email"

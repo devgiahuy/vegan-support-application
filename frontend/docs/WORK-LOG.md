@@ -1,5 +1,184 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-16] — Làm tròn các chỉ số dinh dưỡng về tối đa 2 chữ số thập phân
+
+- **Yêu cầu:** Chỉ số ở tinh bột (carbs) đang khá dài (ví dụ: `1975.8900000000003g` trong ảnh tải lên), cần làm tròn các số về tối đa 2 chữ số thập phân.
+- **Nguyên nhân:** Lỗi sai số dấu phẩy động (floating point representation) trong phép cộng dồn số thực của JavaScript khi tính tổng dưỡng chất nhiều ngày/nhiều món (ví dụ: `0.1 + 0.2 = 0.30000000000000004`), dẫn đến chuỗi số hiển thị kéo dài vô tận trên giao diện.
+- **Thay đổi thực hiện:**
+  - `src/features/meal-program/utils/nutrition.utils.ts`:
+    - Tạo tiện ích `roundToDecimals(value, decimals = 2)` sử dụng `Number.EPSILON` để làm tròn toán học chính xác về 2 chữ số thập phân.
+    - Tạo `formatNutrient(value, decimals = 2)` đảm bảo chuỗi hiển thị ra UI luôn sạch sẽ, không bao giờ xuất hiện đuôi số lẻ dài.
+  - `src/features/meal-program/utils/nutrition.utils.test.ts`:
+    - Viết unit test kiểm chứng độ chính xác khi làm tròn các giá trị float phức tạp (`1975.8900000000003` -> `1975.89`, `616.33`, `200`, `null`, `undefined`).
+  - `src/features/meal-program/mappers/meal-program.mapper.ts`:
+    - Áp dụng `roundToDecimals` trong `mapSnapshot` khi cộng dồn `macronutrients` (protein, carbs, fat, fiber).
+    - Áp dụng trong `mapDay` và `groupSlotsIntoDays` khi tính `nutrition` trong ngày.
+    - Áp dụng trong `mapMealItem` và `mapCumulativeAnalysis`.
+  - `src/features/meal-program/components/week-plan-view.tsx`:
+    - Sử dụng `formatNutrient(...)` cho 4 chỉ số ở thanh tổng quan tuần (Đạm, Bột, Béo, Xơ), các badge trên `CardHeader` của từng ngày và dòng thông tin macro của từng món ăn.
+  - `src/features/meal-program/components/cumulative-nutrition-chart.tsx`:
+    - Định dạng hiển thị đạm và xơ trung bình qua `formatNutrient`.
+- **Kiểm chứng:**
+  - `vitest run src/features/meal-program`: 6 test files, 36/36 tests pass 100%.
+  - `npx tsc --noEmit --incremental false`: 0 lỗi type.
+
+## [2026-11-16] — Sửa lỗi layout giao diện trang meal-plans khi có nhiều card thực đơn
+
+- **Yêu cầu:** Sửa lỗi giao diện trang `/meal-plans` bị vỡ/mất thẩm mỹ khi danh sách phiên bản thực đơn có nhiều card.
+- **Hiện trạng & Nguyên nhân:**
+  - Ở `/meal-plans`, container chính dùng bố cục `grid lg:grid-cols-5`. Theo mặc định CSS Grid áp dụng `align-self: stretch` cho các phần tử con.
+  - Khi cột danh sách phiên bản gần đây bên phải (`lg:col-span-3`) có nhiều card (từ 4 đến 5+ card), chiều cao cột phải tăng lên rất lớn (~600–800px).
+  - Cột bên trái (`Card lg:col-span-2`) chứa biểu mẫu "Tạo thực đơn mới" bị kéo dãn (stretch) chiều cao xuống tận đáy trang theo cột phải, để lại một khoảng trắng rỗng khổng lồ phía dưới nút "Tạo thực đơn tuần".
+  - Danh sách card bên phải truy vấn cố định `limit: 5` dẫn đến việc chia lưới 2 cột luôn để thừa 1 card đơn lẻ ở hàng thứ 3 (như trong ảnh chụp thực tế), không đồng đều.
+  - Các thẻ `PlanCard` chưa có cấu trúc `h-full flex flex-col justify-between`, khiến các thẻ trong cùng một hàng có thể bị lệch nút bấm "Xem chi tiết" khi độ dài nội dung khác nhau.
+- **Thay đổi thực hiện:**
+  - `src/app/(site)/meal-plans/page.tsx`:
+    - Thêm `items-start` vào container lưới `<div className="grid gap-6 lg:grid-cols-5 items-start">`, ngăn chặn grid con tự động dãn chiều cao theo nhau.
+    - Cập nhật Card form "Tạo thực đơn mới" với `self-start lg:sticky lg:top-24`, giúp form giữ nguyên chiều cao tự nhiên vừa vặn nội dung và ghim nhẹ nhàng theo tầm nhìn khi người dùng cuộn xem danh sách thực đơn bên phải.
+    - Cập nhật truy vấn `limit: 6` để phân bổ số lượng card chẵn (3 hàng × 2 cột), tránh tình trạng card lẻ loi ở dòng cuối.
+    - Cập nhật header danh sách với `flex-wrap items-center justify-between gap-2.5`, chống tràn hoặc vỡ dòng trên màn hình nhỏ.
+    - Bổ sung nút liên kết `Xem toàn bộ X thực đơn đã lưu →` ở chân danh sách khi tổng số thực đơn trong hệ thống vượt quá số lượng hiển thị trên trang chính.
+  - `src/features/meal-plan/components/plan-card.tsx`:
+    - Áp dụng `flex h-full flex-col justify-between` cho `Card` để đảm bảo các thẻ trong cùng hàng luôn có chiều cao đồng đều và nút "Xem chi tiết" luôn thẳng hàng ở đáy.
+    - `CardContent` nhận `flex-1` để đẩy footer sát đáy.
+    - Tinh chỉnh padding gọn gàng hơn, thêm hiệu ứng hover `hover:border-primary/40 hover:shadow-sm`.
+    - Làm nổi bật cảnh báo với màu hổ phách `text-amber-600 dark:text-amber-400` và icon lửa calo `text-orange-500`.
+- **Kiểm chứng:**
+  - `npx tsc --noEmit --incremental false`: 0 lỗi type.
+
+## [2026-11-16] — Đồng bộ giao diện trình bày các thứ ngày từ /meal-plans/:id sang /meal-programs/
+
+- **Yêu cầu:** Dựa vào giao diện trình bày các thứ ngày ở `/meal-plans/:id` để áp dụng vào cho `/meal-programs/`.
+- **Hiện trạng:**
+  - Ở `/meal-plans/:id` (`DayGrid`), mỗi ngày trong tuần được hiển thị dưới dạng một thẻ card ngang rộng rãi, tiêu đề ngày tiếng Việt chuẩn (`Thứ Hai, 16/11`), thanh chỉ số dinh dưỡng ngày (Calo, Đạm, Béo, Xơ, Bột) nằm ở CardHeader, và các bữa ăn (Sáng, Trưa, Tối) xếp thành lưới 3 cột trực quan với ảnh thumbnail, phân bổ macro và khẩu phần.
+  - Ở `/meal-programs/[id]` (`WeekPlanView`), các ngày trong tuần trước đây bị ép vào một lưới đa cột hẹp (`grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4`), các bữa ăn bị xếp chồng dọc chật hẹp, không có chỉ số dinh dưỡng ngày chi tiết và nhãn ngày chưa được định dạng đồng bộ.
+- **Thay đổi thực hiện:**
+  - `src/features/meal-program/utils/meal-program-date.utils.ts`:
+    - Thêm hàm `formatDayLabel(dateStr, fallbackDayOfWeek)` định dạng ngày `YYYY-MM-DD` theo UTC sang tiếng Việt `Thứ ..., DD/MM` đồng bộ với `DayGrid`.
+  - `src/features/meal-program/types/meal-program.model.ts` & `src/features/meal-program/types/meal-program.dto.ts`:
+    - Bổ sung `formattedLabel`, `nutrition?: ProgramDayNutrition`, `estimatedTotals` vào `ProgramDaySummary`.
+    - Bổ sung `recipeId`, `customMealId`, `protein`, `carbs`, `fat`, `fiber`, `formattedCalories` vào `MealItemSummary`.
+  - `src/features/meal-program/mappers/meal-program.mapper.ts`:
+    - Cập nhật `mapDay` và `groupSlotsIntoDays` để tính toán đầy đủ `formattedLabel`, dưỡng chất theo ngày `nutrition: { dayCalories, protein, fat, fiber, carbs }`.
+    - Cập nhật `mapMealItem` và grouping để bóc tách `recipeId`, `customMealId`, `protein`, `carbs`, `fat`, `fiber`, `formattedCalories`.
+  - `src/features/meal-program/components/week-plan-view.tsx`:
+    - Tái cấu trúc danh sách ngày sang bố cục dọc (`flex flex-col gap-4`), mỗi ngày là một `Card` chuẩn.
+    - `CardHeader` hiển thị icon lịch, tiêu đề ngày chuẩn (`Thứ Hai, 16/11`) và các badge dinh dưỡng ngày màu sắc theo theme (Calo cam, Đạm xanh lá, Béo xanh da trời, Xơ tím, Bột vàng).
+    - `CardContent` hiển thị lưới bữa ăn 3 cột (`sm:grid-cols-3`), mỗi thẻ gồm ảnh thumbnail 48x48 bo tròn, badge loại bữa, badge nguồn, calo, tên món, định lượng dưỡng chất (`Đạm ...g · Bột ...g · Béo ...g · Xơ ...g · X khẩu phần`), và nút liên kết xem công thức (`/recipes/:id`).
+  - `src/features/meal-program/components/day-meal-checklist.tsx`:
+    - Đồng bộ nhãn ngày sử dụng `day.formattedLabel` chuẩn `Thứ ..., DD/MM`.
+  - Unit tests:
+    - Bổ sung tests cho `formatDayLabel` trong `meal-program-date.utils.test.ts`.
+    - Bổ sung assertions cho `formattedLabel`, `nutrition` trong `meal-program.mapper.test.ts`.
+- **Kiểm chứng:**
+  - `vitest run src/features/meal-program`: 5 test files, 34/34 tests pass.
+  - `vitest run src/features/meal-plan`: 5 test files, 48/48 tests pass (không hồi quy).
+  - `npx tsc --noEmit --incremental false`: 0 lỗi type.
+
+## [2026-11-16] — Sửa lỗi mất icon khi hover nút Bookmark
+
+- **Yêu cầu:** Khắc phục lỗi khi hover vào nút Bookmark ở góc thẻ món ăn thì biến thành vòng tròn xanh đặc, mất icon bên trong.
+- **Nguyên nhân:** Icon `<Bookmark>` trong `BookmarkButton` bị gắn cứng class `text-primary` khiến khi hover (nút nhận nền `hover:bg-primary`), màu của icon không chuyển sang trắng mà tiếp tục giữ màu xanh `text-primary`, dẫn đến hiện tượng icon bị chìm/trùng màu nền 100%.
+- **Thay đổi:**
+  - `src/features/community/components/bookmark-button.tsx`: Gỡ bỏ class `text-primary` gán trực tiếp lên icon `<Bookmark>`, cho phép icon kế thừa `currentColor` linh hoạt từ parent button (bình thường màu xanh theo button, khi hover nhận `text-primary-foreground` trắng nổi bật).
+- **Kiểm chứng:**
+  - `npx tsc --noEmit --incremental false`: 0 lỗi type.
+
+## [2026-11-16] — Đổi màu tag / nút lưu Bookmark thành màu xanh
+
+- **Yêu cầu:** Chỉnh màu tag / nút lưu bookmark (ở góc thẻ công thức món ăn) thành màu xanh thương hiệu.
+- **Thay đổi:**
+  - `src/features/recipe/components/recipe-card-bookmark.tsx`: Cập nhật style của nút `BookmarkButton` trên thẻ công thức món ăn:
+    - Trạng thái chưa lưu: Nền kính mờ `bg-background/90`, icon bookmark màu xanh `text-primary`, hover chuyển nền xanh `hover:bg-primary hover:text-primary-foreground`.
+    - Trạng thái đã lưu: Nền màu xanh `bg-primary text-primary-foreground`, icon bookmark tô đầy màu trắng (`fill-current`), hover màu xanh đậm hơn `hover:bg-primary/90`.
+  - `src/features/community/components/bookmark-button.tsx`: Cập nhật icon `Bookmark` khi chưa lưu mặc định nhận màu xanh `text-primary` (kích thước `h-4 w-4`).
+- **Kiểm chứng:**
+  - `npx tsc --noEmit --incremental false`: 0 lỗi type.
+
+## [2026-11-16] — Chuyển thông báo lỗi đăng nhập sang Sonner Toast
+
+- **Yêu cầu:** Điều chỉnh giao diện đăng nhập: sử dụng thông báo toast (`toast.error`) khi đăng nhập thất bại (sai thông tin, tài khoản bị khoá, lỗi hệ thống) thay vì hiển thị khối cảnh báo inline trên form điền thông tin.
+- **Thay đổi:**
+  - `src/features/auth/components/login-form.tsx`: Loại bỏ state `formError` và khối `<div role="alert">...</div>` inline; chuyển các thông báo lỗi (`INVALID_CREDENTIALS`, `ACCOUNT_LOCKED`, `ACCOUNT_BANNED`, lỗi hệ thống chung) sang gọi `toast.error` từ thư viện `sonner`. Giữ lại mapping lỗi field validation trực tiếp vào input field (`form.setError`).
+- **Kiểm chứng:**
+  - `npx tsc --noEmit --incremental false`: 0 lỗi type.
+  - Đảm bảo Toaster đã được nạp sẵn tại layout cấp cao nhất (`src/app/layout.tsx`).
+
+## [2026-11-14] — Giữ quán gần khi đổi bán kính 1–3–5 km
+
+- **Yêu cầu:** Tăng 3→5km mất quán, giảm 3→1km mất quán Chi Cao cách 132m; tiếp tục push và merge PR #59 vào dev.
+- **Nguyên nhân:** Mỗi radius gọi ranking SerpApi độc lập và partial response không được giữ, nên các tập kết quả không lồng nhau. Khi kiểm tra còn phát hiện key cũ hết lượt (HTTP429); người dùng cập nhật key mới, đã khởi động lại backend để nạp key. Không đưa key vào mã nguồn hoặc log.
+- **Backend:** Radius <=5km dùng chung pool 5km theo center/phrase/explicit filters; lấy trang đầu ba viewport 1/3/5km song song, cùng deadline, tối đa chín calls nearby. Giữ tối đa 60 IDs/phrase, service cap 1000 internal/200 external trước lọc đúng radius/bounds. Snapshot RAM tối đa 5 phút/100 keys; partial không rỗng retry sau 15 giây và merge những quán đã biết, không gia hạn expiry; lỗi retry giữ dữ liệu và cờ unavailable. Initial empty/failure không cache. Wider-radius paging, explicit dietary suppression, advanced filters, consent, attribution và pagination mặc định giữ tương thích. Không thêm persistence/schema/seed hay backend test infrastructure. Filtered keyword search dùng tối đa ba first-page calls thay vì một.
+- **Frontend:** Key v5 loại cache cũ; partial query stale ngay khi quay lại. Khi kết quả rỗng do nhà cung cấp lỗi, giải thích chưa tải được dữ liệu thay vì kết luận không có quán hoặc khuyên tăng bán kính. DTO/Model/Mapper và request shape không đổi; Swagger/catalog đã sync từ served schema. Docs plan 4.23, integration 4.77, phases 3.25.
+- **Kiểm chứng:** Backend lint/typecheck/build/OpenAPI, FE typecheck/scoped ESLint, 110 files/864 tests, production build 47 routes và diff check đạt. Chín nhóm assertions cô lập ngoài repo kiểm tra nested IDs, quán 132m, request coalescing, partial retry/merge/fallback/expiry, empty không cache, filter/isolation, wider paging, strict radius/consent/suppression. GitNexus không có index repo, dùng source trace; không tạo index hoặc hạ tầng test.
+- **Dữ liệu thật và browser:** Dùng tọa độ/địa chỉ công khai Chi Cao (không dùng GPS cá nhân), API và browser cùng xác nhận 3→1→5→1km = 15→12→39→12 quán; Chi Cao vẫn có trong 1km, IDs 1km ⊆ 3km ⊆ 5km, quay lại giữ đủ 12. Chọn Chi Cao trên map ở 1km thành công, map báo 12 quán. Ảnh `/tmp/vegan-radius-consistency/browser-1km.png`; API/DOM assertions trong cùng thư mục. Giữ tab kết quả, không đổi viewport. Không kiểm tra GPS/native mobile. SerpApi vẫn báo truncated: đây là toàn bộ kết quả tìm được trong snapshot, không phải cam kết mọi quán ngoài thực tế. Dữ liệu có thể thay đổi sau khi snapshot hết hạn. Không chạy lại full frontend lint do lỗi nền đã ghi ở các task trước; lint các file thay đổi đạt. Không đổi % scaffold hoặc phase status.
+
+## [2026-11-14] — Bán kính web mặc định 3 km, tối đa 5 km
+
+- **Yêu cầu:** Giới hạn dropdown bán kính tìm quán tối đa 5 km và mặc định 3 km.
+- **Thay đổi:** Dùng chung các mức 100m/300m/500m/1km/3km/5km; request mapper chặn radius ở 5km. Bộ lọc đã lưu có giá trị ngoài các mức này (gồm 10/20/50km cũ) về 3km; lựa chọn hợp lệ như 5km được giữ. Map default dùng cùng hằng số và nút nới bán kính chuyển tới mức hợp lệ tiếp theo. Không đổi backend/native mobile hay giới hạn bounds-search riêng; không đổi API/SSE/quota/schema/seed hoặc % scaffold. IMPLEMENTATION_PLAN 4.22 và BACKEND_INTEGRATION 4.76 ghi nhận quyết định.
+- **Kiểm chứng:** FE typecheck/scoped ESLint, 9 restaurant test files/152 tests, production build 47 routes và diff check đạt. Regression test kiểm tra chuyển dữ liệu lưu cũ và giữ lựa chọn 5km. Browser localhost xác nhận fresh selector hiển thị 3km và đúng sáu lựa chọn, không có mức trên 5km. Ảnh `/tmp/vegan-radius-3km/radius-options.png`. Backend gates và full FE suite không chạy lại vì thay đổi chỉ nằm ở cấu hình/consumer frontend đã kiểm tra; không thêm backend test infrastructure.
+
+## [2026-11-14] — Response chat, toàn bộ ghim quán và nhãn lượt mua thêm
+
+- **Yêu cầu nối tiếp:** Style câu trả lời từ ảnh bị dính chữ/raw Markdown; hiển thị toàn bộ quán trên map/danh sách không chuyển trang; bỏ dropdown Loại quán chay; giải thích/sửa cảnh báo hết lượt khi ảnh vẫn còn 49/50 lượt miễn phí. Giữ yêu cầu commit/push đang thực hiện; commit `b80cf10` đã đóng gói map/chat provider trước các follow-up này.
+- **Chat:** Nguyên nhân dính chữ là `extractDeltaText` dùng `safeString` nên trim từng token, làm mất spaces/newlines. Giữ nguyên token string, kể cả token chỉ có whitespace. Thay parser Markdown tự viết bằng react-markdown/remark-gfm, dùng shared shadcn Table, scroll ngang nội bộ có focus bàn phím, heading/list/paragraph/code/link rõ ràng; skip HTML và không fetch ảnh được model tạo URL. Bubble và app main dùng min-w-0 để bảng không kéo tràn layout; cursor tôn trọng reduced motion. Nội dung/nguồn dinh dưỡng không bị sửa.
+- **Toàn bộ quán:** Thêm optional all=true vào nearby/search, trả toàn bộ tập đã lọc/dedupe/sort trong một discovery pass; default pagination giữ tương thích. Meta all-result có page=1, limit=max(1,total). Giữ caps 1000 internal/200 provider cùng cảnh báo partial/truncated, không gọi provider lại cho từng trang. FE có request DTO/Model/Mapper, key v4 và allResults; bỏ pagination/dropdown/state diet-type, bỏ đọc giá trị diet đã lưu khỏi page và ghi lại filters không có giá trị đó. Map/list/chooser dùng cùng tập; cluster leaves không còn cap 20. Không đổi consent/auth/schema/seed; backend explicit diet filter vẫn hỗ trợ client khác.
+- **Quota UI:** Ảnh có 0 lượt mua thêm nhưng 49/50 lượt miễn phí, vì vậy chat được là đúng. CHAT AllowanceNotice giờ là khối trung tính ghi riêng lượt mua thêm và giải thích không bao gồm lượt miễn phí. Chỉ QuotaBanner dựa trên quota tổng do backend trả mới báo hết lượt. Không thay hạn mức, giá gói, trừ tiền hay logic backend; trạng thái quét/Pantry khác giữ nguyên.
+- **Kiểm chứng:** Backend lint/typecheck/build/OpenAPI/sync và served schema đạt; sáu nhóm service/schema assertions ngoài repo cho all-result/default pagination/search/empty degradation đạt, không thêm backend test infrastructure. Live HTTP all=true trả 93/93 quán, default 20, không trùng ID. FE typecheck/scoped ESLint, 110 files/860 tests và build 47 routes đạt. Tests gồm network chunks cắt giữa UTF-8, whitespace-only tokens, GFM semantics/XSS, mapper all-result, filter removal và ba tình huống free/purchased/exhausted quota. Full frontend lint không chạy lại do lỗi nền đã ghi nhận. Detector chỉ báo animate-bounce có sẵn ở nút scroll-to-bottom ngoài phạm vi thay đổi; không có phát hiện mới ở renderer/map/filter.
+- **Browser:** Đối chiếu đúng câu trả lời từ ảnh và một stream thật mới; heading/table giữ khoảng trắng trong khi stream và sau completion. Desktop 1280×900, mobile 375×812; bảng cuộn ngang bằng ArrowRight (scrollLeft 0→40) và body không tràn ngang. Map guest Bến Thành trả partial 85 quán: xác nhận 85 cards, 85 pins, 1 canvas, không dropdown diet/pagination; chooser chọn quán 85 thành công. Mobile toggle giữ tập 85; cảnh báo partial hiển thị đúng. Không đăng nhập hoặc dùng dữ liệu sức khỏe cá nhân để gọi provider. Banner purchased balance được kiểm tra SSR với 49/50 free +0 paid, hết cả hai và 0 free +2 paid; không kiểm thử tài khoản thật của người dùng.
+- **Bằng chứng:** `/tmp/vegan-chat-map-polish/chat-desktop.png`, `chat-mobile.png`, `chat-stream-complete.png`, `map-all-desktop.png`, `map-all-mobile.png`. Đã reset viewport và giữ tab kết quả. Docs IMPLEMENTATION_PLAN 4.21, IMPLEMENTATION_PHASES 3.24, BACKEND_INTEGRATION 4.75/catalog đồng bộ. Cập nhật không nâng % scaffold hoặc hoàn tất phase mới.
+
+## [2026-11-14] — Sửa chat luôn trả câu dự phòng trên gateway hiện tại
+
+- **Yêu cầu:** Chat luôn báo AI không khả dụng dù các tính năng AI khác hoạt động. Giữ nguyên thay đổi map chưa commit ở cùng workspace/nhánh.
+- **Nguyên nhân đã tái hiện:** `OPENAI_BASE_URL` đang trỏ tới gateway tương thích OpenAI. Gọi `moderate()` thật trả HTTP 503 `model_not_found` cho model kiểm duyệt đã cấu hình; cùng cấu hình gọi Responses streaming hoàn tất trong khoảng 2,6 giây với câu hỏi tổng hợp. Chat luôn gọi kiểm duyệt trước generation nên nhánh lỗi này trả static fallback. HTTP trước sửa trả `provider=local-fallback`, `fallback=true`, quota used=0. Không in key hoặc nội dung chat người dùng vào log kiểm thử.
+- **Sửa:** Native moderation được ưu tiên. Chỉ lỗi rõ ràng thiếu model/endpoint mới dùng Responses để phân loại an toàn, model lấy từ `AI_MODERATION_FALLBACK_MODEL` (mặc định `AI_MODEL_CHAT`). Đầu vào là dữ liệu không tin cậy; yêu cầu JSON strict với duy nhất boolean `flagged`, kiểm tra response completed và schema ở backend. Refusal, rỗng, sai schema, incomplete, timeout hoặc lỗi classifier tiếp tục chặn generation. Auth/rate-limit/transient errors không kích hoạt nhánh tương thích. Admin MODERATION disable vẫn chặn cả hai phương thức. Các lời gọi dùng cùng timeout/abort signal; không cache kết quả kiểm duyệt hoặc đổi quota/PII redaction/topic rules.
+- **Audit:** Governance ghi đúng model, template `safety-classifier-v1`, tokens và CLEAR/FLAGGED/LOCAL_SAFETY_HOLD; không lưu prompt vào metadata. Câu bị chặn ghi model kiểm duyệt thật. Classifier tương thích không được tuyên bố tương đương model moderation chuyên dụng.
+- **Kiểm chứng:** 25 nhóm kiểm tra one-shot ngoài repository đạt: native clear/flagged, thiếu model/endpoint, cấu hình model, strict output, incomplete, auth/rate limit/transient errors, abort/deadline, admin disable và redacted audit. Không thêm test suite/infrastructure backend. Classifier thật nhận diện và chặn một yêu cầu nguy hiểm tổng hợp kèm prompt injection. HTTP sau sửa trả `provider=openai`, `fallback=false`, 71 content deltas, complete và quota used=1; replay cùng idempotency key giữ nguyên message ID/quota, lịch sử đúng hai messages. Local urgent-safety response không gọi provider và không trừ thêm quota. Kiểm tra DB chỉ đọc xác nhận request SUCCESS và audit classifier có model/template/token đúng.
+- **Browser:** Gửi câu hỏi đạm thực vật tổng hợp tại `/assistant`, nhận câu trả lời thật không có ghi chú fallback; tải lại vẫn đọc được câu hỏi/câu trả lời. Không đăng nhập vào tài khoản thật hoặc dùng thông tin sức khỏe cá nhân. Screenshot `/tmp/vegan-chat-e2e/chat-success.png`; HTTP SSE success/replay trong cùng thư mục. Một lượt HTTP trong khi tsx watch khởi động lại bị ngắt; đã chạy lại trên phiên QA mới sau khi source ổn định và pass. Không sửa/xóa lịch sử người dùng.
+- **Gates/tài liệu:** Backend lint/typecheck/build, OpenAPI generation/sync và đối chiếu served `/api-docs.json` đạt; `git diff --check` đạt. Cập nhật OpenAPI, README/env example, IMPLEMENTATION_PLAN 4.20, IMPLEMENTATION_PHASES 3.23, BACKEND_INTEGRATION 4.74 và catalog. Không đổi frontend consumer, DTO/SSE/auth/schema/seed; frontend tests/build không chạy lại trong task backend này (map task trước đã đạt 849 tests/build). Giữ READY và % scaffold. Chưa commit/push.
+- **Nguồn kỹ thuật:** Đối chiếu OpenAI Docs [Moderation](https://developers.openai.com/api/docs/guides/moderation) và [Streaming Responses](https://developers.openai.com/api/docs/guides/streaming-responses), kiểm tra SDK/source cục bộ và gateway thật. GitNexus không có index repository này; CodeGraph CLI không có trong PATH, nên trace được đối chiếu trực tiếp provider → governance → ChatService → SSE/controller.
+- **Giới hạn:** Kiểm tra UI ở guest; chưa chạy luồng đăng nhập/native mobile trong task này. Provider ngoài vẫn có thể lỗi hoặc timeout; classifier dùng thêm một lần gọi Responses khi gateway không hỗ trợ moderation chuyên dụng. Cấu hình local hiện có hoạt động mà không cần thêm key hay đổi model chat.
+
+## [2026-11-14] — Bản đồ đường phố miễn phí và tối ưu SerpApi
+
+- **Yêu cầu:** Thay sơ đồ bằng bản đồ thực tế miễn phí/open source, bố trí ghim hợp lý và giữ SerpApi làm nguồn quán chính. Người dùng giao lựa chọn bố cục; giữ danh sách/bản đồ cạnh nhau trên desktop, chuyển chế độ trên điện thoại.
+- **Frontend:** MapLibre GL 6 + OpenFreeMap Liberty không cần API key. Nạp worker riêng theo MapLibre v6; khởi tạo khi container hiện, resize và giữ một map khi chuyển chế độ. Cụm số tự mở rộng; ghim đánh số trùng thứ tự danh sách, lựa chọn nổi bật và thẻ quán dùng cùng ID. Có chooser truy cập bằng bàn phím, chỉ đường, reset vùng, fullscreen, retry khi nền/WebGL lỗi, attribution riêng cho nền và nguồn quán. Giữ zoom/pan khi làm mới/phân trang, chỉ tìm vùng khi người dùng bấm; chặn vùng vượt giới hạn backend. Không giữ placeholder kết quả của tài khoản/vị trí/bộ lọc chế độ ăn khác. Ghi rõ ghim chỉ thuộc trang hiện tại và nguồn chưa xác minh ăn chay. Sửa độ rộng logo để header không tràn ở 375 px.
+- **Backend:** Bỏ ba lượt zoom quét; dùng một viewport có chiều cao bằng đường kính bán kính yêu cầu. Ba cụm từ tìm gần đây giữ nguyên, tối đa ba trang mỗi cụm từ không có advanced filter: trần request giảm 27 xuống 9, không phải cam kết số request hay độ trễ cố định. Truy vấn price/rating/open chỉ lấy trang đầu vì SerpApi không hỗ trợ phân trang kèm advanced filters; báo truncated nếu còn trang. Kiểm tra minRating trên ứng viên trả về, giữ timeout chung, các trang thành công khi trang sau lỗi, loại trùng/lọc bán kính, coalesce và cache RAM 5 phút cho kết quả hoàn chỉnh khác rỗng. Không lưu bền dữ liệu provider, không đổi route/schema/auth/seed hoặc tự áp dụng hồ sơ ăn uống.
+- **Kiểm chứng:** Backend lint/typecheck/build, OpenAPI generation/sync đạt. 11 nhóm one-shot provider assertions và kiểm tra bổ sung viewport/minRating/filter paging đạt; không thêm backend test infrastructure. HTTP thật với minRating 4.5 trả 19 quán, thấp nhất 4.7, truncated=true, partial=false tại lần đo. Frontend typecheck, scoped ESLint phần map/query/page, 107 files / 849 tests và production build 47 routes đạt; header còn 4 unused-import warnings có sẵn. `git diff --check` đạt.
+- **Browser E2E:** OpenFreeMap tải đường/phường/sông thực tế và ghim SerpApi; mở cụm, chọn ghim/danh sách/chooser, zoom và tìm theo vùng/quay lại lân cận, làm mới và chuyển danh sách/bản đồ không tạo lại canvas. Kiểm tra desktop 1280×900, mobile 375×812 và reset viewport sau kiểm tra. Chọn Hum Lounge khớp thẻ/ghim 11; chọn Đất Mẹ khớp thẻ/ghim 1. Footer nguồn không chèn attribution ở màn hẹp. Không có lỗi console mới sau sửa worker. Impeccable detector không báo phát hiện.
+- **Tài liệu:** IMPLEMENTATION_PLAN 4.19 (D25), BACKEND_INTEGRATION 4.73, IMPLEMENTATION_PHASES 3.22 và API catalog đồng bộ. Các endpoint giữ READY, không đổi % scaffold. Spec 034 và checklist nằm trong thư mục specs đã được repository ignore.
+- **Giới hạn:** SerpApi vẫn có thể partial/timeout hoặc thay đổi kết quả; filter paging cố ý báo giới hạn. Nền công cộng phụ thuộc kết nối/WebGL; cấu hình qua NEXT_PUBLIC_RESTAURANT_MAP_STYLE_URL. Chưa kiểm thử GPS permission, tài khoản đăng nhập hoặc native mobile; mobile app không được thay renderer trong task này. Không chạy full-repository frontend lint vì lỗi nền đã ghi nhận; scoped lint đạt. Chưa commit/push thay đổi.
+- **Bằng chứng:** `/tmp/vegan-restaurant-map-upgrade/desktop.png`, `/tmp/vegan-restaurant-map-upgrade/mobile.png`. App/DB tiếp tục chạy tại frontend 3000/backend 4000.
+
+
+## [2026-11-14] — E2E tìm quán, SerpApi và sơ đồ vị trí
+
+- **Yêu cầu:** Chạy ứng dụng và kiểm tra tìm quán bằng bản đồ do người dùng báo hoạt động không ổn định. Thực hiện trên nhánh `fix/combined-nutrition-pantry-meal-plan` tại workspace chính.
+- **Môi trường:** Khởi động MongoDB replica set bằng Compose với volume `vegan_support_mongodb` hiện có (host port 27018), backend source cổng 4000, frontend dev cổng 3000. Không seed lại, không migrate, không sửa dữ liệu quán/tài khoản. Backend dùng SerpApi thật. Frontend không có Google Maps JavaScript key nên bản đồ trong lần kiểm thử này là sơ đồ dự phòng có ghi rõ nhãn; không coi đây là kiểm thử Google street map.
+- **Lỗi tái hiện và sửa:**
+  - Địa chỉ “Chợ Bến Thành, Quận 1, Thành phố Hồ Chí Minh” báo không tìm thấy dù provider trả địa điểm thật. Parser chỉ đọc `local_results` và chỉ nhận `type` dạng chuỗi; SerpApi trả `place_results` và `type` dạng mảng. Chuẩn hóa cả hai shape cho geocode/search/detail, giữ category provenance và nhãn dietary-unverified.
+  - Tìm theo vùng → quay lại vị trí tìm kiếm xóa viewport ref nhưng sơ đồ không đổi nên nút tìm theo vùng bị disabled. Giữ viewport bounds khi rời chế độ tìm theo vùng; E2E xác nhận nút vẫn enabled trên desktop và mobile.
+  - Chi tiết external place hiển thị “Cách bạn 0 m” do backend tính khoảng cách từ quán đến chính quán. Detail không nhận điểm xuất phát nên trả `distanceMeters: null`; discovery vẫn tính từ tâm tìm kiếm thật.
+- **E2E qua UI thật:**
+  - Địa chỉ Bến Thành → quán SerpApi thật; HTTP geocode Hồ Gươm cũng thành công. Tìm từ khóa, đổi bán kính 5 km → 1 km, mở cụm và chọn quán, giữ zoom sau chọn, link chỉ đường, mở chi tiết và không còn 0 m giả.
+  - Tìm theo vùng, quay lại lân cận và dùng lại nút tìm theo vùng trên desktop 1280×900, mobile 375×812 và viewport mặc định. Danh sách/sơ đồ dùng cùng kết quả; marker hiển thị số lượng trong khung riêng.
+  - Hai trang đầu có 20 quán/trang, không lặp tên quán trong lần chạy này; trước/sau đúng trạng thái. Bộ lọc VEGAN kết hợp từ khóa không khớp trả trạng thái rỗng có giải thích nguồn bị giới hạn; thử lại và xóa bộ lọc hoạt động. Cảnh báo partial/truncated và attribution hiển thị trên danh sách. Console không ghi lỗi JavaScript.
+- **Kiểm tra HTTP thật:** 8 trường hợp pass: thiếu location 400, thiếu một tọa độ 400, DEVICE không consent 403, bounds sai 400, diet filter rõ ràng chỉ internal đã review, nearby đúng bán kính/ID không trùng/phân trang/no-store, keyword, detail external có khoảng cách null. Mẫu 1 km trả 20/56 quán trong khoảng 3,3 giây; từ khóa trả 19 quán trong khoảng 4,9 giây. Đây là số đo tại lần chạy, không phải bảo đảm hiệu năng.
+- **Gates:** Backend lint/typecheck/build/OpenAPI pass; 11 one-shot provider/service assertions pass (stub fetch, không thêm test suite/backend infrastructure); frontend typecheck, scoped ESLint, 105 files/841 tests và build 47 routes pass. OpenAPI/catalog đồng bộ; `git diff --check` pass.
+- **Giới hạn còn lại:** Có lần SerpApi trả partial do budget `MAPS_TIMEOUT_MS=5000`; các lần gọi có thể khác tổng quán khi thu thập được số trang khác nhau. Provider có thể trả kết quả gần nghĩa ngay cả với từ khóa khó; không khẳng định keyword khớp chính xác. Chưa kiểm thử Google Maps JavaScript thật, GPS/device permission, luồng tài khoản đăng nhập hoặc native mobile. Ở 375 px, header chung của app còn bị cắt ngang; chưa sửa header ngoài phạm vi tìm quán. Endpoint giữ READY; không đổi business rules, schema, auth hay % scaffold. Chưa commit/push thay đổi.
+- **Bằng chứng:** `/tmp/vegan-restaurant-e2e/api-results.json`, `desktop-map.jpg`, `mobile-map.jpg`, `final-map.jpg`. Để app/DB chạy cho người dùng kiểm tra lại.
+
+
+## [2026-11-14] — Rebase nhánh dinh dưỡng/tủ bếp/thực đơn lên dev
+
+- **Yêu cầu:** Rebase `fix/combined-nutrition-pantry-meal-plan` lên `origin/dev` mới nhất để tiếp tục phát triển trên nhánh này.
+- **Mốc:** base `origin/dev` là `9e3842a`; backup trước rebase là `backup/combined-fixes-before-rebase-20261114` tại `cc9a301`. Giữ cả bốn commit tính năng; merge `dev` cũ được thay bằng lịch sử tuyến tính.
+- **Xử lý:** Ghép tài liệu và contract; giữ luồng Contributor tự xuất bản từ dev cùng dinh dưỡng tác giả của nhánh, kiểm tra lại role/profile trong transaction; giữ response/revision status mapping mới và shared review API; bỏ các trường khẩu phần/thời gian bị khai báo trùng do auto-merge; chuyển mapper tests sang data DTO theo kiến trúc hiện tại. Giữ mô tả/tên AI tùy chọn và liên kết nguyên liệu đã chọn. Đồng bộ OpenAPI và catalog 195 endpoints.
+- **Kiểm chứng:** Backend lint, typecheck, build pass; smoke 6 trường hợp xuất bản bằng transaction stub pass (không ghi DB); frontend typecheck, 105 files/841 tests, production build 47 routes pass; `git diff --check` pass. Scoped frontend lint còn 4 lỗi/1 warning có sẵn trong `pantry-item-dialog.tsx` (2 `as any`, 2 unescaped quotes, React Hook Form warning); đã đối chiếu với dev/commit gốc. Build cảnh báo middleware deprecated có sẵn.
+- **Phạm vi:** Không triển khai DB, seed hoặc chạy kiểm thử trình duyệt/live API. Endpoint submit vẫn `CHANGING` chờ mobile migration và schema rollout; không thay đổi tỷ lệ scaffold. Rebase local, chưa force-push remote.
+
 ## [2026-11-10] — Sửa lỗi hiển thị lặp `30 ngày`, `90 ngày`, `360 ngày` trên card gói tiện ích ở `/billing`
 
 - **Mục tiêu**: khắc phục lỗi trên card `Gói tiện ích theo thời hạn` tại `/billing` hiển thị lặp thời hạn ở các nút chọn gói (`Gói tiện ích 30 ngày · 30 ngày`, `Gói tiện ích 90 ngày · 90 ngày`, `Gói tiện ích 360 ngày · 360 ngày`), đồng thời giữ hiển thị đầy đủ tên + thời hạn khi có gói tùy chỉnh không chứa thời hạn trong tên.
@@ -258,6 +437,36 @@
 - **Nhánh**: `codex/refactor-src` (từ `dev`).
 - **Thay đổi**: Thêm `features/storage/hooks/use-selected-upload-images.ts` để dùng chung thao tác chọn, xác thực, sắp xếp, xóa và thu hồi URL ảnh. `fridge-upload-zone.tsx` và `receipt-upload-zone.tsx` gọi hook; giới hạn ảnh, thông báo và cách tạo job vẫn giữ nguyên.
 - **Kiểm chứng**: `npx tsc --noEmit`, scoped ESLint, `npm test` (68 files, 732 tests) và `npm run build` (47 routes) pass. `npm run lint` toàn frontend còn 82 lỗi và 318 cảnh báo tại các file ngoài phạm vi sửa. Không đổi endpoint, DTO, mapper hoặc backend contract nên không chạy Swagger sync.
+
+## [2026-10-29] — Bản nháp AI không ghi đè khẩu phần và thời gian
+
+- **Yêu cầu**: Người dùng chốt với Ngô Gia Huy: khi áp dụng bản nháp AI không ghi đè khẩu phần, thời gian sơ chế, thời gian nấu đã nhập ở bước 1; gửi 3 giá trị này cho AI để định lượng nguyên liệu đúng khẩu phần.
+- **Giả định (người dùng yêu cầu không hỏi thêm)**: ô bước 1 còn trống thì AI vẫn điền; chỉ bảo vệ 3 trường này (tên/mô tả vốn đã giữ; độ khó, nguyên liệu, bước nấu vẫn theo AI); thời gian AI khác thì chỉ gợi ý trong toast.
+- **Backend**: request `recipe-drafts/generate` thêm `servings`, `prepTimeMinutes`, `cookTimeMinutes` (tuỳ chọn), prompt định lượng theo khẩu phần, bản nháp giữ số tác giả, thêm `suggestedTiming`.
+- **Frontend**: DTO/Model/Mapper thêm trường mới + `timingHint`; trợ lý gửi 3 giá trị; `setDraftValues` giữ số đã nhập; mapper test mới.
+- **Kiểm chứng**: Backend lint/typecheck/build/OpenAPI; FE tsc, vitest, build. Chưa thử với provider OpenAI thật.
+
+## [2026-10-29] — Dinh dưỡng do tác giả nhập và Contributor/Admin tự xuất bản công thức
+
+- **Yêu cầu**: Người dùng chốt với Ngô Gia Huy: form công thức có lại 6 ô dinh dưỡng; user thường không bắt buộc (thiếu thì hệ thống tính), Contributor bắt buộc và đăng xong là xuất bản. Đã hỏi và chốt: giữ số đã nhập, chỉ tính ô thiếu; vẫn tính số hệ thống để đối chiếu, cảnh báo khi lệch >30%; Admin như Contributor; sửa bài đã xuất bản cũng tự xuất bản; bị bộ lọc tự động gắn cờ thì vào hàng chờ Admin; chỉ áp dụng cho công thức; bài tự xuất bản chỉ lưu bản ước tính từ dữ liệu chuẩn (không gọi AI); duyệt bài user thường vẫn 5 chỉ số, B12 tuỳ chọn.
+- **Backend**: `RecipeDetail.authorNutrition`; response thêm `recipe.authorNutrition`, sửa lỗi 0 bị trả về null; submit kiểm tra 6 chỉ số với Contributor/Admin (`422 RECIPE_NUTRITION_REQUIRED`), policy tự xuất bản (ghi `ModerationAction` APPROVE `autoPublished`); panel duyệt thêm `author`, `deviationPercent`, `deviationWarning`, thứ tự ưu tiên sửa tay > tác giả > hệ thống.
+- **Frontend**: 6 ô ở bước Phân loại (bắt buộc với CONTRIBUTOR/ADMIN), bước Xem lại hiện số đã nhập, form sửa điền sẵn từ `authorNutrition`; trạng thái thật từ phản hồi submit (hộp thoại/toast "Đã xuất bản"), nhãn nút theo role; panel duyệt hiện số tác giả nhập, số hệ thống và cảnh báo lệch. Mapper/schema test mới.
+- **Kiểm chứng**: Backend lint/typecheck/build/OpenAPI; smoke trên DB Mongo tạm (AI giả lập) cho các nhánh Member/Contributor/Admin/gắn cờ/bài viết. FE tsc, vitest 68 file/735 test, build.
+- **Còn lại**: Form công thức mobile chưa có 6 ô nên Contributor gửi từ mobile sẽ nhận 422.
+
+## [2026-10-29] — Thực đơn tuần: phân biệt "chưa xác minh được" với vi phạm ràng buộc khi thêm món
+
+- **Yêu cầu**: Người dùng báo chọn món cá nhân "Bún chả" bị báo vi phạm dị ứng dù không dính dị ứng. Trên dữ liệu thật, lý do duy nhất là `UNRESOLVED_INGREDIENT`: "bún" và "chả chay" là nguyên liệu Tự do nên backend không kiểm tra được. Người dùng chọn giữ việc chặn món, báo lỗi rõ ràng, không tự ghép tên, không migrate và cảnh báo trước trong form.
+- **Backend**: manual-add trả `409 MEAL_PLAN_INGREDIENTS_UNVERIFIED` (`fields.reasons`, `fields.unverifiedIngredients`) khi lý do chỉ là nguyên liệu chưa liên kết hoặc cấu tạo chưa rà soát; vi phạm thật vẫn trả `MEAL_PLAN_HARD_CONSTRAINT_VIOLATION`. Đã cập nhật OpenAPI.
+- **Frontend**:
+  - `meal-plan.dto.ts` / `meal-plan.model.ts` / `meal-plan.mapper.ts`: thêm `MealPlanConstraintErrorFieldsDto`, `MealPlanConstraintError` và `toConstraintError`, kèm mapper test.
+  - `meal-plan.queries.ts`: toast "Chưa thể kiểm tra món này" liệt kê nguyên liệu chưa liên kết; `meal-plan.api.ts` dùng `silent: true` để bỏ toast trùng từ interceptor.
+  - `custom-meal-ingredient-input.tsx`: hiển thị trạng thái liên kết từng dòng, nút "Liên kết" mở `IngredientSuggestions` và cảnh báo khi còn nguyên liệu Tự do.
+- **Kiểm chứng**:
+  - `npx tsc --noEmit` pass 0 lỗi type.
+  - `npx vitest run` 68 test suite (734 tests pass).
+  - `npm run build` pass.
+  - Gọi `MealPlanService.manualAdd` thật trên bản restore DB tạm cho đúng kịch bản trên.
 
 ## [2026-10-29] — Trang /admin/dashboard: Chuẩn hóa hiển thị lý do báo cáo & thêm 2 nút cuộn ngang thanh tabs
 

@@ -60,3 +60,11 @@ test('bounds label uses Vietnamese decimals and is empty for unusable bounds', (
   );
   assert.equal(formatBoundsLabel({ north: 1, south: 2, east: 3, west: 2 }), '');
 });
+
+test('empty results with unavailable provider data do not claim there are no places nearby', () => {
+  const copy = emptyStateCopy('NEARBY', false, true);
+  assert.equal(copy.title, 'Chưa tải được kết quả tìm quán');
+  assert.ok(!copy.actions.includes('Nới bán kính'));
+  assert.equal(emptyStateCopy('NEARBY').title, 'Chưa tìm thấy quán chay quanh đây');
+  assert.equal(emptyStateCopy('NEARBY', true, true).title, 'Chưa có quán đáp ứng bộ lọc chế độ ăn');
+});

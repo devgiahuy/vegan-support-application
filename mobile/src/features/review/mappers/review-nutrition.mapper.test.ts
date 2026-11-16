@@ -124,3 +124,23 @@ test('business error codes map to Vietnamese messages', () => {
   assert.match(getReviewNutritionErrorMessage(apiError('REVIEW_ALREADY_DECIDED')), /không còn ở trạng thái chờ duyệt/);
   assert.match(getReviewNutritionErrorMessage(apiError('INVALID_CONTENT')), /không phải công thức/);
 });
+
+test('author value and deviation warning are mapped without blocking approval', () => {
+  const panel = reviewNutritionMapper.toModel(
+    panelDto({
+      metrics: [
+        metric('calories', 600, { author: 600, deviationPercent: 42.6, deviationWarning: true, finalOrigin: 'USER_PROVIDED' }),
+        metric('proteinGrams', 18.5),
+      ],
+    })
+  );
+  const calories = panel.metrics.find((item) => item.key === ReviewNutritionMetricKey.CALORIES)!;
+  assert.equal(calories.authorValue, 600);
+  assert.equal(calories.deviationPercent, 43);
+  assert.equal(calories.deviationWarning, true);
+  assert.equal(calories.finalOriginLabel, 'Người dùng nhập');
+  assert.equal(panel.canApprove, true);
+  const protein = panel.metrics.find((item) => item.key === ReviewNutritionMetricKey.PROTEIN)!;
+  assert.equal(protein.authorValue, null);
+  assert.equal(protein.deviationWarning, false);
+});

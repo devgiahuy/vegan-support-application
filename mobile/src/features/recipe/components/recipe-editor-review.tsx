@@ -5,6 +5,7 @@ import { Check, CircleAlert, ImageOff, Pencil } from 'lucide-react-native';
 
 import { useIconColors } from '@/lib/theme-colors';
 import {
+  RECIPE_NUTRITION_FIELDS,
   difficultyLabel,
   issueLocation,
   parseAmount,
@@ -39,6 +40,7 @@ function formatNumber(text: string, suffix: string): string {
 export function RecipeEditorReview({
   values,
   issues,
+  requireNutrition,
   categoryName,
   coverUrl,
   onEdit,
@@ -46,6 +48,8 @@ export function RecipeEditorReview({
 }: {
   values: RecipeEditorValues;
   issues: RecipeFieldIssue[];
+  /** Contributor/Admin: dinh dưỡng do tác giả khai và được xuất bản. */
+  requireNutrition: boolean;
   categoryName?: string;
   coverUrl: string | null;
   onEdit: (step: RecipeContentStep) => void;
@@ -84,7 +88,9 @@ export function RecipeEditorReview({
             <Text className="flex-1 text-sm font-semibold text-foreground">Công thức đã đủ thông tin bắt buộc</Text>
           </View>
           <Text className="text-xs leading-5 text-muted-foreground">
-            Sau khi gửi, công thức được xuất bản hoặc vào hàng chờ duyệt tùy quyền tài khoản. Hệ thống tự tính dinh dưỡng từ nguyên liệu.
+            {requireNutrition
+              ? 'Với vai trò Người đóng góp, công thức sẽ được xuất bản công khai ngay sau khi đăng. Hệ thống đối chiếu nguyên liệu để hỗ trợ nhận diện dị ứng và chế độ ăn phù hợp.'
+              : 'Sau khi gửi, công thức vào hàng chờ duyệt. Hệ thống tự tính dinh dưỡng từ nguyên liệu.'}
           </Text>
         </View>
       )}
@@ -169,6 +175,17 @@ export function RecipeEditorReview({
         <View className="flex-row flex-wrap gap-x-5 gap-y-1">
           <Text className="text-sm text-muted-foreground">Danh mục: <Text className="text-foreground">{categoryName ?? 'Chưa chọn'}</Text></Text>
           <Text className="text-sm text-muted-foreground">Độ khó: <Text className="text-foreground">{difficultyLabel(values.difficulty)}</Text></Text>
+        </View>
+        <View className="gap-1.5">
+          {RECIPE_NUTRITION_FIELDS.map((field) => {
+            const text = values.nutrition[field.key].trim();
+            return (
+              <View key={field.key} className="flex-row items-baseline justify-between gap-2">
+                <Text className="text-sm text-foreground">{field.label}</Text>
+                <Text className="text-sm text-muted-foreground">{text ? `${text} ${field.unit}` : requireNutrition ? 'Chưa nhập' : 'Tự tính'}</Text>
+              </View>
+            );
+          })}
         </View>
       </ReviewSection>
     </View>

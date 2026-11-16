@@ -10,7 +10,15 @@ import { ImagePickerField } from '@/features/storage/components/image-picker-fie
 import type { PickedImage } from '@/features/storage/types/storage.model';
 import { useIconColors } from '@/lib/theme-colors';
 import { cn } from '@/lib/utils';
-import { DIFFICULTY_OPTIONS, type EditorIngredient, type EditorStep, type RecipeEditorValues } from '../utils/recipe-editor';
+import {
+  DIFFICULTY_OPTIONS,
+  RECIPE_NUTRITION_FIELDS,
+  type EditorIngredient,
+  type EditorNutrition,
+  type EditorStep,
+  type RecipeEditorValues,
+  type RecipeNutritionKey,
+} from '../utils/recipe-editor';
 import { RecipeIngredientRow } from './recipe-ingredient-row';
 
 type ErrorOf = (path: string) => string | undefined;
@@ -205,7 +213,7 @@ export function StepsSection({
   );
 }
 
-/** Bước 4 — Danh mục (bắt buộc), độ khó và ghi chú dinh dưỡng tự động. */
+/** Bước 4 — Danh mục (bắt buộc), độ khó và dinh dưỡng mỗi khẩu phần do tác giả khai. */
 export function ClassifySection({
   categoryId,
   categoryOptions,
@@ -215,6 +223,10 @@ export function ClassifySection({
   error,
   onCategoryChange,
   onDifficultyChange,
+  nutrition,
+  requireNutrition,
+  errorOf,
+  onNutritionChange,
 }: {
   categoryId: string | null;
   categoryOptions: DropdownOption<string | null>[];
@@ -224,6 +236,11 @@ export function ClassifySection({
   error?: string;
   onCategoryChange: (id: string | null) => void;
   onDifficultyChange: (difficulty: RecipeDifficulty) => void;
+  nutrition: EditorNutrition;
+  /** Contributor/Admin: bắt buộc đủ 6 chỉ số. */
+  requireNutrition: boolean;
+  errorOf: ErrorOf;
+  onNutritionChange: (key: RecipeNutritionKey, value: string) => void;
 }) {
   return (
     <View className="gap-5">
@@ -265,11 +282,30 @@ export function ClassifySection({
         </View>
       </View>
 
-      <View className="gap-1 rounded-xl border border-border bg-muted/30 p-4">
-        <Text className="text-sm font-medium text-foreground">Dinh dưỡng được tính tự động</Text>
-        <Text className="text-xs leading-5 text-muted-foreground">
-          Sau khi lưu, hệ thống đối chiếu nguyên liệu đã liên kết để ước tính năng lượng, vi chất và cảnh báo dị ứng. Bạn không cần nhập tay.
-        </Text>
+      <View className="gap-3">
+        <View className="gap-1">
+          <Text className="text-sm font-medium text-foreground">
+            Dinh dưỡng mỗi khẩu phần{requireNutrition ? " *" : " (không bắt buộc)"}
+          </Text>
+          <Text className="text-xs leading-5 text-muted-foreground">
+            {requireNutrition
+              ? "Bắt buộc nhập đủ 6 chỉ số. Với tài khoản Contributor/Admin, công thức được xuất bản ngay sau khi đăng."
+              : "Để trống ô nào thì hệ thống tự tính ô đó từ nguyên liệu khi gửi duyệt. Ban biên tập kiểm tra lại trước khi xuất bản."}
+          </Text>
+        </View>
+        {RECIPE_NUTRITION_FIELDS.map((field) => (
+          <TextField
+            key={field.key}
+            labelVariant="plain"
+            label={`${field.label} (${field.unit})`}
+            value={nutrition[field.key]}
+            onChangeText={(value) => onNutritionChange(field.key, value)}
+            keyboardType={field.integer ? "number-pad" : "decimal-pad"}
+            placeholder={requireNutrition ? "Bắt buộc" : "Tự tính"}
+            maxLength={9}
+            error={errorOf(`nutrition.${field.key}`)}
+          />
+        ))}
       </View>
     </View>
   );

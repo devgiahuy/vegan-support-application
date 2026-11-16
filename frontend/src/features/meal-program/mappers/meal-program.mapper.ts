@@ -6,6 +6,8 @@ import {
   safeNumber,
   safeString,
 } from '@/lib/mapper';
+import { formatDayLabel } from '../utils/meal-program-date.utils';
+import { roundToDecimals } from '../utils/nutrition.utils';
 import type {
   CumulativeAnalysisDto,
   MealProgramDto,
@@ -329,18 +331,30 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
         0
       ),
       macronutrients: {
-        protein: safeNumber(
-          pickField(macronutrients, ['protein_g', 'protein'], sumDailyMetric('proteinGrams')),
-          0
+        protein: roundToDecimals(
+          safeNumber(
+            pickField(macronutrients, ['protein_g', 'protein'], sumDailyMetric('proteinGrams')),
+            0
+          ),
+          2
         ),
-        carbs: safeNumber(
-          pickField(macronutrients, ['carbs_g', 'carbs'], sumDailyMetric('carbohydrateGrams')),
-          0
+        carbs: roundToDecimals(
+          safeNumber(
+            pickField(macronutrients, ['carbs_g', 'carbs'], sumDailyMetric('carbohydrateGrams')),
+            0
+          ),
+          2
         ),
-        fat: safeNumber(pickField(macronutrients, ['fat_g', 'fat'], sumDailyMetric('fatGrams')), 0),
-        fiber: safeNumber(
-          pickField(macronutrients, ['fiber_g', 'fiber'], sumDailyMetric('fiberGrams')),
-          0
+        fat: roundToDecimals(
+          safeNumber(pickField(macronutrients, ['fat_g', 'fat'], sumDailyMetric('fatGrams')), 0),
+          2
+        ),
+        fiber: roundToDecimals(
+          safeNumber(
+            pickField(macronutrients, ['fiber_g', 'fiber'], sumDailyMetric('fiberGrams')),
+            0
+          ),
+          2
         ),
       },
       days,
@@ -354,8 +368,17 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
         formattedDate: '',
         dayOfWeek: 1,
         dayOfWeekLabel: 'Thứ Hai',
+        formattedLabel: 'Thứ Hai',
         meals: [],
         totalCalories: 0,
+        nutrition: {
+          dayCalories: 0,
+          protein: 0,
+          fat: 0,
+          fiber: null,
+          carbs: 0,
+        },
+        estimatedTotals: null,
       };
     }
 
@@ -384,14 +407,50 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
     const totalCalories = meals.reduce((sum, meal) => sum + meal.calories, 0);
     const date = safeString(pickField(dto, ['date'], ''), '');
     const dayOfWeek = safeNumber(pickField(dto, ['day_of_week', 'dayOfWeek'], 1), 1);
+    const dayOfWeekLabel = this.getDayOfWeekLabel(date, dayOfWeek);
+    const formattedDate = this.formatDayDate(date);
+    const formattedLabel = date ? formatDayLabel(date, dayOfWeekLabel) : dayOfWeekLabel;
+
+    const estimatedTotals = dto.estimatedTotals ?? null;
+    const proteinRaw =
+      estimatedTotals?.proteinGrams !== null && estimatedTotals?.proteinGrams !== undefined
+        ? safeNumber(estimatedTotals.proteinGrams, 0)
+        : meals.reduce((sum, m) => sum + (m.protein ?? 0), 0);
+    const fatRaw =
+      estimatedTotals?.fatGrams !== null && estimatedTotals?.fatGrams !== undefined
+        ? safeNumber(estimatedTotals.fatGrams, 0)
+        : meals.reduce((sum, m) => sum + (m.fat ?? 0), 0);
+    const carbsRaw =
+      estimatedTotals?.carbohydrateGrams !== null &&
+      estimatedTotals?.carbohydrateGrams !== undefined
+        ? safeNumber(estimatedTotals.carbohydrateGrams, 0)
+        : meals.reduce((sum, m) => sum + (m.carbs ?? 0), 0);
+    const fiberRaw =
+      estimatedTotals?.fiberGrams !== null && estimatedTotals?.fiberGrams !== undefined
+        ? safeNumber(estimatedTotals.fiberGrams, 0)
+        : meals.reduce((sum, m) => sum + (m.fiber ?? 0), 0);
+
+    const protein = roundToDecimals(proteinRaw, 2);
+    const fat = roundToDecimals(fatRaw, 2);
+    const carbs = roundToDecimals(carbsRaw, 2);
+    const fiber = fiberRaw > 0 ? roundToDecimals(fiberRaw, 2) : null;
 
     return {
       date,
-      formattedDate: this.formatDayDate(date),
+      formattedDate,
       dayOfWeek,
-      dayOfWeekLabel: this.getDayOfWeekLabel(date, dayOfWeek),
+      dayOfWeekLabel,
+      formattedLabel,
       meals,
       totalCalories,
+      nutrition: {
+        dayCalories: totalCalories,
+        protein,
+        fat,
+        fiber,
+        carbs,
+      },
+      estimatedTotals,
     };
   }
 
@@ -406,25 +465,96 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
         sourceTypeLabel: 'Công thức',
         servings: 1,
         calories: 0,
+        formattedCalories: '0 kcal',
         imageUrl: undefined,
       };
     }
 
     const mealType = dto.meal_type ?? dto.mealType ?? 'BREAKFAST';
     const sourceType = dto.source_type ?? dto.sourceType ?? 'RECIPE';
+    const recipe = dto.recipe;
+    const customMeal = dto.customMeal;
+
+    const recipeId = safeString(pickField(dto, ['recipeId', 'recipe_id'], recipe?.id ?? ''), '');
+    const customMealId = safeString(
+      pickField(dto, ['customMealId', 'custom_meal_id'], customMeal?.id ?? ''),
+      ''
+    );
+
+    const protein = roundToDecimals(
+      safeNumber(
+        pickField(
+          dto,
+          ['proteinGrams', 'protein'],
+          recipe?.proteinGrams ??
+            recipe?.protein ??
+            customMeal?.proteinGrams ??
+            customMeal?.protein ??
+            0
+        ),
+        0
+      ),
+      2
+    );
+    const carbs = roundToDecimals(
+      safeNumber(
+        pickField(
+          dto,
+          ['carbohydrateGrams', 'carbs'],
+          recipe?.carbohydrateGrams ??
+            recipe?.carbs ??
+            customMeal?.carbohydrateGrams ??
+            customMeal?.carbs ??
+            0
+        ),
+        0
+      ),
+      2
+    );
+    const fat = roundToDecimals(
+      safeNumber(
+        pickField(
+          dto,
+          ['fatGrams', 'fat'],
+          recipe?.fatGrams ?? recipe?.fat ?? customMeal?.fatGrams ?? customMeal?.fat ?? 0
+        ),
+        0
+      ),
+      2
+    );
+    const fiber = roundToDecimals(
+      safeNumber(
+        pickField(
+          dto,
+          ['fiberGrams', 'fiber'],
+          recipe?.fiberGrams ?? recipe?.fiber ?? customMeal?.fiberGrams ?? customMeal?.fiber ?? 0
+        ),
+        0
+      ),
+      2
+    );
+    const calories = safeNumber(
+      pickField(dto, ['calories'], recipe?.calories ?? customMeal?.calories ?? 0),
+      0
+    );
 
     return {
       id: safeString(pickField(dto, ['id'], ''), ''),
-      name: safeString(
-        pickField(dto, ['name'], dto.recipe?.title ?? dto.customMeal?.name ?? ''),
-        ''
-      ),
+      recipeId: recipeId || (sourceType === 'RECIPE' ? safeString(dto.id, '') : undefined),
+      customMealId:
+        customMealId || (sourceType === 'CUSTOM_MEAL' ? safeString(dto.id, '') : undefined),
+      name: safeString(pickField(dto, ['name'], recipe?.title ?? customMeal?.name ?? ''), ''),
       mealType,
       mealTypeLabel: this.mapMealTypeLabel(mealType),
       sourceType,
       sourceTypeLabel: sourceType === 'RECIPE' ? 'Công thức' : 'Món cá nhân',
       servings: safeNumber(pickField(dto, ['servings'], 1), 1),
-      calories: safeNumber(pickField(dto, ['calories'], 0), 0),
+      calories,
+      formattedCalories: `${calories.toLocaleString('vi-VN')} kcal`,
+      protein,
+      carbs,
+      fat,
+      fiber,
       imageUrl: dto.image_url
         ? safeString(dto.image_url)
         : dto.imageUrl
@@ -454,12 +584,24 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
       dto.warnings ?? dto.repeated_pattern_warnings ?? dto.repeatedPatternWarnings ?? [];
 
     return {
-      averageDailyCalories,
+      averageDailyCalories: roundToDecimals(averageDailyCalories, 0),
       averageMacronutrients: {
-        protein: safeNumber(pickField(averageMacronutrients, ['protein_g', 'protein'], 0), 0),
-        carbs: safeNumber(pickField(averageMacronutrients, ['carbs_g', 'carbs'], 0), 0),
-        fat: safeNumber(pickField(averageMacronutrients, ['fat_g', 'fat'], 0), 0),
-        fiber: safeNumber(pickField(averageMacronutrients, ['fiber_g', 'fiber'], 0), 0),
+        protein: roundToDecimals(
+          safeNumber(pickField(averageMacronutrients, ['protein_g', 'protein'], 0), 0),
+          2
+        ),
+        carbs: roundToDecimals(
+          safeNumber(pickField(averageMacronutrients, ['carbs_g', 'carbs'], 0), 0),
+          2
+        ),
+        fat: roundToDecimals(
+          safeNumber(pickField(averageMacronutrients, ['fat_g', 'fat'], 0), 0),
+          2
+        ),
+        fiber: roundToDecimals(
+          safeNumber(pickField(averageMacronutrients, ['fiber_g', 'fiber'], 0), 0),
+          2
+        ),
       },
       repeatedPatternWarnings: safeArray<RepeatedPatternWarningDto, RepeatedPatternWarning>(
         rawWarnings,
@@ -798,6 +940,54 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
         'Món ăn dinh dưỡng'
       );
       const calories = safeNumber(slot.calories ?? recipe?.calories ?? customMeal?.calories, 0);
+      const protein = roundToDecimals(
+        safeNumber(
+          slot.proteinGrams ??
+            slot.protein ??
+            recipe?.proteinGrams ??
+            recipe?.protein ??
+            customMeal?.proteinGrams ??
+            customMeal?.protein,
+          0
+        ),
+        2
+      );
+      const carbs = roundToDecimals(
+        safeNumber(
+          slot.carbohydrateGrams ??
+            slot.carbs ??
+            recipe?.carbohydrateGrams ??
+            recipe?.carbs ??
+            customMeal?.carbohydrateGrams ??
+            customMeal?.carbs,
+          0
+        ),
+        2
+      );
+      const fat = roundToDecimals(
+        safeNumber(
+          slot.fatGrams ??
+            slot.fat ??
+            recipe?.fatGrams ??
+            recipe?.fat ??
+            customMeal?.fatGrams ??
+            customMeal?.fat,
+          0
+        ),
+        2
+      );
+      const fiber = roundToDecimals(
+        safeNumber(
+          slot.fiberGrams ??
+            slot.fiber ??
+            recipe?.fiberGrams ??
+            recipe?.fiber ??
+            customMeal?.fiberGrams ??
+            customMeal?.fiber,
+          0
+        ),
+        2
+      );
 
       // Phân biệt mealType: BREAKFAST, LUNCH, DINNER, SNACK
       let mealTypeStr = safeString(
@@ -822,8 +1012,20 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
         slot.imageUrl ??
         slot.image_url) as string | undefined;
 
+      const slotRecipeId = safeString(
+        pickField(slot, ['recipeId', 'recipe_id'], (recipe?.id as string) ?? ''),
+        ''
+      );
+      const slotCustomMealId = safeString(
+        pickField(slot, ['customMealId', 'custom_meal_id'], (customMeal?.id as string) ?? ''),
+        ''
+      );
+
       const item: MealItemSummary = {
         id: safeString(slot.id, ''),
+        recipeId: slotRecipeId || (sourceType === 'RECIPE' ? safeString(slot.id, '') : undefined),
+        customMealId:
+          slotCustomMealId || (sourceType === 'CUSTOM_MEAL' ? safeString(slot.id, '') : undefined),
         name,
         mealType,
         mealTypeLabel: this.mapMealTypeLabel(mealType),
@@ -831,6 +1033,11 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
         sourceTypeLabel: sourceType === 'RECIPE' ? 'Công thức' : 'Món cá nhân',
         servings: safeNumber(slot.servings, 1),
         calories,
+        formattedCalories: `${calories.toLocaleString('vi-VN')} kcal`,
+        protein,
+        carbs,
+        fat,
+        fiber,
         imageUrl: imageUrl ? safeString(imageUrl) : undefined,
       };
 
@@ -857,14 +1064,40 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
       });
 
       const totalCalories = meals.reduce((sum, m) => sum + m.calories, 0);
+      const protein = roundToDecimals(
+        meals.reduce((sum, m) => sum + (m.protein ?? 0), 0),
+        2
+      );
+      const fat = roundToDecimals(
+        meals.reduce((sum, m) => sum + (m.fat ?? 0), 0),
+        2
+      );
+      const carbs = roundToDecimals(
+        meals.reduce((sum, m) => sum + (m.carbs ?? 0), 0),
+        2
+      );
+      const fiberRaw = meals.reduce((sum, m) => sum + (m.fiber ?? 0), 0);
+      const fiber = fiberRaw > 0 ? roundToDecimals(fiberRaw, 2) : null;
+      const dayOfWeekLabel = this.getDayOfWeekLabel(date, dayOfWeek);
+      const formattedDate = this.formatDayDate(date);
+      const formattedLabel = date ? formatDayLabel(date, dayOfWeekLabel) : dayOfWeekLabel;
 
       days.push({
         date,
-        formattedDate: this.formatDayDate(date),
+        formattedDate,
         dayOfWeek,
-        dayOfWeekLabel: this.getDayOfWeekLabel(date, dayOfWeek),
+        dayOfWeekLabel,
+        formattedLabel,
         meals,
         totalCalories,
+        nutrition: {
+          dayCalories: totalCalories,
+          protein,
+          fat,
+          fiber,
+          carbs,
+        },
+        estimatedTotals: null,
       });
     }
 

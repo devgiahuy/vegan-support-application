@@ -23,6 +23,27 @@ const emptyValues: RecipeFormValues = {
 };
 
 describe('issuesFromValues', () => {
+  it('requires all six nutrition values only for Contributor/Admin', () => {
+    const filled: RecipeFormValues = {
+      ...emptyValues,
+      title: 'Canh nấm đậu hũ',
+      categoryId: 'cat-1',
+      servings: 2,
+      ingredients: [{ name: 'Đậu hũ', ingredientId: null, amount: 200, unit: 'g' }],
+      steps: [{ stepNumber: 1, instruction: 'Nấu sôi rồi cho đậu vào' }],
+      nutrition: { calories: 250, proteinGrams: 12 },
+    };
+    expect(issuesFromValues(filled)).toEqual([]);
+    const required = issuesFromValues(filled, { requireNutrition: true });
+    expect(required.map((i) => i.path)).toEqual([
+      'nutrition.carbsGrams',
+      'nutrition.fatGrams',
+      'nutrition.fiberGrams',
+      'nutrition.vitaminB12Mcg',
+    ]);
+    expect(required.every((i) => i.step === 'classify')).toBe(true);
+  });
+
   it('orders issues by step and row as shown in the form', () => {
     const issues = issuesFromValues(emptyValues);
     expect(issues.map((i) => i.path)).toEqual([

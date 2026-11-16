@@ -114,10 +114,11 @@ export function RestaurantList({
         </div>
       ) : (
         <div className="flex flex-col gap-4" role="list" aria-label="Danh sách quán chay">
-          {restaurants.map((restaurant) => (
+          {restaurants.map((restaurant, index) => (
             <RestaurantCard
               key={restaurant.id}
               restaurant={restaurant}
+              position={index + 1}
               isSelected={selectedId === restaurant.id}
               onSelect={onSelect}
             />

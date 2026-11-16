@@ -18,7 +18,7 @@ import { useMealPlansQuery } from '@/features/meal-plan/queries/meal-plan.querie
  * Yêu cầu đăng nhập (dữ liệu thuộc sở hữu từng người dùng).
  */
 function MealPlansContent() {
-  const { data, isLoading, isError, refetch } = useMealPlansQuery({ page: 1, limit: 5 });
+  const { data, isLoading, isError, refetch } = useMealPlansQuery({ page: 1, limit: 6 });
   const plans = data?.items ?? [];
 
   return (
@@ -30,8 +30,8 @@ function MealPlansContent() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-5">
-        <Card className="lg:col-span-2">
+      <div className="grid gap-6 lg:grid-cols-5 items-start">
+        <Card className="lg:col-span-2 self-start lg:sticky lg:top-24">
           <CardHeader>
             <CardTitle className="text-lg">Tạo thực đơn mới</CardTitle>
           </CardHeader>
@@ -41,9 +41,9 @@ function MealPlansContent() {
         </Card>
 
         <section className="space-y-3 lg:col-span-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
             <h2 className="text-lg font-bold tracking-tight">Phiên bản gần đây</h2>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button asChild variant="outline" size="sm" className="text-xs gap-1.5 h-8">
                 <Link href="/custom-meals">
                   <Utensils className="h-3.5 w-3.5 text-primary" /> Món ăn của tôi
@@ -76,10 +76,22 @@ function MealPlansContent() {
             />
           )}
           {!isLoading && !isError && plans.length > 0 && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {plans.map((plan) => (
-                <PlanCard key={plan.id} plan={plan} />
-              ))}
+            <div className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {plans.map((plan) => (
+                  <PlanCard key={plan.id} plan={plan} />
+                ))}
+              </div>
+              {data?.metadata && data.metadata.totalItems > plans.length && (
+                <div className="flex justify-center pt-2">
+                  <Button asChild variant="outline" size="sm" className="text-xs">
+                    <Link href="/meal-plans/saved">
+                      Xem toàn bộ {data.metadata.totalItems} thực đơn đã lưu
+                      <ArrowRight data-icon="inline-end" className="ml-1 size-3.5" />
+                    </Link>
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </section>

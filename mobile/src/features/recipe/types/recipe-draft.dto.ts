@@ -48,6 +48,8 @@ export interface GenerateRecipeDraftResponseDto {
     ingredientConfidence?: number[] | null;
     confidence?: number;
     assumptions?: (string | null)[] | null;
+    /** Ước tính riêng của AI về khẩu phần/thời gian; hiển thị làm gợi ý khi khác giá trị người dùng đã nhập. */
+    suggestedTiming?: { servings?: number; prepTimeMinutes?: number; cookTimeMinutes?: number } | null;
     provenance?: { provider?: string; model?: string; templateVersion?: string } | null;
   } | null;
 }

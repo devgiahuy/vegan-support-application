@@ -40,6 +40,22 @@ export interface NutritionFact {
   vitaminB12: number | null;
 }
 
+/** Chỉ số tác giả đã nhập cho bản này (`recipe.authorNutrition`); `null` = để trống. Khác `nutrition` là số đã công bố. */
+export interface RecipeAuthorNutrition {
+  calories: number | null;
+  proteinGrams: number | null;
+  carbsGrams: number | null;
+  fatGrams: number | null;
+  fiberGrams: number | null;
+  vitaminB12Mcg: number | null;
+}
+
+/** Lý do gửi duyệt thất bại sau khi bản nháp đã được lưu (chỉ có ở kết quả tạo/sửa). */
+export interface RecipeSubmitFailure {
+  code: string | null;
+  message: string;
+}
+
 export interface TraditionWarning {
   tradition: string;
   warningCode: string;
@@ -93,6 +109,8 @@ export interface Recipe {
   difficultyLabel: string;
   mealPlannerEligible: boolean;
   nutrition: NutritionFact;
+  /** Số tác giả đã nhập; dùng điền sẵn form sửa (không dùng `nutrition`). */
+  authorNutrition: RecipeAuthorNutrition | null;
   ingredients: RecipeIngredient[];
   /** Các bước nấu có cấu trúc (nếu có). */
   steps: RecipeInstructionStep[];
@@ -110,6 +128,8 @@ export interface Recipe {
   /** Backend chưa có rating: chỉ hiện khi có dữ liệu thật (giữ `undefined`, không bịa số). */
   rating?: number;
   ratingCount?: number;
+  /** Chỉ có sau tạo/sửa khi bản nháp đã lưu nhưng bước gửi duyệt thất bại. */
+  submitFailure?: RecipeSubmitFailure;
 }
 
 export interface AppliedSearchConstraints {

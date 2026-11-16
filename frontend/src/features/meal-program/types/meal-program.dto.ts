@@ -10,14 +10,52 @@ export interface WeeklyPlanMealItemDto {
   mealType?: 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK';
   source_type?: 'RECIPE' | 'CUSTOM_MEAL';
   sourceType?: 'RECIPE' | 'CUSTOM_MEAL';
+  recipeId?: string;
+  recipe_id?: string;
+  customMealId?: string;
+  custom_meal_id?: string;
   name?: string;
   servings?: number;
   calories?: number;
+  proteinGrams?: number | null;
+  fiberGrams?: number | null;
+  fatGrams?: number | null;
+  carbohydrateGrams?: number | null;
+  protein?: number | null;
+  carbs?: number | null;
+  fat?: number | null;
+  fiber?: number | null;
   image_url?: string | null;
   imageUrl?: string | null;
   status?: 'FILLED' | 'UNFILLED';
-  recipe?: { title?: string; coverImageUrl?: string | null } | null;
-  customMeal?: { name?: string; photoUrl?: string | null } | null;
+  recipe?: {
+    id?: string;
+    title?: string;
+    coverImageUrl?: string | null;
+    proteinGrams?: number | null;
+    fiberGrams?: number | null;
+    fatGrams?: number | null;
+    carbohydrateGrams?: number | null;
+    protein?: number | null;
+    carbs?: number | null;
+    fat?: number | null;
+    fiber?: number | null;
+    calories?: number;
+  } | null;
+  customMeal?: {
+    id?: string;
+    name?: string;
+    photoUrl?: string | null;
+    proteinGrams?: number | null;
+    fiberGrams?: number | null;
+    fatGrams?: number | null;
+    carbohydrateGrams?: number | null;
+    protein?: number | null;
+    carbs?: number | null;
+    fat?: number | null;
+    fiber?: number | null;
+    calories?: number;
+  } | null;
 }
 
 export interface WeeklyPlanDayDto {

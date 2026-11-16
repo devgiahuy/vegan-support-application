@@ -192,7 +192,7 @@ export function registerChatOpenApi(registry: OpenAPIRegistry, errorSchema: ZodT
     tags: ['AI Chat'],
     summary: 'Stream nutrition answer qua SSE',
     description:
-      'OpenAI Responses API được bọc sau internal SSE contract. Quota chỉ consume sau provider completion; fallback, validation, moderation block, timeout, abort và partial error không consume. Khi moderation provider bị tắt hoặc không khả dụng, generated answer bị giữ lại và trả static unavailable advisory với fallback=true. Reset 00:00 Asia/Ho_Chi_Minh. Retry cùng idempotencyKey replay completed response hoặc tiếp tục an toàn mà không trừ quota hai lần.',
+      'OpenAI Responses API được bọc sau internal SSE contract. Quota chỉ consume sau provider completion; fallback, validation, moderation block, timeout, abort và partial error không consume. Kiểm duyệt chạy trước sinh câu trả lời. Nếu gateway báo rõ moderation model/endpoint không được hỗ trợ, backend phân loại an toàn bằng Responses với AI_MODERATION_FALLBACK_MODEL (mặc định AI_MODEL_CHAT), strict boolean JSON và cùng timeout/abort signal. Lỗi xác thực, rate limit hoặc lỗi tạm thời khác không kích hoạt nhánh tương thích này. Khi moderation bị tắt, cả hai phương thức không khả dụng hoặc kết quả phân loại sai schema/incomplete, generated answer bị giữ lại và trả static unavailable advisory với fallback=true. Reset 00:00 Asia/Ho_Chi_Minh. Retry cùng idempotencyKey replay completed response hoặc tiếp tục an toàn mà không trừ quota hai lần.',
     operationId: 'streamChatMessage',
     security: guestOrAuthenticated,
     request: {

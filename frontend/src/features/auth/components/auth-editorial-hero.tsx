@@ -27,18 +27,18 @@ export function AuthEditorialHero({ className }: AuthEditorialHeroProps) {
     >
       {/* Decorative ambient botanical glow in background */}
       <div
-        className="pointer-events-none absolute -left-20 -top-20 -z-10 h-72 w-72 rounded-full bg-emerald-500/10 blur-3xl dark:bg-emerald-500/5"
+        className="absolute rounded-full pointer-events-none -left-20 -top-20 -z-10 h-72 w-72 bg-emerald-500/10 blur-3xl dark:bg-emerald-500/5"
         aria-hidden="true"
       />
       <div
-        className="pointer-events-none absolute -bottom-16 -right-16 -z-10 h-80 w-80 rounded-full bg-teal-500/10 blur-3xl dark:bg-teal-500/5"
+        className="absolute rounded-full pointer-events-none -bottom-16 -right-16 -z-10 h-80 w-80 bg-teal-500/10 blur-3xl dark:bg-teal-500/5"
         aria-hidden="true"
       />
 
       {/* Top Section: Editorial Storytelling & Headlines */}
       <div className="space-y-4">
         {/* Eyebrow badge */}
-        <motion.div
+        {/* <motion.div
           initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
@@ -46,7 +46,7 @@ export function AuthEditorialHero({ className }: AuthEditorialHeroProps) {
         >
           <Leaf className="h-3.5 w-3.5 text-[#287D32] dark:text-emerald-400" />
           <span>YOUR PLANT-BASED COMPANION</span>
-        </motion.div>
+        </motion.div> */}
 
         {/* Main Heading */}
         <motion.h1
@@ -72,7 +72,7 @@ export function AuthEditorialHero({ className }: AuthEditorialHeroProps) {
       </div>
 
       {/* Middle & Visual Section: Food Composition & Floating Ecosystem Cards */}
-      <div className="relative mt-8 flex flex-1 items-center justify-center py-6">
+      <div className="relative flex items-center justify-center flex-1 py-6 mt-8">
         {/* Organic rounded backdrop canvas */}
         <motion.div
           initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.96 }}
@@ -81,8 +81,8 @@ export function AuthEditorialHero({ className }: AuthEditorialHeroProps) {
           className="relative flex aspect-square w-full max-w-[420px] items-center justify-center rounded-[36px] border border-border/50 bg-gradient-to-b from-[#F8F7F2] to-[#E8F1E8]/50 p-6 shadow-sm dark:border-border/30 dark:from-[#12211A]/80 dark:to-[#0B1410]/90"
         >
           {/* Subtle botanical circular backdrop element */}
-          <div className="absolute inset-4 rounded-full border border-emerald-500/10 dark:border-emerald-400/10" />
-          <div className="absolute inset-10 rounded-full border border-dashed border-emerald-500/15 dark:border-emerald-400/10" />
+          <div className="absolute border rounded-full inset-4 border-emerald-500/10 dark:border-emerald-400/10" />
+          <div className="absolute border border-dashed rounded-full inset-10 border-emerald-500/15 dark:border-emerald-400/10" />
 
           {/* Central Vegan Food Photography */}
           <motion.div
@@ -98,7 +98,7 @@ export function AuthEditorialHero({ className }: AuthEditorialHeroProps) {
               repeat: Infinity,
               ease: 'easeInOut',
             }}
-            className="relative h-64 w-64 sm:h-72 sm:w-72"
+            className="relative w-64 h-64 sm:h-72 sm:w-72"
           >
             <Image
               src="/hero/optimized/completed-dish.webp"
@@ -128,7 +128,7 @@ export function AuthEditorialHero({ className }: AuthEditorialHeroProps) {
             className="absolute -top-4 -right-2 sm:-right-4 z-10 w-[200px] rounded-2xl border border-white/60 bg-white/95 p-3.5 shadow-[0_12px_32px_rgba(29,43,34,0.08)] backdrop-blur-md dark:border-border/60 dark:bg-card/95 dark:shadow-[0_12px_32px_rgba(0,0,0,0.4)]"
           >
             <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-[#287D32] dark:text-emerald-400 uppercase">
-              <Sparkles className="h-3 w-3" />
+              <Sparkles className="w-3 h-3" />
               <span>VEGGIE AI</span>
             </div>
             <div className="mt-1 text-[11px] font-medium text-muted-foreground">Gợi ý hôm nay</div>
@@ -159,7 +159,7 @@ export function AuthEditorialHero({ className }: AuthEditorialHeroProps) {
             className="absolute -bottom-3 -left-2 sm:-left-4 z-10 flex items-center gap-3 rounded-2xl border border-white/60 bg-white/95 px-3.5 py-2.5 shadow-[0_12px_32px_rgba(29,43,34,0.08)] backdrop-blur-md dark:border-border/60 dark:bg-card/95 dark:shadow-[0_12px_32px_rgba(0,0,0,0.4)]"
           >
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100/80 text-[#287D32] dark:bg-emerald-950/70 dark:text-emerald-300">
-              <MapPin className="h-4 w-4" />
+              <MapPin className="w-4 h-4" />
             </div>
             <div>
               <div className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
@@ -188,7 +188,7 @@ export function AuthEditorialHero({ className }: AuthEditorialHeroProps) {
             }}
             className="absolute bottom-6 -right-2 sm:-right-6 z-10 flex items-center gap-2 rounded-2xl border border-white/60 bg-white/95 px-3 py-2 shadow-[0_10px_28px_rgba(29,43,34,0.07)] backdrop-blur-md dark:border-border/60 dark:bg-card/95 dark:shadow-[0_10px_28px_rgba(0,0,0,0.4)]"
           >
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400">
+            <div className="flex items-center justify-center rounded-full h-7 w-7 bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400">
               <Heart className="h-3.5 w-3.5 fill-current" />
             </div>
             <div>
@@ -208,7 +208,7 @@ export function AuthEditorialHero({ className }: AuthEditorialHeroProps) {
         initial={shouldReduceMotion ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4, delay: 0.5 }}
-        className="mt-6 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+        className="flex flex-wrap items-center gap-2 mt-6 text-xs text-muted-foreground"
       >
         <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/60 px-3 py-1 font-medium dark:bg-muted/30">
           <Utensils className="h-3 w-3 text-[#287D32] dark:text-emerald-400" />

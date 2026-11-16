@@ -78,8 +78,8 @@ export function SiteHeader() {
         <BrandLogo
           variant="horizontal"
           size="md"
-          imageClassName="h-7 w-auto xl:h-8 2xl:h-9"
-          className="shrink-0"
+          imageClassName="h-auto w-full"
+          className="w-36 min-w-0 shrink-0 sm:w-48 lg:w-44 xl:w-48 2xl:w-56"
           priority
         />
 

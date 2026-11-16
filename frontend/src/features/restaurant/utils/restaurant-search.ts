@@ -1,5 +1,5 @@
 import { DietPattern, RestaurantWeekday } from '@/common/enums';
-import { DEFAULT_RADIUS_M } from '../schemas/restaurant.schema';
+import { DEFAULT_RADIUS_M, RESTAURANT_RADIUS_OPTIONS } from '../schemas/restaurant.schema';
 import { isBoundsUsable } from './restaurant-bounds';
 import type {
   RestaurantAdvancedFilters,
@@ -94,7 +94,8 @@ export function sanitizePersistedFilters(
   const source = raw as Record<string, unknown>;
 
   const radiusM =
-    typeof source.radiusM === 'number' && Number.isFinite(source.radiusM)
+    typeof source.radiusM === 'number' &&
+    (RESTAURANT_RADIUS_OPTIONS as readonly number[]).includes(source.radiusM)
       ? source.radiusM
       : DEFAULT_RADIUS_M;
 
@@ -156,12 +157,21 @@ export function sanitizeAdvancedFilters(raw: unknown): RestaurantAdvancedFilters
 /** Nội dung trạng thái rỗng và các hành động gợi ý, tùy theo chế độ tìm hiện tại. */
 export function emptyStateCopy(
   mode: RestaurantSearchMode | null,
-  externalResultsSuppressed = false
+  externalResultsSuppressed = false,
+  externalDataUnavailable = false
 ): {
   title: string;
   description: string;
   actions: string[];
 } {
+  if (externalDataUnavailable && !externalResultsSuppressed) {
+    return {
+      title: 'Chưa tải được kết quả tìm quán',
+      description:
+        'Dữ liệu từ nhà cung cấp bản đồ đang gián đoạn. Chưa thể xác định có quán trong phạm vi này; hãy thử lại sau.',
+      actions: [],
+    };
+  }
   if (externalResultsSuppressed) {
     return {
       title: 'Chưa có quán đáp ứng bộ lọc chế độ ăn',

@@ -51,6 +51,11 @@ const GENERATED_SERVING_OPTIONS = [0.75, 1, 1.25] as const;
 const MAX_DAILY_COMBINATION_CANDIDATES = 24;
 const INCOMPLETE_MACRO_SCORE_PENALTY = 2;
 const WEEKLY_REUSE_SCORE_PENALTY = 0.35;
+// Reasons meaning "cannot verify", not a confirmed allergy/exclusion/diet/tradition violation.
+const UNVERIFIED_INGREDIENT_REASONS = new Set([
+  'UNRESOLVED_INGREDIENT',
+  'INGREDIENT_COMPOSITION_UNCERTAIN',
+]);
 const SAME_DAY_REPEAT_SCORE_PENALTY = 1.2;
 const MEAL_SPLITS: Record<MealType, number> = {
   [MealType.BREAKFAST]: 0.25,
@@ -896,9 +901,42 @@ export class MealPlanService {
     return `Thực đơn đã xếp ${filled}/${TOTAL_SLOTS} bữa cho mục tiêu ${goalLabel}, dựa trên mức năng lượng khoảng ${targetCalories} kcal mỗi ngày. Dị ứng, nguyên liệu cần tránh, chế độ ăn và quy tắc truyền thống của bạn luôn được kiểm tra trước khi chọn món.`;
   }
 
-  private assertNoHardViolation(reasons: string[]): void {
+  private unverifiedIngredientNames(
+    catalog: Awaited<ReturnType<ContentRepository['safetyCatalog']>>,
+    ingredients: Array<{
+      ingredientId: string | null;
+      displayName: string;
+      resolutionStatus: string;
+      ingredient: unknown;
+    }>,
+  ): string[] {
+    return [
+      ...new Set(
+        ingredients
+          .filter(
+            (entry) =>
+              entry.resolutionStatus !== 'EXACT' ||
+              !entry.ingredientId ||
+              !entry.ingredient ||
+              !catalog.closure(entry.ingredientId).complete,
+          )
+          .map((entry) => entry.displayName),
+      ),
+    ];
+  }
+
+  private assertNoHardViolation(reasons: string[], unverifiedIngredients: string[] = []): void {
     const unique = [...new Set(reasons)];
     if (!unique.length) return;
+    if (unique.every((reason) => UNVERIFIED_INGREDIENT_REASONS.has(reason))) {
+      const names = unverifiedIngredients.length ? `: ${unverifiedIngredients.join(', ')}` : '';
+      throw new AppError({
+        statusCode: 409,
+        code: 'MEAL_PLAN_INGREDIENTS_UNVERIFIED',
+        message: `Chưa thể kiểm tra món này với dị ứng, nguyên liệu cần tránh, chế độ ăn và quy tắc truyền thống của bạn vì có nguyên liệu chưa liên kết với Ngân hàng Thực phẩm${names}. Đây không phải vi phạm đã xác định. Hãy liên kết các nguyên liệu này trong món hoặc chọn món khác.`,
+        fields: { reasons: unique, unverifiedIngredients },
+      });
+    }
     throw new AppError({
       statusCode: 409,
       code: 'MEAL_PLAN_HARD_CONSTRAINT_VIOLATION',
@@ -1246,7 +1284,10 @@ export class MealPlanService {
         )
       )
         hardReasons.push('TRADITION_RULE');
-      this.assertNoHardViolation(hardReasons);
+      this.assertNoHardViolation(
+        hardReasons,
+        this.unverifiedIngredientNames(safetyCatalog, revision.ingredients),
+      );
       const calories =
         revision.recipeDetail.calories === null
           ? null
@@ -1317,7 +1358,10 @@ export class MealPlanService {
         )
           hardReasons.push('TRADITION_RULE');
       }
-      this.assertNoHardViolation(hardReasons);
+      this.assertNoHardViolation(
+        hardReasons,
+        this.unverifiedIngredientNames(safetyCatalog, custom.ingredients),
+      );
       const calories =
         custom.userCalories === null
           ? null

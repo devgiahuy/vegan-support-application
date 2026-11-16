@@ -26,6 +26,12 @@ export interface ReviewNutritionMetricDto {
   } | null;
   finalValue?: number | null;
   finalOrigin?: string | null;
+  /** Giá trị mỗi khẩu phần tác giả đã nhập (USER_PROVIDED); `null` khi để trống. */
+  author?: number | null;
+  /** |tác giả − ước tính hệ thống| / ước tính × 100; `null` khi thiếu một trong hai. */
+  deviationPercent?: number | null;
+  /** `true` khi lệch quá 30% — người duyệt nên kiểm tra lại. */
+  deviationWarning?: boolean;
 }
 
 export interface ReviewNutritionUncoveredDto {

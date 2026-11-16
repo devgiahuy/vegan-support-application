@@ -12,7 +12,6 @@ import { PANTRY_UNIT_GROUPS } from '../lib/pantry-units';
 import { isValidDateInput } from '../lib/date-input';
 import { pantryErrorMessage } from '../lib/pantry-errors';
 import {
-  useAdjustPantryItemMutation,
   useCreatePantryItemMutation,
   useMergePantryItemsMutation,
   usePantryAdjustmentsQuery,
@@ -116,34 +115,29 @@ export function PantryItemSheet({
   item: listItem,
   onClose,
   initialMode = 'OBSERVATION',
-  initialType = 'CONSUME',
+  onAdjust,
 }: {
   item: PantryItem;
   onClose: () => void;
-  /** Tab mở đầu tiên: bấm "Tiêu hao"/"Bổ sung" ngoài danh sách mở thẳng tab Số lượng. */
-  initialMode?: 'OBSERVATION' | 'QUANTITY' | 'HISTORY';
-  initialType?: 'CONSUME' | 'RESTORE' | 'ADJUST';
+  initialMode?: 'OBSERVATION' | 'HISTORY';
+  /** Mở hộp "Điều chỉnh số lượng" (Tiêu hao / Hoàn trả / Bù sai lệch) cho mục này. */
+  onAdjust?: (item: PantryItem) => void;
 }) {
   // Danh sách có thể đã cũ; chi tiết mới nhất cung cấp `version` đúng cho khóa lạc quan khi lưu.
   const detail = usePantryItemQuery(listItem.id);
   const item = detail.data ?? listItem;
   const syncedVersion = React.useRef(item.version);
   const [refreshed, setRefreshed] = React.useState(false);
-  const [mode, setMode] = React.useState<'OBSERVATION' | 'QUANTITY' | 'HISTORY'>(initialMode);
+  const [mode, setMode] = React.useState<'OBSERVATION' | 'HISTORY'>(initialMode);
   const [purchasedAt, setPurchasedAt] = React.useState(item.purchasedAt ?? '');
   const [openedAt, setOpenedAt] = React.useState(item.openedAt ?? '');
   const [expiresAt, setExpiresAt] = React.useState(item.expiresAt ?? '');
   const [note, setNote] = React.useState(item.freshnessNote ?? '');
-  const [type, setType] = React.useState<'CONSUME' | 'RESTORE' | 'ADJUST'>(initialType);
-  const [amount, setAmount] = React.useState('');
-  const [reason, setReason] = React.useState('');
   const [page, setPage] = React.useState(1);
   const [error, setError] = React.useState('');
   const update = useUpdatePantryItemMutation();
-  const adjust = useAdjustPantryItemMutation();
   const history = usePantryAdjustmentsQuery(mode === 'HISTORY' ? item.id : '', page);
-  const operation = React.useRef<{ fingerprint: string; key: string } | null>(null);
-  const busy = update.isPending || adjust.isPending;
+  const busy = update.isPending;
   React.useEffect(() => {
     const fresh = detail.data;
     if (!fresh || fresh.version === syncedVersion.current) return;
@@ -175,39 +169,6 @@ export function PantryItemSheet({
           onError: (value) => setError(pantryErrorMessage(value)),
         }
       );
-    } else {
-      const parsed = Number(amount.replace(',', '.'));
-      if (
-        !Number.isFinite(parsed) ||
-        parsed === 0 ||
-        Math.abs(parsed) > 999999999 ||
-        (type !== 'ADJUST' && parsed < 0)
-      )
-        return setError('Nhập số lượng hợp lệ khác 0; dùng/hoàn trả cần số dương.');
-      if (type === 'ADJUST' && !reason.trim()) return setError('Điều chỉnh cần ghi lý do.');
-      const fingerprint = JSON.stringify([type, parsed, reason.trim()]);
-      if (operation.current?.fingerprint !== fingerprint)
-        operation.current = {
-          fingerprint,
-          key: createOperationKey('pantry-adjust'),
-        };
-      adjust.mutate(
-        {
-          id: item.id,
-          values: {
-            type,
-            amount: parsed,
-            unit: item.unit,
-            reason,
-            expectedVersion: item.version,
-            idempotencyKey: operation.current.key,
-          },
-        },
-        {
-          onSuccess: onClose,
-          onError: (value) => setError(pantryErrorMessage(value)),
-        }
-      );
     }
   };
   return (
@@ -217,7 +178,7 @@ export function PantryItemSheet({
         <Text className="text-xs text-primary">Mục này đã thay đổi, thông tin đã được tải lại theo bản mới nhất.</Text>
       ) : null}
       <View className="flex-row gap-2">
-        {(['OBSERVATION', 'QUANTITY', 'HISTORY'] as const).map((value) => (
+        {(['OBSERVATION', 'HISTORY'] as const).map((value) => (
           <Pressable
             key={value}
             disabled={busy}
@@ -230,11 +191,7 @@ export function PantryItemSheet({
             className={`min-h-12 flex-1 items-center justify-center rounded-lg border px-2 ${mode === value ? 'border-primary bg-primary/10' : 'border-border'}`}
           >
             <Text className="text-center text-sm text-foreground">
-              {value === 'OBSERVATION'
-                ? 'Thông tin'
-                : value === 'QUANTITY'
-                  ? 'Số lượng'
-                  : 'Lịch sử'}
+              {value === 'OBSERVATION' ? 'Thông tin' : 'Lịch sử'}
             </Text>
           </Pressable>
         ))}
@@ -245,40 +202,9 @@ export function PantryItemSheet({
           <DateField label="Ngày mở" value={openedAt} onChange={setOpenedAt} clearable />
           <DateField label="Hạn dùng" value={expiresAt} onChange={setExpiresAt} clearable />
           <TextField label="Ghi chú độ tươi" value={note} onChangeText={setNote} maxLength={5000} />
-        </>
-      ) : mode === 'QUANTITY' ? (
-        <>
-          <View className="flex-row gap-2">
-            {(['CONSUME', 'RESTORE', 'ADJUST'] as const).map((value) => (
-              <Pressable
-                key={value}
-                disabled={busy}
-                onPress={() => setType(value)}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: type === value }}
-                className={`min-h-12 flex-1 items-center justify-center rounded-lg border px-2 ${type === value ? 'border-primary bg-primary/10' : 'border-border'}`}
-              >
-                <Text className="text-center text-sm text-foreground">
-                  {value === 'CONSUME'
-                    ? 'Đã dùng'
-                    : value === 'RESTORE'
-                      ? 'Hoàn trả'
-                      : 'Điều chỉnh'}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-          <TextField
-            label={`Số lượng (${item.unit})${type === 'ADJUST' ? ' tăng/giảm' : ''}`}
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType={type === 'ADJUST' ? 'numbers-and-punctuation' : 'decimal-pad'}
-          />
-          <Text className="text-xs leading-5 text-muted-foreground">
-            Hoàn trả chỉ dùng khi bạn cần trả lại phần đã ghi nhận là đã dùng. Nếu vừa mua thêm, hãy dùng
-            &quot;Thêm nguyên liệu&quot; hoặc quét hóa đơn để giữ đúng nguồn dữ liệu.
-          </Text>
-          <TextField label="Lý do" value={reason} onChangeText={setReason} maxLength={5000} />
+          {onAdjust ? (
+            <PrimaryButton label="Điều chỉnh số lượng" variant="outline" disabled={busy} onPress={() => onAdjust(item)} />
+          ) : null}
         </>
       ) : (
         <>

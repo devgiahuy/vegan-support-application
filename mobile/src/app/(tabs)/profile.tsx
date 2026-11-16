@@ -7,7 +7,6 @@ import {
   AlertTriangle,
   Award,
   BadgeCheck,
-  Camera,
   Info,
   BookOpen,
   CalendarDays,
@@ -292,8 +291,11 @@ export default function ProfileScreen() {
     <SiteScreen>
       <View className="px-5 pt-4">
         <View className="rounded-3xl border border-border bg-card p-5">
+          <Text className="mb-4 text-sm text-muted-foreground">
+            Ngày tham gia: <Text className="font-bold text-primary">{displayProfile.memberSince}</Text>
+          </Text>
           <View className="flex-row gap-4">
-            <View className="mb-2 mr-2">
+            <View>
               <View className="h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-primary/10">
                 {displayProfile.user.avatarUrl ? (
                   <Image
@@ -306,14 +308,6 @@ export default function ProfileScreen() {
                   <Text className="text-2xl font-bold text-primary">{displayProfile.user.initials || 'U'}</Text>
                 )}
               </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Đổi ảnh đại diện"
-                onPress={() => setAvatarEditing(true)}
-                hitSlop={6}
-                className="absolute -bottom-2 -right-2 h-8 w-8 items-center justify-center rounded-full border border-border bg-background">
-                <Camera size={16} color={colors.primary} />
-              </Pressable>
             </View>
 
             <View className="min-w-0 flex-1">
@@ -335,12 +329,6 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          <View className="mt-4 flex-row">
-            <View>
-              <Text className="text-lg font-bold text-primary">{displayProfile.memberSince}</Text>
-              <Text className="text-xs text-muted-foreground">Ngày tham gia</Text>
-            </View>
-          </View>
         </View>
 
         <View className="mt-4 flex-row gap-2">

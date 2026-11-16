@@ -245,7 +245,7 @@ function AssistantContent() {
       </aside>
 
       {/* 3. Main Chat Canvas */}
-      <main className="relative flex flex-1 flex-col overflow-hidden bg-background">
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
         {/* Chat Top Bar */}
         <header className="flex h-13 shrink-0 items-center justify-between border-b border-border/60 bg-background/85 px-4 backdrop-blur-md">
           <div className="flex items-center gap-2.5">

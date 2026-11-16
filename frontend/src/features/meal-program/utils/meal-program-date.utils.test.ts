@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatDayLabel,
   formatIsoDate,
   formatVietnameseDate,
   getNextMonday,
@@ -60,5 +61,14 @@ describe('meal-program-date.utils', () => {
     upcoming.forEach((item) => {
       expect(isMonday(item.dateStr)).toBe(true);
     });
+  });
+
+  it('formatDayLabel should format YYYY-MM-DD to Vietnamese day and DD/MM', () => {
+    // 2026-09-28 is Monday -> Thứ Hai, 28/09
+    expect(formatDayLabel('2026-09-28')).toBe('Thứ Hai, 28/09');
+    // 2026-10-04 is Sunday -> Chủ Nhật, 04/10
+    expect(formatDayLabel('2026-10-04')).toBe('Chủ Nhật, 04/10');
+    // Fallback when non-date
+    expect(formatDayLabel('invalid', 'Thứ Ba')).toBe('Thứ Ba, invalid');
   });
 });

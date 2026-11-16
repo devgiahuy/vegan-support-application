@@ -17,6 +17,10 @@ const envSchema = z.object({
     .url('NEXT_PUBLIC_APP_URL phải là URL hợp lệ')
     .default('http://localhost:3000'),
   BACKEND_API_URL: z.string().url('BACKEND_API_URL phải là URL hợp lệ').optional(),
+  NEXT_PUBLIC_RESTAURANT_MAP_STYLE_URL: z
+    .string()
+    .url()
+    .default('https://tiles.openfreemap.org/styles/liberty'),
 });
 
 function loadEnv() {
@@ -24,6 +28,8 @@ function loadEnv() {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || undefined,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || undefined,
     BACKEND_API_URL: process.env.BACKEND_API_URL || undefined,
+    NEXT_PUBLIC_RESTAURANT_MAP_STYLE_URL:
+      process.env.NEXT_PUBLIC_RESTAURANT_MAP_STYLE_URL || undefined,
   });
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
@@ -43,6 +49,7 @@ export const API_BASE_URL =
 
 /** Base URL server-only cho server-fetch và route handlers (ưu tiên BACKEND_API_URL). */
 export const BACKEND_URL = env.BACKEND_API_URL ?? env.NEXT_PUBLIC_API_URL;
+export const RESTAURANT_MAP_STYLE_URL = env.NEXT_PUBLIC_RESTAURANT_MAP_STYLE_URL;
 
 export const isDev = process.env.NODE_ENV === 'development';
 export const isProd = process.env.NODE_ENV === 'production';

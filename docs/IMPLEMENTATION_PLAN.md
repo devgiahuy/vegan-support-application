@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.15
+**Version:** 4.23
 
-**Updated:** 2026-11-09
+**Updated:** 2026-11-14
 
 **Status:** Approved implementation baseline
 
@@ -42,6 +42,7 @@ The current API contract may still contain legacy Contributor subtype fields unt
 | D22 | Safety | Nutrition, freshness, compatibility, BMI, and AI answers are educational support, not diagnosis or guaranteed safety. |
 | D23 | Usage billing | User-approved 2026-10-13 and payOS conversion 2026-10-14: payOS exclusively for new one-time cumulative AI usage/Pantry capacity packages and, since 2026-10-27, a non-renewing combo with 1-month/3-month/1-year durations (BL-20.1). App rollout remains development/test; payOS checkout is real money, without sandbox or mock fallback. No recurring or media-storage purchase. |
 | D24 | AI recipe draft | Accept ordered ingredient names and optional author-supplied title, description, servings and preparation/cooking times. Preserve supplied values and suggest missing values; return an editable draft for the existing DRAFT content flow. Cover images are supplied separately. AI output does not publish or become canonical nutrition data. Updated at user request 2026-11-07. |
+| D25 | Restaurant map | User-approved 2026-11-14: web street map uses key-free MapLibre/OpenFreeMap with all bounded discovery results together, clustered pins, distinct attribution, explicit area-search action and accessible list/chooser. Web removes pagination and diet-type filtering; radius selection defaults to 3km and is capped at 5km. SerpApi radius choices up to 5km share a bounded candidate snapshot for the same center/phrase/filters and apply exact distance locally, preserving known nearby places during partial retries. Provider/internal caps and incomplete-result notices remain. No new location persistence or verified dietary claim. |
 
 ## 3. MVP scope
 
@@ -256,7 +257,7 @@ User-approved 2026-10-25 extension: use a public named allergen catalog for expl
 
 #### BL-05.1 — Recipe nutrition on submit and reviewer confirmation (user-approved 2026-10-28)
 
-1. Authors no longer enter nutrition. Client-supplied `recipe.nutrition` is ignored; draft revisions carry null nutrition and are not meal-planner eligible.
+1. Superseded by BL-05.2 on 2026-10-29 (authors may enter nutrition again). Draft revisions are not meal-planner eligible.
 2. Submitting a recipe revision calculates a canonical estimate (BL-05 steps 1–3) and attaches it to that pending revision. When reviewed data is complete, AI is not called.
 3. Insufficient data (free-text ingredient, missing canonical profile or any of the five review metrics, unit conversion unavailable, or a step that changes ingredients without a cooking method) never blocks submission. It queues one asynchronous AI job that sees the whole recipe and may suggest missing cooking methods, retention factors and whole-line estimates for the missing metrics. The job makes 1 attempt plus 3 automatic retries after 1, 5 and 15 minutes, then becomes `FAILED`; a startup sweep resumes interrupted jobs. A job that finishes after the revision is decided is discarded.
 4. Recipe AI calls in this pipeline are system-paid: they never consume any user quota or credit, and every call is traced as a `NUTRITION` AI governance event.
@@ -264,6 +265,18 @@ User-approved 2026-10-25 extension: use a public named allergen catalog for expl
 6. A recipe revision can be approved only when all five values are present, even while a job runs or after it failed. A metric missing on any ingredient line is missing; partial sums are never presented as totals. Approval writes the final values into the revision's recipe detail used by cards and the meal planner, and cancels active jobs.
 7. Editing a published recipe creates a new revision that is recalculated from scratch on submit and must be reviewed again. Values approved or overridden for the previous revision are shown for reference only and are never carried over.
 8. AI suggestions apply only to that revision's estimate and remain labelled `AI_ESTIMATED`. They are never written to canonical ingredient data (`IngredientFoodProfile`, nutrient values, factors). Numbers become official for the recipe only through reviewer approval.
+
+#### BL-05.2 — Author-entered nutrition and trusted-author recipe publication (user-approved 2026-10-29)
+
+Agreed by the user with team member Ngô Gia Huy; refines BL-05.1.
+
+1. The recipe form shows six per-serving fields: calories, protein, carbohydrate, fat, fiber and vitamin B12. The revision stores exactly what the author typed (`authorNutrition`) as `USER_PROVIDED` provenance.
+2. Members may leave any field blank. On submit, typed values are kept and only blank metrics are calculated (BL-05.1 pipeline). The system estimate is still computed for comparison, including the AI gap-filling job when reviewed data is insufficient. Review still requires the five metrics of BL-05.1; vitamin B12 is optional, stored when typed and never estimated by AI.
+3. Reviewer precedence per metric: reviewer override > author value > system estimate. The panel shows the author value, the system value and a warning when they differ by more than 30% of the system value. Clearing an override returns to the author value when present.
+4. Approved Contributors (role and active profile authorised by the backend; all Contributors have the same permission) and Admins must declare all six values before a recipe can be submitted (`RECIPE_NUTRITION_REQUIRED`). Their recipe revision — including edits of a published recipe — is then published immediately with an audited moderation action, without the review queue. This recipe-specific rule is combined with the later approved Contributor publication rule in BL-06: active Contributors also auto-publish their own articles and videos.
+5. For Admin recipe authors, an automated moderation flag keeps the recipe in the Admin queue. The later approved Contributor publication rule in BL-06 takes precedence for active Contributors: moderation signals are retained for Admin review without preventing automatic publication.
+6. Auto-published recipes store a canonical-only reference estimate (no AI call). The author-declared values become the published values.
+7. Editors prefill only the author's own typed values, so values calculated or overridden for an earlier revision are never carried into a new revision (BL-05.1 rule 7 still holds).
 
 ### BL-06 — Content and video review lifecycle
 
@@ -339,6 +352,7 @@ Maintenance clarification 2026-10-26: titles and bodies need not be unique. Auto
 6. Meal suggestions use confirmed pantry state and offer multiple candidates.
 7. Shopping gaps are computed only after recipe/custom-meal choice, servings, unit conversion, and confirmed pantry inventory.
 8. Shopping items show required, available, missing, unit, conversion assumptions, and confidence.
+9. A free-text pantry item counts toward a required ingredient only when its normalized text exactly equals the ingredient's canonical name or an approved alias (canonical name wins); there is no fuzzy matching. Pantry items whose expiry date is before today are not counted as available. Manual pantry entry links such exact matches to the canonical ingredient at creation; existing free-text items are matched at read time, not migrated.
 
 ### BL-13 — Behavioral recommendations
 
@@ -353,6 +367,7 @@ Maintenance clarification 2026-10-26: titles and bodies need not be unique. Auto
 - Authenticated users may hide their own chat sessions from history by soft deletion. Deleted sessions and their messages remain stored for existing retention/audit needs but are excluded from history and cannot be opened. An active answer blocks deletion until processing finishes. Guests cannot delete sessions through this endpoint.
 - Guest quota is smaller than authenticated quota and protected from trivial bypass.
 - AI provider/model is configuration and logged per request.
+- Chat keeps pre-generation safety classification. A gateway that explicitly lacks the dedicated moderation model/endpoint may use the configured Responses classifier; invalid/unavailable classification or disabled moderation retains the static response without consuming quota. The compatibility classifier does not assert equivalence to the dedicated moderation model (maintenance 2026-11-14).
 - Health/profile context is used only for the requested purpose.
 - Answers provide uncertainty/safety guidance and never mutate canonical data automatically.
 - Saved/shareable outputs become versioned AI artifacts and enter the applicable review flow.
@@ -594,6 +609,24 @@ A phase is complete only when:
 | Phase 2 ideas are forgotten or accidentally claimed READY | Dedicated roadmap plus explicit status taxonomy |
 
 ## 13. Change record
+
+- **4.23 — 2026-11-14:** Correct inconsistent 1/3/5km restaurant discovery. Same-center SerpApi searches up to 5km share a five-minute candidate snapshot populated by first pages of fixed 1/3/5km viewports (three requests per phrase). Partial snapshots retry after 15 seconds, retain successful observations without extending expiry, and continue reporting degradation. Exact radius/bounds filtering follows bounded candidate selection. Web distinguishes unavailable data from a confirmed empty result and refreshes partial queries when revisited. This improves consistency within a snapshot, without promising exhaustive provider coverage or identical results after expiry.
+
+- **4.22 — 2026-11-14:** User caps the web radius selector at 5km and sets its default to 3km. Previous unsupported/wider saved choices reset to 3km; valid explicit choices remain. Backend/native mobile contracts and the separate bounds-search limit remain unchanged.
+
+- **4.21 — 2026-11-14:** User requests all discovered restaurants on the web map/list without pagination and removes the diet-type dropdown. Add opt-in all=true to return one bounded discovery set while retaining the existing paginated contract for other clients. Web no longer restores/sends a diet filter; explicit backend filtering remains available to other clients. No dietary verification, complete-directory or quota rule change.
+
+- **4.20 — 2026-11-14:** Fix chat's permanent fallback when the configured gateway supports Responses but rejects the moderation model. Preserve pre-generation moderation with a strict, configured compatibility classifier, fail-closed behavior, shared timeout, quota release/replay and redacted governance metadata. No new product scope, route, schema or authorization rule.
+
+- **4.19 — 2026-11-14:** User requests a real free/open street map for restaurant discovery with SerpApi retained as primary. Web uses MapLibre/OpenFreeMap with clustered current-page pins, explicit area searches, separate basemap/provider attribution and no new coordinate persistence. SerpApi uses a radius-matched viewport with bounded paging; explicit minimum rating is enforced locally on returned candidates. Existing personal-profile exception and dietary-unverified provider status remain unchanged.
+
+- **4.18 — 2026-11-14:** Reconcile the author-nutrition branch with current `dev`: retain BL-05.2 author values and required recipe fields, preserve the later approved BL-06 Contributor publication rule for all content types and its database role/profile recheck, and preserve D24 optional title/description and linked ingredients. No new scope approval or deployment is implied; mobile migration and schema rollout remain pending.
+
+- **4.17 — 2026-10-29:** D24 refinement: the AI recipe draft uses and preserves the author's servings/prep/cook times; blanks are filled by the AI; differing AI times are only hinted.
+
+- **4.16 — 2026-10-29:** User approves BL-05.2 (agreed with Ngô Gia Huy): six optional author nutrition fields for Members (typed values kept, blanks calculated, >30% deviation warning for reviewers), six required fields for approved Contributors/Admins whose recipes and recipe edits are published immediately unless automated moderation flags them, canonical-only reference estimate for auto-published recipes; articles/videos unchanged.
+
+- **4.15 — 2026-10-29:** User approves shopping-gap matching of free-text pantry items by exact canonical name/approved alias, excluding expired pantry items from availability, and auto-linking exact matches on manual pantry creation (BL-12 rule 9). No migration of existing items.
 
 - **4.14 — 2026-10-28:** User approves BL-05.1: recipe nutrition calculated on submit, async system-paid AI gap filling (1 + 3 retries at 1/5/15 min, startup sweep, quota-free, governance-traced), reviewer panel with five metrics (B12 excluded), audited overrides kept across recalculation, approval gated on five values and written to recipe detail, no carry-over between revisions, and no AI write to canonical food data.
 

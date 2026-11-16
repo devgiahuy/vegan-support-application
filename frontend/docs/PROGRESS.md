@@ -1,5 +1,66 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Làm tròn các chỉ số dinh dưỡng về tối đa 2 chữ số thập phân — Updated 2026-11-16
+
+Khắc phục lỗi dấu phẩy động (floating point precision error) hiển thị chuỗi thập phân dài bất thường (như `1975.8900000000003g` ở tinh bột / carbs):
+- **Utility làm tròn chuẩn:** Tạo `src/features/meal-program/utils/nutrition.utils.ts` cung cấp `roundToDecimals(value, decimals = 2)` và `formatNutrient(value, decimals = 2)` sử dụng `Number.EPSILON` để làm tròn chính xác về tối đa 2 chữ số thập phân, gọt sạch đuôi số thập phân vô tận của JS.
+- **Tầng Mapper:** Tích hợp `roundToDecimals` trong `MealProgramMapper` khi tính tổng dưỡng chất tuần (`mapSnapshot`), dưỡng chất ngày (`mapDay`, `groupSlotsIntoDays`), dưỡng chất từng món ăn (`mapMealItem`) và phân tích tích lũy (`mapCumulativeAnalysis`).
+- **Giao diện hiển thị:** Áp dụng `formatNutrient` trong `WeekPlanView` (thanh tổng quan tuần, thẻ từng ngày, từng món ăn) và `CumulativeNutritionChart`.
+- **Kiểm chứng:** Viết unit test cho `nutrition.utils.test.ts` (pass 100%), toàn bộ 36 tests `meal-program` pass, `tsc --noEmit --incremental false` đạt 0 lỗi type.
+
+## Sửa lỗi layout giao diện trang /meal-plans khi có nhiều card thực đơn — Updated 2026-11-16
+
+Khắc phục triệt để lỗi kéo dãn bất thường và bất cân xứng layout trên trang kế hoạch bữa ăn (`/meal-plans`):
+- **Sửa lỗi kéo dãn form tạo thực đơn:** Thêm `items-start` trên grid container và `self-start lg:sticky lg:top-24` cho thẻ form "Tạo thực đơn mới", giúp form giữ chiều cao tự nhiên vừa khít nội dung thay vì bị kéo dãn tạo khoảng trắng lớn khi danh sách thực đơn bên phải có nhiều thẻ. Form đồng thời ghim êm ái khi cuộn trang.
+- **Tối ưu hiển thị danh sách thực đơn:** Nâng số lượng truy vấn hiển thị lên `limit: 6` (số chẵn, chia đều 2 cột 3 hàng), bổ sung liên kết chuyển trang "Xem toàn bộ X thực đơn đã lưu →" khi số lượng thực đơn vượt quá giới hạn hiển thị.
+- **Chuẩn hóa PlanCard:** Thiết lập `h-full flex flex-col justify-between` và `CardContent flex-1` giúp các thẻ trong cùng một hàng luôn có chiều cao đồng đều, nút "Xem chi tiết" luôn thẳng hàng ở đáy thẻ; bổ sung hiệu ứng hover và màu sắc nhận diện cảnh báo/năng lượng trực quan.
+- **Kiểm chứng:** `npx tsc --noEmit --incremental false` đạt 0 lỗi type.
+
+## Đồng bộ giao diện thứ ngày từ /meal-plans/:id sang /meal-programs/ — Updated 2026-11-16
+
+Cập nhật giao diện trình bày các thứ ngày trong tuần của Lộ trình Dinh dưỡng Nhiều tuần (`/meal-programs/[id]`, component `WeekPlanView` và `DayMealChecklist`) theo chuẩn thiết kế trực quan, rõ ràng của trang chi tiết thực đơn tuần (`/meal-plans/[id]`, component `DayGrid`):
+- **Bố cục thẻ ngày (Full-width Card):** Thay thế lưới đa cột bị bó hẹp bằng danh sách dọc các thẻ ngày rộng rãi (`flex flex-col gap-4`), mỗi ngày là một `Card` độc lập.
+- **Tiêu đề thứ ngày & 4 chỉ số dinh dưỡng ngày (CardHeader):** Hiển thị rõ tiêu đề thứ ngày tiếng Việt chuẩn (`Thứ Hai, 16/11`) kèm icon lịch, phía bên phải hiển thị đầy đủ các badge chỉ số dinh dưỡng màu sắc trực quan (Calo, Đạm, Béo, Xơ, Bột).
+- **Lưới các bữa ăn trong ngày (CardContent):** Trình bày các bữa ăn (Sáng, Trưa, Tối, Phụ) dạng lưới thẻ ngang (`grid sm:grid-cols-3`), mỗi thẻ bữa ăn gồm badge loại bữa, badge nguồn (Công thức / Món cá nhân), trạng thái hoàn thành, calo, ảnh thumbnail 48x48 bo tròn với fallback icon, tên món ăn, dòng phân rã dưỡng chất đa lượng (`Đạm ...g · Bột ...g · Béo ...g · Xơ ...g · X khẩu phần`), và nút xem công thức (`/recipes/:id`).
+- **Nâng cấp tầng DTO / Model / Mapper:** Bổ sung `formattedLabel`, `nutrition`, `estimatedTotals` cho ngày và `protein`, `carbs`, `fat`, `fiber`, `recipeId`, `customMealId` cho từng món ăn.
+- **Kiểm chứng:** `vitest` pass 34/34 tests `meal-program` và 48/48 tests `meal-plan`; `tsc --noEmit --incremental false` đạt 0 lỗi type.
+
+## Đổi màu tag / nút lưu Bookmark — Updated 2026-11-16
+
+Cập nhật nút lưu Bookmark trên thẻ công thức (`RecipeCardBookmark`) và component `BookmarkButton` dùng màu xanh thương hiệu (`text-primary` / `bg-primary`): icon bookmark màu xanh ở trạng thái chưa lưu, hover chuyển nền xanh với icon màu trắng rõ nét (sửa lỗi icon bị ẩn do trùng màu xanh khi hover), và chuyển thành nút nền xanh với icon tô trắng khi đã lưu bookmark. `tsc --noEmit` đạt 0 lỗi.
+
+## Thông báo lỗi đăng nhập dạng Toast — Updated 2026-11-16
+
+Chuyển thông báo lỗi đăng nhập (sai mật khẩu, tài khoản bị khoá, lỗi hệ thống) trong `LoginForm` từ dạng inline alert box sang `toast.error` bằng Sonner. Form đăng nhập giữ thiết kế sạch sẽ, không bị đẩy thụt layout khi phát sinh lỗi. Field validation errors vẫn hiển thị dưới từng ô nhập. `tsc --noEmit` đạt 0 lỗi.
+
+## Đồng nhất kết quả theo bán kính — Updated 2026-11-14
+
+SerpApi radius <=5km dùng chung bounded snapshot và lọc khoảng cách thật; partial retry giữ những quán đã tìm được. FE làm mới partial query khi quay lại và phân biệt lỗi dữ liệu với không có quán. Key mới của người dùng đã nạp vào runtime; API/browser thật quanh địa chỉ công khai Chi Cao đạt 15→12→39→12 quán cho 3→1→5→1km, nested IDs và chọn Chi Cao trên map 1km. Backend gates/OpenAPI/sync, chín isolated groups, FE typecheck/scoped lint/864 tests/build đạt. Truncation vẫn hiển thị, không cam kết phủ hết quán ngoài thực tế; không đổi % scaffold/mobile/schema/seed. Chi tiết tại WORK-LOG.
+
+## Bán kính tìm quán 3–5 km — Updated 2026-11-14
+
+Dropdown web mặc định 3km, tối đa 5km; các mức cũ vượt giới hạn tự về 3km, lựa chọn hợp lệ được giữ. Mapper/map default/nút nới bán kính dùng cùng cấu hình. Typecheck/scoped lint, 152 restaurant tests, build và browser selector đạt; backend/mobile/bounds-search giữ nguyên, không đổi % scaffold. Chi tiết tại WORK-LOG.
+
+## Chat response, toàn bộ quán và nhãn quota — Updated 2026-11-14
+
+Giữ whitespace/newlines khi stream; render GFM table/list/heading/link an toàn, responsive và cuộn ngang bảng bằng bàn phím. Web map/list lấy toàn bộ tập kết quả qua all=true, bỏ pagination/dropdown diet-type và không áp dụng lựa chọn diet cũ; backend giữ pagination cho client cũ cùng provider caps/notices. Lượt chat mua thêm=0 hiển thị trung tính, phân biệt với lượt miễn phí; không đổi quota backend. Backend gates/OpenAPI, sáu isolated groups, FE typecheck/scoped lint/860 tests/build và browser desktop/mobile đạt. Giữ READY và % scaffold; bằng chứng, giới hạn tại WORK-LOG.
+
+## Chat fallback trên gateway tương thích — Updated 2026-11-14
+
+Đã tái hiện lỗi thiếu model moderation (503 model_not_found) trong khi Responses vẫn thành công. Thêm phân loại an toàn bằng model cấu hình khi gateway báo rõ không hỗ trợ moderation; giữ kiểm duyệt bắt buộc, admin disable, timeout/abort, quota và contract SSE. 25 nhóm kiểm tra cô lập, classifier thật, HTTP SSE/replay/history/quota và browser gửi/tải lại đạt; backend lint/typecheck/build/OpenAPI/sync đạt. Không đổi consumer hoặc % scaffold; các giới hạn và bằng chứng tại WORK-LOG.
+
+## Bản đồ đường phố và tối ưu SerpApi — Updated 2026-11-14
+
+Đã thay sơ đồ web bằng MapLibre/OpenFreeMap không cần key, cụm ghim và số thứ tự đồng bộ danh sách, giữ viewport khi refresh/chuyển chế độ mobile và sửa header 375 px. SerpApi dùng viewport theo bán kính, giảm trần fan-out 27 → 9, giới hạn phân trang advanced filter và kiểm tra minRating cục bộ. Backend lint/typecheck/build/OpenAPI, frontend typecheck/scoped lint/849 tests/build và browser desktop/mobile thực tế đạt. Giữ READY và % scaffold; không đổi native mobile. GPS/login, provider timeout và nền công cộng còn giới hạn trong WORK-LOG. Bản đồ đường phố hiện tại không cần Google Maps frontend key; mục E2E bên dưới là lần kiểm thử trước nâng cấp.
+
+## Kiểm thử E2E và sửa tìm quán trên bản đồ — Updated 2026-11-14
+
+Đã kiểm thử guest discovery với SerpApi thật trên desktop/mobile browser, sửa parser list/single-place và category arrays, giữ viewport khi quay lại lân cận, bỏ khoảng cách 0 m giả ở chi tiết. 8 HTTP cases và 11 isolated assertions đạt; backend lint/typecheck/build, frontend typecheck/scoped lint/841 tests/build đạt. Giữ nguyên % scaffold và trạng thái READY. Cần Google Maps frontend key để kiểm thử street map; partial provider timeout, GPS/native mobile và header ở 375 px còn giới hạn ghi trong WORK-LOG.
+
+## Đồng bộ nhánh phát triển với dev — Updated 2026-11-14
+
+Rebase nhánh `fix/combined-nutrition-pantry-meal-plan` lên `origin/dev` (`9e3842a`), giữ bốn commit và xử lý conflict dinh dưỡng, trạng thái xuất bản, bản nháp AI và tài liệu. Backend lint/typecheck/build, frontend typecheck/841 tests/build và kiểm tra diff đạt. Scoped frontend lint còn lỗi đã có trước rebase ở pantry dialog. Giữ nguyên tỷ lệ hoàn thành; submit vẫn CHANGING chờ mobile/schema rollout. Chi tiết tại WORK-LOG.
+
 ## Sửa lỗi hiển thị lặp thời hạn 30/90/360 ngày trên card gói tiện ích — Updated 2026-11-10
 
 Bổ sung chuẩn hóa nhãn hiển thị theo thời hạn trong `billing.mapper.ts` / `billing.model.ts` (`BillingProduct.displayName` và `BillingOrder.durationSuffixLabel`) để chỉ ghép thêm `durationLabel` khi tên gói chưa chứa sẵn thông tin thời hạn. Khắc phục tình trạng nút chọn gói trong `DurationPlanCard` (và dòng đơn hàng `OrderRow`) ở `/billing` hiển thị lặp `Gói tiện ích 30 ngày · 30 ngày`, `Gói tiện ích 90 ngày · 90 ngày`, `Gói tiện ích 360 ngày · 360 ngày`; giữ được khả năng phân biệt khi quản trị viên tạo nhiều gói cùng thời hạn và giữ ổn định bố cục `ToggleGroup` khi có từ 4 gói trở lên. Giữ nguyên tỷ lệ hoàn thành tính năng. Chi tiết kiểm chứng tại WORK-LOG.
@@ -124,6 +185,10 @@ Tách 43 nhóm endpoint theo feature hoặc domain dùng chung, chuyển consume
 ## Refactor chọn ảnh cho luồng quét tủ lạnh và hóa đơn — Updated 2026-11-05
 
 Tách logic chọn, kiểm tra, sắp xếp, xóa và dọn URL ảnh trùng lặp sang hook chung trong `features/storage/hooks`. Hai màn quét giữ nguyên giao diện, giới hạn 6/4 ảnh và luồng tạo job riêng. Không đổi API hoặc trạng thái tích hợp. Typecheck, lint các file sửa, 732 tests và build 47 routes đều pass. Lint toàn frontend còn 82 lỗi và 318 cảnh báo ở các file ngoài phạm vi refactor.
+
+## Dinh dưỡng do tác giả nhập, Contributor/Admin tự xuất bản công thức — Updated 2026-10-29
+
+Form công thức có 6 ô dinh dưỡng mỗi khẩu phần: user thường không bắt buộc (ô trống được hệ thống tính khi gửi duyệt), Contributor/Admin bắt buộc đủ 6 và công thức (kể cả bản sửa) được xuất bản ngay, trừ khi bị bộ lọc tự động gắn cờ. Panel duyệt hiện số tác giả nhập, số hệ thống và cảnh báo lệch >30%. tsc, 735 test, build pass. Mobile chưa cập nhật.
 
 ## Dinh dưỡng công thức tính khi gửi duyệt, người duyệt xác nhận — Updated 2026-10-28
 

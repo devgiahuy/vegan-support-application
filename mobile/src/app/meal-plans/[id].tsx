@@ -6,7 +6,8 @@ import { Plus, Trash2 } from 'lucide-react-native';
 import { MealType } from '@/common/enums';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { MealItemSelector, type SelectedMealItem } from '@/features/meal-plan/components/meal-item-selector';
+import { MealAnalysisPanel } from '@/features/meal-analysis/components/meal-analysis-panel';
+import { MealItemSelector,type SelectedMealItem } from '@/features/meal-plan/components/meal-item-selector';
 import { MealSlotCard } from '@/features/meal-plan/components/meal-slot-card';
 import { PlanDayCard } from '@/features/meal-plan/components/plan-day-card';
 import { PlanHero } from '@/features/meal-plan/components/plan-hero';
@@ -231,6 +232,7 @@ export default function MealPlanDetailScreen() {
         {plan.userSummary ? <PlanSummary summary={plan.userSummary} /> : null}
         <PlanNutritionTargets targets={targets} />
         <PlanWarningsBanner warnings={plan.warnings} />
+        <MealAnalysisPanel planId={plan.id} planVersion={plan.lockVersion} />
 
         {days.map((day) => (
           <PlanDayCard

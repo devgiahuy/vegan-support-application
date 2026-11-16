@@ -2,13 +2,14 @@ import * as React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Link, type Href } from 'expo-router';
-import { ArrowRight, Clock, Flame, Sparkles, Star } from 'lucide-react-native';
+import { ArrowRight, CircleHelp, Clock, Flame, Sparkles, Star } from 'lucide-react-native';
 
 import { ImageBadge } from '@/components/ui/image-badge';
 import { FALLBACK_RECIPE_COVER_URL } from '@/lib/env';
 import { useIconColors } from '@/lib/theme-colors';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useHomeRecommendationsQuery } from '../queries/recommendation.queries';
+import { WhyRecommendedSheet } from './why-recommended-sheet';
 import type { Recommendation, RecommendationMeta } from '../types/recommendation.model';
 
 /** Dòng ngữ cảnh chấm điểm: gợi ý riêng kèm ràng buộc đã lọc, hoặc gợi ý phổ biến khi chưa cá nhân hóa (đồng bộ web). */
@@ -106,6 +107,7 @@ export function RecommendedForYou() {
   const colors = useIconColors();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { data, isLoading, isError } = useHomeRecommendationsQuery({ limit: 4 });
+  const [whyOpen, setWhyOpen] = React.useState(false);
 
   if (!isAuthenticated) return null;
   if (!isLoading && (isError || !data)) return null;
@@ -120,6 +122,17 @@ export function RecommendedForYou() {
       </View>
       <Text className="mt-1 text-xl font-bold text-foreground">Món chay hợp khẩu vị</Text>
       {data ? <Text className="mt-1 text-xs text-muted-foreground">{constraintsNote(data.meta)}</Text> : null}
+      {data ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Vì sao tôi thấy gợi ý này?"
+          onPress={() => setWhyOpen(true)}
+          hitSlop={8}
+          className="mt-2 flex-row items-center gap-1.5 self-start">
+          <CircleHelp size={13} color={colors.primary} />
+          <Text className="text-xs font-semibold text-primary">Vì sao tôi thấy gợi ý này?</Text>
+        </Pressable>
+      ) : null}
 
       <View className="mt-4 flex-row flex-wrap gap-3">
         {isLoading ? (
@@ -137,6 +150,7 @@ export function RecommendedForYou() {
           items.slice(0, 4).map((item) => <RecommendationCard key={item.id} item={item} />)
         )}
       </View>
+      {whyOpen ? <WhyRecommendedSheet meta={data?.meta} onClose={() => setWhyOpen(false)} /> : null}
     </View>
   );
 }

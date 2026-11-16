@@ -4,6 +4,7 @@ import React from 'react';
 import { Flame, Activity, ShieldAlert } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { formatNutrient } from '../utils/nutrition.utils';
 import type { CumulativeAnalysis, ProgramWeek } from '../types/meal-program.model';
 
 interface CumulativeNutritionChartProps {
@@ -56,7 +57,7 @@ export const CumulativeNutritionChart: React.FC<CumulativeNutritionChartProps> =
             <div>
               <p className="text-xs text-muted-foreground font-medium">Chất đạm trung bình</p>
               <p className="text-xl font-bold text-foreground">
-                ~{averageMacronutrients.protein}{' '}
+                ~{formatNutrient(averageMacronutrients.protein)}{' '}
                 <span className="text-xs font-normal text-muted-foreground">
                   g/ngày ({proteinPct}%)
                 </span>
@@ -73,7 +74,7 @@ export const CumulativeNutritionChart: React.FC<CumulativeNutritionChartProps> =
             <div>
               <p className="text-xs text-muted-foreground font-medium">Chất xơ tự nhiên</p>
               <p className="text-xl font-bold text-foreground">
-                ~{averageMacronutrients.fiber}{' '}
+                ~{formatNutrient(averageMacronutrients.fiber)}{' '}
                 <span className="text-xs font-normal text-muted-foreground">g/ngày</span>
               </p>
             </div>

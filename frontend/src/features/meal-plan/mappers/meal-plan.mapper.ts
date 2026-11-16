@@ -13,6 +13,7 @@ import type {
   EstimatedNutritionTargetsDto,
   GenerateMealPlanRequestDto,
   MealPlanDayDto,
+  MealPlanConstraintErrorFieldsDto,
   MealPlanDto,
   MealPlanListResponseDto,
   MealSlotDto,
@@ -27,6 +28,7 @@ import type {
   EstimatedNutritionTargets,
   GenerateMealPlanInput,
   MealPlan,
+  MealPlanConstraintError,
   MealPlanDay,
   MealSlot,
   PlanUserSummary,
@@ -584,6 +586,27 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
 
   toSwapDto(expectedVersion: number, idempotencyKey: string): SwapMealPlanItemRequestDto {
     return { expectedVersion, idempotencyKey };
+  }
+
+  /** Map 409 manual-add; trả `null` nếu không phải lỗi ràng buộc món. */
+  toConstraintError(
+    code: string | undefined,
+    fields: MealPlanConstraintErrorFieldsDto | undefined
+  ): MealPlanConstraintError | null {
+    if (
+      code !== 'MEAL_PLAN_INGREDIENTS_UNVERIFIED' &&
+      code !== 'MEAL_PLAN_HARD_CONSTRAINT_VIOLATION'
+    )
+      return null;
+    const strings = (value: unknown) =>
+      safeArray<unknown>(value).filter(
+        (entry): entry is string => typeof entry === 'string' && entry.trim().length > 0
+      );
+    return {
+      kind: code === 'MEAL_PLAN_INGREDIENTS_UNVERIFIED' ? 'UNVERIFIED' : 'VIOLATION',
+      reasons: strings(fields?.reasons),
+      unverifiedIngredients: strings(fields?.unverifiedIngredients),
+    };
   }
 }
 

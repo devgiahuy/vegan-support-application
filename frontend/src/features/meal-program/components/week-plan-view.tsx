@@ -1,12 +1,23 @@
 'use client';
 
-import React from 'react';
+import * as React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Utensils, Flame, Sparkles, RefreshCw, Sun, Moon, Calendar } from 'lucide-react';
+import {
+  Calendar,
+  Flame,
+  Sprout,
+  Droplets,
+  Apple,
+  Wheat,
+  UtensilsCrossed,
+  Utensils,
+  RefreshCw,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { formatNutrient } from '../utils/nutrition.utils';
 import type { MealItemSummary, ProgramWeek } from '../types/meal-program.model';
 
 interface WeekPlanViewProps {
@@ -15,44 +26,28 @@ interface WeekPlanViewProps {
   onOpenRegenerateModal?: (weekNumber: number) => void;
 }
 
-const MEAL_TYPE_CONFIG: Record<
-  string,
-  {
-    label: string;
-    badgeStyle: string;
-    icon: typeof Sun;
-    iconColor: string;
+function MealThumbnail({ src, alt }: { src?: string; alt: string }) {
+  const [hasError, setHasError] = React.useState(false);
+  if (!src || hasError) {
+    return (
+      <div className="w-12 h-12 rounded-lg bg-muted/40 border border-border/40 flex items-center justify-center shrink-0 text-muted-foreground/60">
+        <UtensilsCrossed className="size-5" />
+      </div>
+    );
   }
-> = {
-  BREAKFAST: {
-    label: 'Bữa sáng',
-    badgeStyle:
-      'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300 dark:border-amber-800',
-    icon: Sun,
-    iconColor: 'text-amber-500',
-  },
-  LUNCH: {
-    label: 'Bữa trưa',
-    badgeStyle:
-      'bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300 border-orange-300 dark:border-orange-800',
-    icon: Utensils,
-    iconColor: 'text-orange-500',
-  },
-  DINNER: {
-    label: 'Bữa tối',
-    badgeStyle:
-      'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800',
-    icon: Moon,
-    iconColor: 'text-indigo-500',
-  },
-  SNACK: {
-    label: 'Bữa phụ',
-    badgeStyle:
-      'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800',
-    icon: Sparkles,
-    iconColor: 'text-emerald-500',
-  },
-};
+  return (
+    <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-muted/20 border border-border/50">
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        className="object-cover"
+        sizes="48px"
+        onError={() => setHasError(true)}
+      />
+    </div>
+  );
+}
 
 export const WeekPlanView: React.FC<WeekPlanViewProps> = ({
   week,
@@ -92,119 +87,226 @@ export const WeekPlanView: React.FC<WeekPlanViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Thanh tóm tắt dinh dưỡng tuần */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 p-4 rounded-xl bg-muted/40 border">
-        <div className="space-y-0.5">
-          <span className="text-xs text-muted-foreground">Tổng năng lượng</span>
-          <p className="text-base font-bold text-foreground flex items-center gap-1">
-            <Flame className="w-4 h-4 text-orange-500" />~{snapshot.totalCalories.toLocaleString()}{' '}
-            Kcal
+      {/* 1. TỔNG QUAN DINH DƯỠNG TRONG TUẦN */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 p-4 rounded-2xl bg-card border shadow-2xs">
+        {/* Năng lượng Calo */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+            <Flame className="w-3.5 h-3.5 text-orange-500" />
+            <span>Tổng calo tuần</span>
+          </div>
+          <p className="text-base font-bold text-foreground font-mono">
+            ~{snapshot.totalCalories.toLocaleString('vi-VN')} kcal
           </p>
         </div>
-        <div className="space-y-0.5">
-          <span className="text-xs text-muted-foreground">Chất đạm (Protein)</span>
-          <p className="text-base font-semibold text-foreground">
-            ~{snapshot.macronutrients.protein}g
+
+        {/* Đạm (Protein) */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5 text-xs text-emerald-800 dark:text-emerald-300 font-medium">
+            <Sprout className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Đạm (Protein)</span>
+          </div>
+          <p className="text-base font-bold text-foreground font-mono">
+            ~{formatNutrient(snapshot.macronutrients.protein)}g
           </p>
         </div>
-        <div className="space-y-0.5">
-          <span className="text-xs text-muted-foreground">Tinh bột (Carbs)</span>
-          <p className="text-base font-semibold text-foreground">
-            ~{snapshot.macronutrients.carbs}g
+
+        {/* Chất béo (Fat) */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5 text-xs text-sky-800 dark:text-sky-300 font-medium">
+            <Droplets className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+            <span>Chất béo (Fat)</span>
+          </div>
+          <p className="text-base font-bold text-foreground font-mono">
+            ~{formatNutrient(snapshot.macronutrients.fat)}g
           </p>
         </div>
-        <div className="space-y-0.5">
-          <span className="text-xs text-muted-foreground">Chất béo (Fat)</span>
-          <p className="text-base font-semibold text-foreground">~{snapshot.macronutrients.fat}g</p>
+
+        {/* Chất xơ (Fiber) */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5 text-xs text-purple-800 dark:text-purple-300 font-medium">
+            <Apple className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+            <span>Chất xơ (Fiber)</span>
+          </div>
+          <p className="text-base font-bold text-foreground font-mono">
+            ~{formatNutrient(snapshot.macronutrients.fiber)}g
+          </p>
         </div>
-        <div className="space-y-0.5">
-          <span className="text-xs text-muted-foreground">Chất xơ (Fiber)</span>
-          <p className="text-base font-semibold text-foreground">
-            ~{snapshot.macronutrients.fiber}g
+
+        {/* Tinh bột (Carbs) */}
+        <div className="space-y-1 col-span-2 sm:col-span-1">
+          <div className="flex items-center gap-1.5 text-xs text-amber-800 dark:text-amber-300 font-medium">
+            <Wheat className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+            <span>Tinh bột (Carbs)</span>
+          </div>
+          <p className="text-base font-bold text-foreground font-mono">
+            ~{formatNutrient(snapshot.macronutrients.carbs)}g
           </p>
         </div>
       </div>
 
-      {/* Danh sách 7 ngày trong tuần */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+      {/* 2. DANH SÁCH CÁC THỨ NGÀY TRONG TUẦN (ÁP DỤNG LAYOUT VÀ STYLE TỪ /meal-plans/:id) */}
+      <div className="flex flex-col gap-4">
         {snapshot.days.map((day) => {
-          const dayTitle = day.dayOfWeekLabel
-            ? `${day.dayOfWeekLabel} (${day.formattedDate || day.date})`
-            : day.formattedDate || day.date;
+          const dayTitle =
+            day.formattedLabel ||
+            (day.dayOfWeekLabel
+              ? `${day.dayOfWeekLabel}, ${day.formattedDate || day.date}`
+              : day.formattedDate || day.date);
+
+          const hasMeals = day.meals && day.meals.length > 0;
+          const nutrition = day.nutrition;
 
           return (
-            <Card
-              key={day.date || String(day.dayOfWeek)}
-              className="flex flex-col h-full border shadow-sm"
-            >
-              <CardHeader className="p-3.5 border-b bg-muted/20 flex flex-row items-center justify-between space-y-0">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
-                  <span className="font-semibold text-sm text-foreground">{dayTitle}</span>
+            <Card key={day.date || String(day.dayOfWeek)} className="overflow-hidden">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 bg-muted/20 border-b gap-2.5 space-y-0">
+                {/* Tiêu đề thứ ngày */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Calendar className="size-4 text-primary" />
+                  <CardTitle className="text-base font-semibold">{dayTitle}</CardTitle>
                 </div>
-                <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium bg-background px-2 py-0.5 rounded-full border">
-                  <Flame className="w-3.5 h-3.5 text-orange-500" />~{day.totalCalories} Kcal
-                </span>
+
+                {/* 4 chỉ số dinh dưỡng + Total Calo trong ngày */}
+                <div className="flex items-center gap-1.5 text-xs flex-wrap sm:justify-end">
+                  {/* Calo */}
+                  <span
+                    className="rounded-md px-2 py-0.5 border text-[11px] font-medium transition-colors bg-orange-50/60 text-orange-900 border-orange-200/60 dark:bg-orange-950/20 dark:text-orange-200 dark:border-orange-800/40"
+                    title="Tổng năng lượng trong ngày"
+                  >
+                    Calo: <strong>{day.totalCalories.toLocaleString('vi-VN')}</strong> kcal
+                  </span>
+
+                  {/* Đạm */}
+                  {nutrition && nutrition.protein > 0 && (
+                    <span
+                      className="rounded-md px-2 py-0.5 border text-[11px] font-medium transition-colors bg-emerald-50/60 text-emerald-900 border-emerald-200/60 dark:bg-emerald-950/20 dark:text-emerald-200 dark:border-emerald-800/40"
+                      title="Chất đạm trong ngày"
+                    >
+                      Đạm: <strong>{formatNutrient(nutrition.protein)}g</strong>
+                    </span>
+                  )}
+
+                  {/* Béo */}
+                  {nutrition && nutrition.fat > 0 && (
+                    <span
+                      className="rounded-md px-2 py-0.5 border text-[11px] font-medium transition-colors bg-sky-50/60 text-sky-900 border-sky-200/60 dark:bg-sky-950/20 dark:text-sky-200 dark:border-sky-800/40"
+                      title="Chất béo trong ngày"
+                    >
+                      Béo: <strong>{formatNutrient(nutrition.fat)}g</strong>
+                    </span>
+                  )}
+
+                  {/* Xơ */}
+                  {nutrition && nutrition.fiber !== null && nutrition.fiber > 0 && (
+                    <span
+                      className="rounded-md px-2 py-0.5 border text-[11px] font-medium transition-colors bg-purple-50/60 text-purple-900 border-purple-200/60 dark:bg-purple-950/20 dark:text-purple-200 dark:border-purple-800/40"
+                      title="Chất xơ trong ngày"
+                    >
+                      Xơ: <strong>{formatNutrient(nutrition.fiber)}g</strong>
+                    </span>
+                  )}
+
+                  {/* Tinh bột (Carbs) */}
+                  {nutrition && nutrition.carbs > 0 && (
+                    <span
+                      className="rounded-md bg-amber-50/60 text-amber-900 border-amber-200/60 dark:bg-amber-950/20 dark:text-amber-200 dark:border-amber-800/40 px-2 py-0.5 border text-[11px] font-medium"
+                      title="Tinh bột trong ngày"
+                    >
+                      Bột: <strong>{formatNutrient(nutrition.carbs)}g</strong>
+                    </span>
+                  )}
+                </div>
               </CardHeader>
 
-              <CardContent className="p-3 space-y-2.5 flex-1">
-                {day.meals.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic py-6 text-center">
-                    Chưa xếp món cho ngày này
-                  </p>
+              {/* Lưới các bữa ăn trong ngày (Sáng, Trưa, Tối, Phụ) */}
+              <CardContent className="p-4 grid gap-3 sm:grid-cols-3">
+                {!hasMeals ? (
+                  <div className="flex items-center justify-center gap-2 rounded-xl border border-dashed p-6 text-sm text-muted-foreground sm:col-span-3">
+                    <UtensilsCrossed className="size-4" />
+                    <span>Chưa xếp món cho ngày này</span>
+                  </div>
                 ) : (
                   day.meals.map((meal: MealItemSummary) => {
-                    const config = MEAL_TYPE_CONFIG[meal.mealType] ?? MEAL_TYPE_CONFIG.BREAKFAST;
-                    const MealIcon = config.icon;
+                    const hasMacros =
+                      (meal.protein ?? 0) > 0 ||
+                      (meal.carbs ?? 0) > 0 ||
+                      (meal.fat ?? 0) > 0 ||
+                      (meal.fiber ?? 0) > 0;
 
                     return (
                       <div
                         key={meal.id}
-                        className="flex gap-2.5 p-2 rounded-lg bg-card border hover:border-primary/40 hover:shadow-sm transition-all"
+                        className="flex flex-col justify-between gap-2.5 rounded-xl border bg-card p-3.5 shadow-xs transition-all hover:border-border/80 h-full"
                       >
-                        {meal.imageUrl ? (
-                          <div className="relative w-12 h-12 rounded-md overflow-hidden shrink-0 bg-muted">
-                            <Image
-                              src={meal.imageUrl}
-                              alt={meal.name}
-                              fill
-                              sizes="48px"
-                              className="object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-12 h-12 rounded-md bg-muted/60 text-muted-foreground flex items-center justify-center shrink-0">
-                            <MealIcon className={`w-5 h-5 ${config.iconColor}`} />
-                          </div>
-                        )}
-
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <div className="flex items-center justify-between gap-1">
-                            <span
-                              className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md border flex items-center gap-1 ${config.badgeStyle}`}
-                            >
-                              <MealIcon className="w-2.5 h-2.5 shrink-0" />
-                              {meal.mealTypeLabel}
+                        <div className="space-y-2">
+                          {/* Dòng tiêu đề thẻ: Loại bữa + Nguồn + Trạng thái + Calo */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <Badge variant="outline" className="text-xs font-medium">
+                                {meal.mealTypeLabel}
+                              </Badge>
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] px-1.5 py-0 font-medium"
+                              >
+                                {meal.sourceTypeLabel}
+                              </Badge>
+                              {meal.isCompleted && (
+                                <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 text-[10px] px-1.5 py-0 font-medium">
+                                  Đã ăn ✓
+                                </Badge>
+                              )}
+                            </div>
+                            <span className="text-xs font-semibold text-foreground">
+                              ~{meal.calories.toLocaleString('vi-VN')} kcal
                             </span>
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-                              {meal.sourceTypeLabel}
-                            </Badge>
                           </div>
 
-                          <p
-                            className="text-xs font-semibold text-foreground truncate"
-                            title={meal.name}
-                          >
-                            {meal.name}
-                          </p>
-
-                          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                            <span>{meal.servings} khẩu phần</span>
-                            <span className="font-medium text-foreground">
-                              ~{meal.calories} Kcal
-                            </span>
+                          {/* Nội dung: Ảnh thumbnail + Tên món + Dinh dưỡng */}
+                          <div className="flex items-start gap-2.5">
+                            <MealThumbnail src={meal.imageUrl} alt={meal.name} />
+                            <div className="space-y-1 min-w-0 flex-1">
+                              <p
+                                className="text-sm font-semibold leading-snug text-foreground line-clamp-2"
+                                title={meal.name}
+                              >
+                                {meal.name}
+                              </p>
+                              {hasMacros ? (
+                                <p className="text-xs text-muted-foreground">
+                                  {meal.protein ? `Đạm ${formatNutrient(meal.protein)}g · ` : ''}
+                                  {meal.carbs ? `Bột ${formatNutrient(meal.carbs)}g · ` : ''}
+                                  {meal.fat ? `Béo ${formatNutrient(meal.fat)}g` : ''}
+                                  {meal.fiber ? ` · Xơ ${formatNutrient(meal.fiber)}g` : ''}
+                                  {meal.servings > 0 && ` · ${meal.servings} khẩu phần`}
+                                </p>
+                              ) : (
+                                meal.servings > 0 && (
+                                  <p className="text-xs text-muted-foreground">
+                                    {meal.servings} khẩu phần
+                                  </p>
+                                )
+                              )}
+                            </div>
                           </div>
                         </div>
+
+                        {/* Thao tác: Xem chi tiết công thức nếu có recipeId */}
+                        {meal.recipeId && (
+                          <div className="pt-1">
+                            <Button
+                              asChild
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 text-xs px-2 gap-1 text-muted-foreground hover:text-foreground w-full justify-start"
+                            >
+                              <Link href={`/recipes/${meal.recipeId}`} target="_blank">
+                                <Utensils className="size-3.5" />
+                                Xem công thức
+                              </Link>
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     );
                   })

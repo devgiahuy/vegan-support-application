@@ -1,8 +1,9 @@
-import { isDevScanEnabled, scanProviderMode } from './scan-policy';
+import { isScanEnabled, scanProviderMode } from './scan-policy';
 
-export const DEV_SCANS_ENABLED = isDevScanEnabled(__DEV__, process.env.EXPO_PUBLIC_ENABLE_DEV_SCANS);
+/** Quét tủ lạnh/hóa đơn bật cho mọi người dùng; `EXPO_PUBLIC_DISABLE_SCANS=true` là công tắc khẩn cấp. */
+export const SCANS_ENABLED = isScanEnabled(process.env.EXPO_PUBLIC_DISABLE_SCANS);
 export const SCAN_PROVIDER_MODE = scanProviderMode(process.env.EXPO_PUBLIC_SCAN_PROVIDER);
 
-export function requireDevScans(): void {
-  if (!DEV_SCANS_ENABLED) throw new Error('Luồng quét thử nghiệm chưa được bật ở môi trường này.');
+export function requireScansEnabled(): void {
+  if (!SCANS_ENABLED) throw new Error('Tính năng quét đang tạm tắt. Vui lòng thử lại sau.');
 }
