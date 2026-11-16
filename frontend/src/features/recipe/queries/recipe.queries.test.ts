@@ -4,7 +4,24 @@ import { reviewApi } from '@/features/review/api/review.api';
 import { PostReviewStatus } from '@/features/review/types/content-review.model';
 import { PostType } from '@/common/enums';
 import type { Recipe } from '../types/recipe.model';
-import { RecipeSubmitForReviewError, submitSavedRecipe } from './recipe.queries';
+import { RecipeSubmitForReviewError, submitSavedRecipe, RECIPE_QUERY_KEYS } from './recipe.queries';
+import { QueryClient } from '@tanstack/react-query';
+
+it('keeps recipe detail warnings separate for guests and each account', async () => {
+  const client = new QueryClient();
+  const guest = RECIPE_QUERY_KEYS.detail('recipe-1', 'guest');
+  const alice = RECIPE_QUERY_KEYS.detail('recipe-1', 'alice');
+  const bob = RECIPE_QUERY_KEYS.detail('recipe-1', 'bob');
+  client.setQueryData(guest, { allergyWarnings: [] });
+  client.setQueryData(alice, { allergyWarnings: ['PEANUT'] });
+  client.setQueryData(bob, { allergyWarnings: ['SOY'] });
+  expect(client.getQueryData(guest)).toEqual({ allergyWarnings: [] });
+  expect(client.getQueryData(alice)).toEqual({ allergyWarnings: ['PEANUT'] });
+  expect(client.getQueryData(bob)).toEqual({ allergyWarnings: ['SOY'] });
+  await client.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.all });
+  expect(client.getQueryState(alice)?.isInvalidated).toBe(true);
+  client.clear();
+});
 
 function makeSavedRecipe(overrides?: Partial<Recipe>): Recipe {
   return {

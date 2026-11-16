@@ -114,6 +114,13 @@ export interface RecipeIneligibilityReason {
   ingredientNames: string[];
 }
 
+export interface RecipeAllergyWarning {
+  kind: 'ALLERGEN' | 'INGREDIENT';
+  identifier: string;
+  label: string;
+  ingredientNames: string[];
+}
+
 export interface Recipe {
   id: string;
   title: string;
@@ -185,6 +192,8 @@ export interface Recipe {
   allergenCodes?: string[];
   /** Danh sách dị ứng kèm tên tiếng Việt chuẩn hóa. */
   allergens?: RecipeAllergen[];
+  /** Matches returned for the current authenticated viewer only. */
+  allergyWarnings?: RecipeAllergyWarning[];
   traditionWarnings?: TraditionWarning[];
   dietCompatibilities?: DietCompatibility[];
   /** Con số kiểm chứng: Số lượng người đang sử dụng công thức món ăn này. Mặc định luôn là 0 nếu thiếu. */

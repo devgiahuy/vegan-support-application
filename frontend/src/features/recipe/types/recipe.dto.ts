@@ -62,6 +62,8 @@ export interface RecipeDetailDto extends BasePostDto {
     authorNutrition?: NutritionFactDto | null;
     mealPlannerEligible?: boolean;
     allergenCodes?: string[];
+    /** Viewer-specific matches; unrelated recipe allergens must never become warnings. */
+    allergyWarnings?: (RecipeAllergyWarningDto | null)[] | null;
     traditionWarnings?: TraditionWarningDto[];
     dietCompatibilities?: DietCompatibilityDto[];
     ingredients?: RecipeIngredientDto[];
@@ -71,6 +73,13 @@ export interface RecipeDetailDto extends BasePostDto {
     /** Legacy field retained for older backend responses. */
     usageCount?: number;
   } | null;
+}
+
+export interface RecipeAllergyWarningDto {
+  kind?: string | null;
+  identifier?: string | null;
+  label?: string | null;
+  ingredientNames?: (string | null)[] | null;
 }
 
 export interface AppliedConstraintsDto {

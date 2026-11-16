@@ -37,9 +37,7 @@ function actorFromRequest(request: Request): ContentActor {
 }
 
 export class ContentController {
-  constructor(
-    private readonly contentService: ContentService,
-  ) {}
+  constructor(private readonly contentService: ContentService) {}
 
   listPosts = async (request: Request, response: Response): Promise<void> => {
     const result = await this.contentService.listPublished(
@@ -66,9 +64,11 @@ export class ContentController {
       actorFromRequest(request),
       getValidatedQuery<MyPostsQuery>(request),
     );
-    response.status(200).json(
-      myPostListResponseSchema.parse({ success: true, data: result.data, meta: result.meta }),
-    );
+    response
+      .status(200)
+      .json(
+        myPostListResponseSchema.parse({ success: true, data: result.data, meta: result.meta }),
+      );
   };
 
   getRelatedPosts = async (request: Request, response: Response): Promise<void> => {
@@ -105,6 +105,8 @@ export class ContentController {
           }
         : undefined,
     );
+    response.setHeader('Cache-Control', 'private, no-store');
+    response.vary('Authorization');
     response.status(200).json(postResponseSchema.parse({ success: true, data, meta: null }));
   };
 
@@ -161,5 +163,4 @@ export class ContentController {
     );
     response.status(200).json(deletePostResponseSchema.parse({ success: true, data, meta: null }));
   };
-
 }
