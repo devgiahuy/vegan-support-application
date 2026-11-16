@@ -243,6 +243,9 @@ export class ReviewNutritionMapper extends BaseMapper<ReviewNutritionPanelDto, R
       finalOrigin,
       finalOriginLabel: getReviewNutritionOriginLabel(finalOrigin),
       isMissing: finalValue === null,
+      authorValue: nullableNumber(dto?.author),
+      deviationPercent: ((value) => (value === null ? null : Math.round(value)))(nullableNumber(dto?.deviationPercent)),
+      deviationWarning: safeBoolean(dto?.deviationWarning, false),
     };
   }
 

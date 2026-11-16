@@ -7,7 +7,11 @@ export interface EmptyStateCopy {
 }
 
 /** Nội dung trạng thái rỗng và các hành động gợi ý theo chế độ tìm — đồng bộ `emptyStateCopy` của web. */
-export function emptyStateCopy(mode: RestaurantSearchMode | null, externalResultsSuppressed = false): EmptyStateCopy {
+export function emptyStateCopy(
+  mode: RestaurantSearchMode | null,
+  externalResultsSuppressed = false,
+  externalDataUnavailable = false
+): EmptyStateCopy {
   if (externalResultsSuppressed) {
     return {
       title: 'Chưa có quán đáp ứng bộ lọc chế độ ăn',
@@ -19,6 +23,14 @@ export function emptyStateCopy(mode: RestaurantSearchMode | null, externalResult
           : mode === 'BOUNDS'
             ? ['Đổi vị trí']
             : ['Nới bán kính', 'Đổi vị trí'],
+    };
+  }
+  // Dữ liệu bản đồ lỗi thì rỗng không có nghĩa là quanh đây không có quán: không khuyên nới bán kính.
+  if (externalDataUnavailable) {
+    return {
+      title: 'Chưa tải được kết quả tìm quán',
+      description: 'Dữ liệu bản đồ tạm thời chưa phản hồi nên chưa biết quanh đây có quán hay không. Hãy thử lại sau ít phút.',
+      actions: mode === 'BOUNDS' ? [] : ['Đổi vị trí'],
     };
   }
   if (mode === 'KEYWORD') {

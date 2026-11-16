@@ -11,6 +11,17 @@ import { getContentErrorMessage } from '../utils/recipe-errors';
 import type { RecipeDraftSuggestion } from '../types/recipe-draft.model';
 import { TagInput } from './tag-input';
 
+/** Chỉ hiện gợi ý thời gian khi ước tính của AI khác giá trị đang dùng (do người dùng đã nhập). */
+function differsFromSuggestedTiming(suggestion: RecipeDraftSuggestion): boolean {
+  const timing = suggestion.suggestedTiming;
+  return (
+    timing !== null &&
+    (timing.servings !== suggestion.servings ||
+      timing.prepTimeMinutes !== suggestion.prepTimeMinutes ||
+      timing.cookTimeMinutes !== suggestion.cookTimeMinutes)
+  );
+}
+
 const POPULAR_VEGAN_INGREDIENTS = [
   'Đậu hũ', 'Nấm đông cô', 'Cà rốt', 'Nước cốt dừa', 'Hành boa-rô', 'Sả cây', 'Nấm đùi gà', 'Khoai tây', 'Bột cà ri', 'Rau mùi',
 ];
@@ -153,6 +164,11 @@ export function AiRecipeDraftPanel({
               {suggestion.servings} khẩu phần · sơ chế {suggestion.prepTimeMinutes} phút · nấu {suggestion.cookTimeMinutes} phút · {difficultyLabel(suggestion.difficulty)}
             </Text>
           </View>
+          {differsFromSuggestedTiming(suggestion) ? (
+            <Text className="text-[11px] leading-4 text-muted-foreground">
+              AI ước tính {suggestion.suggestedTiming?.servings} khẩu phần · sơ chế {suggestion.suggestedTiming?.prepTimeMinutes} phút · nấu {suggestion.suggestedTiming?.cookTimeMinutes} phút. Giá trị bạn đã nhập được giữ nguyên.
+            </Text>
+          ) : null}
           {suggestion.title ? (
             <View className="gap-0.5">
               <Text className="text-base font-bold text-foreground">{suggestion.title}</Text>

@@ -4,12 +4,13 @@ import { Activity, ArrowLeft, ArrowRight, CircleAlert, Send } from 'lucide-react
 
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { RecipeNutritionPreviewSheet } from '@/features/recipe-nutrition/components/recipe-nutrition-preview-sheet';
-import { CategoryType } from '@/common/enums';
+import { CategoryType, UserRole } from '@/common/enums';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { buildCategoryOptions } from '@/features/category/utils/category-options';
 import type { PickedImage } from '@/features/storage/types/storage.model';
 import { getApiErrorCode } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
+import { useAuthStore } from '@/store/useAuthStore';
 import type { CreateRecipeInput } from '../api/recipe.api';
 import type { RecipeDraftSuggestion } from '../types/recipe-draft.model';
 import {
@@ -31,6 +32,7 @@ import {
   type RecipeEditorStep,
   type RecipeEditorValues,
   type RecipeFieldIssue,
+  type RecipeNutritionKey,
   type RecipeFormInitial,
 } from '../utils/recipe-editor';
 import { getContentErrorMessage } from '../utils/recipe-errors';
@@ -90,7 +92,11 @@ export function RecipeForm({
   const categoryOptions = React.useMemo(() => buildCategoryOptions(categoryQuery.data ?? [], 'Chọn danh mục'), [categoryQuery.data]);
   const categoryName = values.categoryId ? categoryOptions.find((option) => option.value === values.categoryId)?.label : undefined;
 
-  const issues = React.useMemo(() => validateRecipeEditor(values), [values]);
+  // Backend vẫn là bên quyết định cuối (`RECIPE_NUTRITION_REQUIRED`); mobile chỉ chặn sớm theo vai trò hiện tại.
+  const role = useAuthStore((state) => state.user?.role);
+  const requireNutrition = role === UserRole.CONTRIBUTOR || role === UserRole.ADMIN;
+
+  const issues = React.useMemo(() => validateRecipeEditor(values, { requireNutrition }), [values, requireNutrition]);
   const visibleIssues = issues.filter((issue) => attempted.has(issue.step));
   const errorOf = (path: string) => visibleIssues.find((issue) => issue.path === path)?.message;
 
@@ -108,6 +114,9 @@ export function RecipeForm({
       })),
     []
   );
+
+  const changeNutrition = (key: RecipeNutritionKey, value: string) =>
+    setValues((previous) => ({ ...previous, nutrition: { ...previous.nutrition, [key]: value } }));
 
   const goTo = (target: RecipeEditorStep) => {
     setStep(target);
@@ -299,6 +308,10 @@ export function RecipeForm({
             error={errorOf('categoryId')}
             onCategoryChange={(categoryId) => patch({ categoryId })}
             onDifficultyChange={(difficulty) => patch({ difficulty })}
+            nutrition={values.nutrition}
+            requireNutrition={requireNutrition}
+            errorOf={errorOf}
+            onNutritionChange={changeNutrition}
           />
         ) : null}
 
@@ -306,6 +319,7 @@ export function RecipeForm({
           <RecipeEditorReview
             values={values}
             issues={issues}
+            requireNutrition={requireNutrition}
             categoryName={categoryName}
             coverUrl={cover?.url ?? initial?.coverImageUrl ?? null}
             onEdit={(target) => goTo(target)}

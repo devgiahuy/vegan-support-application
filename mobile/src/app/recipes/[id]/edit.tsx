@@ -89,6 +89,7 @@ export default function EditRecipeScreen() {
               optional: ing.optional,
               position: ing.position,
             })),
+            authorNutrition: recipe.authorNutrition,
             steps:
               recipe.steps.length > 0
                 ? recipe.steps.map((step) => ({
@@ -111,7 +112,7 @@ export default function EditRecipeScreen() {
               input: { ...values, expectedVersion: recipe.version },
             });
             const feedback = getSubmitFeedback(getSubmitOutcome(updated.revisionStatus), 'công thức', true);
-            Alert.alert(feedback.title, feedback.message);
+            Alert.alert(feedback.title, updated.submitFailure?.message ?? feedback.message);
             router.replace(`/recipes/${recipe.id}` as Href);
           }}
         />
