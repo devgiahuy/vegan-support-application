@@ -5,6 +5,8 @@ export type MealProgramGoal = 'MAINTAIN' | 'LOSE' | 'GAIN';
 
 export interface MealItemSummary {
   id: string;
+  recipeId?: string;
+  customMealId?: string;
   name: string;
   mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK';
   mealTypeLabel: string;
@@ -12,8 +14,21 @@ export interface MealItemSummary {
   sourceTypeLabel: string;
   servings: number;
   calories: number;
+  formattedCalories?: string;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  fiber?: number;
   imageUrl?: string;
   isCompleted?: boolean;
+}
+
+export interface ProgramDayNutrition {
+  dayCalories: number;
+  protein: number;
+  fat: number;
+  fiber: number | null;
+  carbs: number;
 }
 
 export interface ProgramDaySummary {
@@ -21,8 +36,16 @@ export interface ProgramDaySummary {
   formattedDate: string; // '28/09'
   dayOfWeek: number; // 1..7
   dayOfWeekLabel?: string; // 'Thứ Hai'
+  formattedLabel?: string; // 'Thứ Hai, 28/09'
   meals: MealItemSummary[];
   totalCalories: number;
+  nutrition?: ProgramDayNutrition;
+  estimatedTotals?: {
+    proteinGrams?: number | null;
+    fiberGrams?: number | null;
+    fatGrams?: number | null;
+    carbohydrateGrams?: number | null;
+  } | null;
 }
 
 export interface WeeklyPlanSnapshot {

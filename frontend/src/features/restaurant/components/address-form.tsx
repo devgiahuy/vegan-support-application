@@ -61,19 +61,19 @@ export function AddressForm({ onResolved, onDenied }: AddressFormProps) {
   return (
     <form
       onSubmit={(event) => void form.handleSubmit(onSubmit)(event)}
-      className="flex w-full flex-col gap-2 sm:flex-row sm:items-end"
+      className="flex flex-col w-full gap-2 sm:flex-row sm:items-end"
       noValidate
     >
       <div className="flex flex-1 flex-col gap-1.5">
         <Label htmlFor="restaurant-address">Hoặc nhập địa chỉ</Label>
         <div className="relative">
           <MapPin
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            className="absolute -translate-y-1/2 pointer-events-none left-3 top-1/2 size-4 text-muted-foreground"
             aria-hidden="true"
           />
           <Input
             id="restaurant-address"
-            placeholder="VD: Hồ Gươm, Hà Nội"
+            placeholder="VD: 123 Nguyễn Trãi, Quận 1, TP.HCM"
             className="h-12 rounded-xl pl-9"
             {...form.register('addressText')}
           />

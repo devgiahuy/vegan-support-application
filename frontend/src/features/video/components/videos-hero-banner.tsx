@@ -43,9 +43,9 @@ export function VideosHeroBanner() {
   };
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-primary/25 bg-card/60 shadow-xl shadow-primary/5 backdrop-blur-sm">
+    <div className="relative overflow-hidden border shadow-xl rounded-3xl border-primary/25 bg-card/60 shadow-primary/5 backdrop-blur-sm">
       {/* Background Image Layer */}
-      <div className="absolute inset-0 select-none pointer-events-none">
+      <div className="absolute inset-0 pointer-events-none select-none">
         <Image
           src="/videos/hero-bg.jpg"
           alt="Phim trường hướng dẫn nấu món chay trực quan cùng đầu bếp chuyên nghiệp"
@@ -58,45 +58,45 @@ export function VideosHeroBanner() {
         <div className="absolute inset-0 bg-gradient-to-r from-background/98 via-background/92 to-background/40 dark:from-[#0b1410]/98 dark:via-[#0b1410]/92 dark:to-[#0b1410]/45" />
         <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent sm:hidden" />
         {/* Subtle radial emerald glow */}
-        <div className="absolute -left-20 -top-20 h-72 w-72 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+        <div className="absolute rounded-full pointer-events-none -left-20 -top-20 h-72 w-72 bg-primary/10 blur-3xl" />
       </div>
 
       {/* Content Container */}
       <div className="relative z-10 px-6 py-8 sm:px-10 sm:py-12 lg:px-12 lg:py-14">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div className="grid items-center grid-cols-1 gap-8 lg:grid-cols-12">
           {/* Left Column: Core Editorial Headline & CTAs */}
           <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="lg:col-span-8 space-y-5"
+            className="space-y-5 lg:col-span-8"
           >
             {/* Pill Eyebrow */}
-            <motion.div variants={itemVariants} className="flex flex-wrap items-center gap-2">
+            {/* <motion.div variants={itemVariants} className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 dark:bg-primary/20 px-3.5 py-1.5 text-xs font-semibold text-primary shadow-xs backdrop-blur-md">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+                <span className="relative flex w-2 h-2">
+                  <span className="absolute inline-flex w-full h-full rounded-full opacity-75 animate-ping bg-primary" />
+                  <span className="relative inline-flex w-2 h-2 rounded-full bg-primary" />
                 </span>
                 <Play className="h-3.5 w-3.5 fill-primary text-primary" />
                 <span>Kho Video Nấu Chay Chọn Lọc</span>
               </span>
 
               <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background/60 px-3 py-1 text-[11px] font-medium text-muted-foreground backdrop-blur-md">
-                <Sparkles className="h-3 w-3 text-amber-500" />
+                <Sparkles className="w-3 h-3 text-amber-500" />
                 <span>AI Tóm Tắt &amp; Mốc Thời Gian Tự Động</span>
               </span>
-            </motion.div>
+            </motion.div> */}
 
             {/* Main Headline */}
             <motion.div variants={itemVariants} className="space-y-2">
               <h1 className="text-2xl sm:text-4xl lg:text-[2.65rem] font-extrabold text-foreground tracking-tight leading-[1.18]">
                 Kho Video{' '}
-                <span className="block sm:inline bg-gradient-to-r from-primary via-emerald-600 to-sprout dark:from-emerald-400 dark:via-green-300 dark:to-lime-300 bg-clip-text text-transparent">
+                <span className="block text-transparent sm:inline bg-gradient-to-r from-primary via-emerald-600 to-sprout dark:from-emerald-400 dark:via-green-300 dark:to-lime-300 bg-clip-text">
                   Nấu Chay Trực Quan
                 </span>
               </h1>
-              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-2xl font-normal">
+              <p className="max-w-2xl text-sm font-normal leading-relaxed sm:text-base text-muted-foreground">
                 Học nấu ăn chay dễ dàng qua các video chất lượng cao từ Chuyên gia dinh dưỡng và Đầu
                 bếp có kinh nghiệm. Mọi video đều có{' '}
                 <strong className="font-semibold text-foreground">
@@ -114,7 +114,7 @@ export function VideosHeroBanner() {
                 className="rounded-2xl gap-2 font-bold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-200 active:scale-[0.98] bg-primary text-primary-foreground hover:bg-primary/90 h-12 px-6 text-sm sm:text-base"
               >
                 <Link href="/videos/new">
-                  <UploadCloud className="h-5 w-5" />
+                  <UploadCloud className="w-5 h-5" />
                   <span>Đăng video nấu chay</span>
                 </Link>
               </Button>
@@ -141,13 +141,13 @@ export function VideosHeroBanner() {
           </motion.div>
 
           {/* Right Column: Floating Video Highlight Card */}
-          <motion.div
+          {/* <motion.div
             initial={{ opacity: 0, scale: 0.95, y: shouldReduceMotion ? 0 : 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="lg:col-span-4 hidden lg:flex flex-col justify-end items-end"
+            className="flex-col items-end justify-end hidden lg:col-span-4 lg:flex"
           >
-            <div className="w-full max-w-xs rounded-2xl border border-white/30 dark:border-white/10 bg-white/70 dark:bg-card/70 p-4 shadow-xl shadow-black/5 dark:shadow-black/20 backdrop-blur-md space-y-3">
+            <div className="w-full max-w-xs p-4 space-y-3 border shadow-xl rounded-2xl border-white/30 dark:border-white/10 bg-white/70 dark:bg-card/70 shadow-black/5 dark:shadow-black/20 backdrop-blur-md">
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-primary">
                   <Sparkles className="h-3.5 w-3.5 text-primary" />
@@ -158,7 +158,7 @@ export function VideosHeroBanner() {
                 </span>
               </div>
 
-              <p className="text-xs text-foreground/90 font-medium leading-relaxed">
+              <p className="text-xs font-medium leading-relaxed text-foreground/90">
                 Tự động trích xuất các bước chế biến, chia timeline từng công đoạn và ước tính định
                 lượng calo tức thì.
               </p>
@@ -170,13 +170,13 @@ export function VideosHeroBanner() {
                 </span>
                 <Link
                   href="/videos/new"
-                  className="font-semibold text-primary hover:underline flex items-center gap-1"
+                  className="flex items-center gap-1 font-semibold text-primary hover:underline"
                 >
                   Tải video lên &rarr;
                 </Link>
               </div>
             </div>
-          </motion.div>
+          </motion.div> */}
         </div>
       </div>
     </div>

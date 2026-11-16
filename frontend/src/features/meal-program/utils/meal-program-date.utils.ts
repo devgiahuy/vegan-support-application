@@ -1,3 +1,38 @@
+export const WEEKDAY_NAMES = [
+  'Chủ Nhật',
+  'Thứ Hai',
+  'Thứ Ba',
+  'Thứ Tư',
+  'Thứ Năm',
+  'Thứ Sáu',
+  'Thứ Bảy',
+] as const;
+
+export function normalizeDate(dateStr: string): string {
+  if (!dateStr) return '';
+  return dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.trim();
+}
+
+/**
+ * Nhãn ngày từ `YYYY-MM-DD` (thứ + dd/mm), tính theo UTC để tránh lệch timezone.
+ * Ví dụ: 2026-11-16 -> "Thứ Hai, 16/11"
+ */
+export function formatDayLabel(dateStr: string, fallbackDayOfWeek?: string): string {
+  const clean = normalizeDate(dateStr);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(clean);
+  if (!match) return fallbackDayOfWeek ? `${fallbackDayOfWeek}, ${clean}` : clean;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (Number.isNaN(date.getTime())) return clean;
+
+  const weekday = fallbackDayOfWeek || WEEKDAY_NAMES[date.getUTCDay()];
+  const formattedDayMonth = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
+  return `${weekday}, ${formattedDayMonth}`;
+}
+
 /**
  * Các hàm tiện ích xử lý ngày tháng cho module Meal Program
  * Quy chuẩn: Ngày bắt đầu của một lộ trình dinh dưỡng BẮT BUỘC phải là Thứ Hai (UTC Day = 1)

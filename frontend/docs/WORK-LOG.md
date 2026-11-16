@@ -1,5 +1,80 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-16] — Làm tròn các chỉ số dinh dưỡng về tối đa 2 chữ số thập phân
+
+- **Yêu cầu:** Chỉ số ở tinh bột (carbs) đang khá dài (ví dụ: `1975.8900000000003g` trong ảnh tải lên), cần làm tròn các số về tối đa 2 chữ số thập phân.
+- **Nguyên nhân:** Lỗi sai số dấu phẩy động (floating point representation) trong phép cộng dồn số thực của JavaScript khi tính tổng dưỡng chất nhiều ngày/nhiều món (ví dụ: `0.1 + 0.2 = 0.30000000000000004`), dẫn đến chuỗi số hiển thị kéo dài vô tận trên giao diện.
+- **Thay đổi thực hiện:**
+  - `src/features/meal-program/utils/nutrition.utils.ts`:
+    - Tạo tiện ích `roundToDecimals(value, decimals = 2)` sử dụng `Number.EPSILON` để làm tròn toán học chính xác về 2 chữ số thập phân.
+    - Tạo `formatNutrient(value, decimals = 2)` đảm bảo chuỗi hiển thị ra UI luôn sạch sẽ, không bao giờ xuất hiện đuôi số lẻ dài.
+  - `src/features/meal-program/utils/nutrition.utils.test.ts`:
+    - Viết unit test kiểm chứng độ chính xác khi làm tròn các giá trị float phức tạp (`1975.8900000000003` -> `1975.89`, `616.33`, `200`, `null`, `undefined`).
+  - `src/features/meal-program/mappers/meal-program.mapper.ts`:
+    - Áp dụng `roundToDecimals` trong `mapSnapshot` khi cộng dồn `macronutrients` (protein, carbs, fat, fiber).
+    - Áp dụng trong `mapDay` và `groupSlotsIntoDays` khi tính `nutrition` trong ngày.
+    - Áp dụng trong `mapMealItem` và `mapCumulativeAnalysis`.
+  - `src/features/meal-program/components/week-plan-view.tsx`:
+    - Sử dụng `formatNutrient(...)` cho 4 chỉ số ở thanh tổng quan tuần (Đạm, Bột, Béo, Xơ), các badge trên `CardHeader` của từng ngày và dòng thông tin macro của từng món ăn.
+  - `src/features/meal-program/components/cumulative-nutrition-chart.tsx`:
+    - Định dạng hiển thị đạm và xơ trung bình qua `formatNutrient`.
+- **Kiểm chứng:**
+  - `vitest run src/features/meal-program`: 6 test files, 36/36 tests pass 100%.
+  - `npx tsc --noEmit --incremental false`: 0 lỗi type.
+
+## [2026-11-16] — Sửa lỗi layout giao diện trang meal-plans khi có nhiều card thực đơn
+
+- **Yêu cầu:** Sửa lỗi giao diện trang `/meal-plans` bị vỡ/mất thẩm mỹ khi danh sách phiên bản thực đơn có nhiều card.
+- **Hiện trạng & Nguyên nhân:**
+  - Ở `/meal-plans`, container chính dùng bố cục `grid lg:grid-cols-5`. Theo mặc định CSS Grid áp dụng `align-self: stretch` cho các phần tử con.
+  - Khi cột danh sách phiên bản gần đây bên phải (`lg:col-span-3`) có nhiều card (từ 4 đến 5+ card), chiều cao cột phải tăng lên rất lớn (~600–800px).
+  - Cột bên trái (`Card lg:col-span-2`) chứa biểu mẫu "Tạo thực đơn mới" bị kéo dãn (stretch) chiều cao xuống tận đáy trang theo cột phải, để lại một khoảng trắng rỗng khổng lồ phía dưới nút "Tạo thực đơn tuần".
+  - Danh sách card bên phải truy vấn cố định `limit: 5` dẫn đến việc chia lưới 2 cột luôn để thừa 1 card đơn lẻ ở hàng thứ 3 (như trong ảnh chụp thực tế), không đồng đều.
+  - Các thẻ `PlanCard` chưa có cấu trúc `h-full flex flex-col justify-between`, khiến các thẻ trong cùng một hàng có thể bị lệch nút bấm "Xem chi tiết" khi độ dài nội dung khác nhau.
+- **Thay đổi thực hiện:**
+  - `src/app/(site)/meal-plans/page.tsx`:
+    - Thêm `items-start` vào container lưới `<div className="grid gap-6 lg:grid-cols-5 items-start">`, ngăn chặn grid con tự động dãn chiều cao theo nhau.
+    - Cập nhật Card form "Tạo thực đơn mới" với `self-start lg:sticky lg:top-24`, giúp form giữ nguyên chiều cao tự nhiên vừa vặn nội dung và ghim nhẹ nhàng theo tầm nhìn khi người dùng cuộn xem danh sách thực đơn bên phải.
+    - Cập nhật truy vấn `limit: 6` để phân bổ số lượng card chẵn (3 hàng × 2 cột), tránh tình trạng card lẻ loi ở dòng cuối.
+    - Cập nhật header danh sách với `flex-wrap items-center justify-between gap-2.5`, chống tràn hoặc vỡ dòng trên màn hình nhỏ.
+    - Bổ sung nút liên kết `Xem toàn bộ X thực đơn đã lưu →` ở chân danh sách khi tổng số thực đơn trong hệ thống vượt quá số lượng hiển thị trên trang chính.
+  - `src/features/meal-plan/components/plan-card.tsx`:
+    - Áp dụng `flex h-full flex-col justify-between` cho `Card` để đảm bảo các thẻ trong cùng hàng luôn có chiều cao đồng đều và nút "Xem chi tiết" luôn thẳng hàng ở đáy.
+    - `CardContent` nhận `flex-1` để đẩy footer sát đáy.
+    - Tinh chỉnh padding gọn gàng hơn, thêm hiệu ứng hover `hover:border-primary/40 hover:shadow-sm`.
+    - Làm nổi bật cảnh báo với màu hổ phách `text-amber-600 dark:text-amber-400` và icon lửa calo `text-orange-500`.
+- **Kiểm chứng:**
+  - `npx tsc --noEmit --incremental false`: 0 lỗi type.
+
+## [2026-11-16] — Đồng bộ giao diện trình bày các thứ ngày từ /meal-plans/:id sang /meal-programs/
+
+- **Yêu cầu:** Dựa vào giao diện trình bày các thứ ngày ở `/meal-plans/:id` để áp dụng vào cho `/meal-programs/`.
+- **Hiện trạng:**
+  - Ở `/meal-plans/:id` (`DayGrid`), mỗi ngày trong tuần được hiển thị dưới dạng một thẻ card ngang rộng rãi, tiêu đề ngày tiếng Việt chuẩn (`Thứ Hai, 16/11`), thanh chỉ số dinh dưỡng ngày (Calo, Đạm, Béo, Xơ, Bột) nằm ở CardHeader, và các bữa ăn (Sáng, Trưa, Tối) xếp thành lưới 3 cột trực quan với ảnh thumbnail, phân bổ macro và khẩu phần.
+  - Ở `/meal-programs/[id]` (`WeekPlanView`), các ngày trong tuần trước đây bị ép vào một lưới đa cột hẹp (`grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4`), các bữa ăn bị xếp chồng dọc chật hẹp, không có chỉ số dinh dưỡng ngày chi tiết và nhãn ngày chưa được định dạng đồng bộ.
+- **Thay đổi thực hiện:**
+  - `src/features/meal-program/utils/meal-program-date.utils.ts`:
+    - Thêm hàm `formatDayLabel(dateStr, fallbackDayOfWeek)` định dạng ngày `YYYY-MM-DD` theo UTC sang tiếng Việt `Thứ ..., DD/MM` đồng bộ với `DayGrid`.
+  - `src/features/meal-program/types/meal-program.model.ts` & `src/features/meal-program/types/meal-program.dto.ts`:
+    - Bổ sung `formattedLabel`, `nutrition?: ProgramDayNutrition`, `estimatedTotals` vào `ProgramDaySummary`.
+    - Bổ sung `recipeId`, `customMealId`, `protein`, `carbs`, `fat`, `fiber`, `formattedCalories` vào `MealItemSummary`.
+  - `src/features/meal-program/mappers/meal-program.mapper.ts`:
+    - Cập nhật `mapDay` và `groupSlotsIntoDays` để tính toán đầy đủ `formattedLabel`, dưỡng chất theo ngày `nutrition: { dayCalories, protein, fat, fiber, carbs }`.
+    - Cập nhật `mapMealItem` và grouping để bóc tách `recipeId`, `customMealId`, `protein`, `carbs`, `fat`, `fiber`, `formattedCalories`.
+  - `src/features/meal-program/components/week-plan-view.tsx`:
+    - Tái cấu trúc danh sách ngày sang bố cục dọc (`flex flex-col gap-4`), mỗi ngày là một `Card` chuẩn.
+    - `CardHeader` hiển thị icon lịch, tiêu đề ngày chuẩn (`Thứ Hai, 16/11`) và các badge dinh dưỡng ngày màu sắc theo theme (Calo cam, Đạm xanh lá, Béo xanh da trời, Xơ tím, Bột vàng).
+    - `CardContent` hiển thị lưới bữa ăn 3 cột (`sm:grid-cols-3`), mỗi thẻ gồm ảnh thumbnail 48x48 bo tròn, badge loại bữa, badge nguồn, calo, tên món, định lượng dưỡng chất (`Đạm ...g · Bột ...g · Béo ...g · Xơ ...g · X khẩu phần`), và nút liên kết xem công thức (`/recipes/:id`).
+  - `src/features/meal-program/components/day-meal-checklist.tsx`:
+    - Đồng bộ nhãn ngày sử dụng `day.formattedLabel` chuẩn `Thứ ..., DD/MM`.
+  - Unit tests:
+    - Bổ sung tests cho `formatDayLabel` trong `meal-program-date.utils.test.ts`.
+    - Bổ sung assertions cho `formattedLabel`, `nutrition` trong `meal-program.mapper.test.ts`.
+- **Kiểm chứng:**
+  - `vitest run src/features/meal-program`: 5 test files, 34/34 tests pass.
+  - `vitest run src/features/meal-plan`: 5 test files, 48/48 tests pass (không hồi quy).
+  - `npx tsc --noEmit --incremental false`: 0 lỗi type.
+
 ## [2026-11-16] — Sửa lỗi mất icon khi hover nút Bookmark
 
 - **Yêu cầu:** Khắc phục lỗi khi hover vào nút Bookmark ở góc thẻ món ăn thì biến thành vòng tròn xanh đặc, mất icon bên trong.

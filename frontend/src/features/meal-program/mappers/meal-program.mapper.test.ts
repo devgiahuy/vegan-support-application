@@ -272,7 +272,9 @@ describe('MealProgramMapper', () => {
 
     const day = weekModel.snapshot?.days[0];
     expect(day?.formattedDate).toBe('01/10');
+    expect(day?.formattedLabel).toBe('Thứ Năm, 01/10');
     expect(day?.totalCalories).toBe(1000); // 400 + 600
+    expect(day?.nutrition?.dayCalories).toBe(1000);
     expect(day?.meals[0].mealTypeLabel).toBe('Bữa sáng');
     expect(day?.meals[0].sourceTypeLabel).toBe('Công thức');
     expect(day?.meals[1].mealTypeLabel).toBe('Bữa trưa');
@@ -490,8 +492,10 @@ describe('MealProgramMapper', () => {
       expect(day.date).toBe(dates[index]);
       expect(day.dayOfWeek).toBe(index + 1);
       expect(day.dayOfWeekLabel).toBe(expectedDayLabels[index]);
+      expect(day.formattedLabel).toContain(expectedDayLabels[index]);
       expect(day.meals.length).toBe(3);
       expect(day.totalCalories).toBe(1500); // 400 + 500 + 600
+      expect(day.nutrition?.dayCalories).toBe(1500);
 
       // Verify meals are sorted in order: BREAKFAST -> LUNCH -> DINNER
       expect(day.meals[0].mealType).toBe('BREAKFAST');

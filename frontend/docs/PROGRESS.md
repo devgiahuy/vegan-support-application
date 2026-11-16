@@ -1,5 +1,30 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Làm tròn các chỉ số dinh dưỡng về tối đa 2 chữ số thập phân — Updated 2026-11-16
+
+Khắc phục lỗi dấu phẩy động (floating point precision error) hiển thị chuỗi thập phân dài bất thường (như `1975.8900000000003g` ở tinh bột / carbs):
+- **Utility làm tròn chuẩn:** Tạo `src/features/meal-program/utils/nutrition.utils.ts` cung cấp `roundToDecimals(value, decimals = 2)` và `formatNutrient(value, decimals = 2)` sử dụng `Number.EPSILON` để làm tròn chính xác về tối đa 2 chữ số thập phân, gọt sạch đuôi số thập phân vô tận của JS.
+- **Tầng Mapper:** Tích hợp `roundToDecimals` trong `MealProgramMapper` khi tính tổng dưỡng chất tuần (`mapSnapshot`), dưỡng chất ngày (`mapDay`, `groupSlotsIntoDays`), dưỡng chất từng món ăn (`mapMealItem`) và phân tích tích lũy (`mapCumulativeAnalysis`).
+- **Giao diện hiển thị:** Áp dụng `formatNutrient` trong `WeekPlanView` (thanh tổng quan tuần, thẻ từng ngày, từng món ăn) và `CumulativeNutritionChart`.
+- **Kiểm chứng:** Viết unit test cho `nutrition.utils.test.ts` (pass 100%), toàn bộ 36 tests `meal-program` pass, `tsc --noEmit --incremental false` đạt 0 lỗi type.
+
+## Sửa lỗi layout giao diện trang /meal-plans khi có nhiều card thực đơn — Updated 2026-11-16
+
+Khắc phục triệt để lỗi kéo dãn bất thường và bất cân xứng layout trên trang kế hoạch bữa ăn (`/meal-plans`):
+- **Sửa lỗi kéo dãn form tạo thực đơn:** Thêm `items-start` trên grid container và `self-start lg:sticky lg:top-24` cho thẻ form "Tạo thực đơn mới", giúp form giữ chiều cao tự nhiên vừa khít nội dung thay vì bị kéo dãn tạo khoảng trắng lớn khi danh sách thực đơn bên phải có nhiều thẻ. Form đồng thời ghim êm ái khi cuộn trang.
+- **Tối ưu hiển thị danh sách thực đơn:** Nâng số lượng truy vấn hiển thị lên `limit: 6` (số chẵn, chia đều 2 cột 3 hàng), bổ sung liên kết chuyển trang "Xem toàn bộ X thực đơn đã lưu →" khi số lượng thực đơn vượt quá giới hạn hiển thị.
+- **Chuẩn hóa PlanCard:** Thiết lập `h-full flex flex-col justify-between` và `CardContent flex-1` giúp các thẻ trong cùng một hàng luôn có chiều cao đồng đều, nút "Xem chi tiết" luôn thẳng hàng ở đáy thẻ; bổ sung hiệu ứng hover và màu sắc nhận diện cảnh báo/năng lượng trực quan.
+- **Kiểm chứng:** `npx tsc --noEmit --incremental false` đạt 0 lỗi type.
+
+## Đồng bộ giao diện thứ ngày từ /meal-plans/:id sang /meal-programs/ — Updated 2026-11-16
+
+Cập nhật giao diện trình bày các thứ ngày trong tuần của Lộ trình Dinh dưỡng Nhiều tuần (`/meal-programs/[id]`, component `WeekPlanView` và `DayMealChecklist`) theo chuẩn thiết kế trực quan, rõ ràng của trang chi tiết thực đơn tuần (`/meal-plans/[id]`, component `DayGrid`):
+- **Bố cục thẻ ngày (Full-width Card):** Thay thế lưới đa cột bị bó hẹp bằng danh sách dọc các thẻ ngày rộng rãi (`flex flex-col gap-4`), mỗi ngày là một `Card` độc lập.
+- **Tiêu đề thứ ngày & 4 chỉ số dinh dưỡng ngày (CardHeader):** Hiển thị rõ tiêu đề thứ ngày tiếng Việt chuẩn (`Thứ Hai, 16/11`) kèm icon lịch, phía bên phải hiển thị đầy đủ các badge chỉ số dinh dưỡng màu sắc trực quan (Calo, Đạm, Béo, Xơ, Bột).
+- **Lưới các bữa ăn trong ngày (CardContent):** Trình bày các bữa ăn (Sáng, Trưa, Tối, Phụ) dạng lưới thẻ ngang (`grid sm:grid-cols-3`), mỗi thẻ bữa ăn gồm badge loại bữa, badge nguồn (Công thức / Món cá nhân), trạng thái hoàn thành, calo, ảnh thumbnail 48x48 bo tròn với fallback icon, tên món ăn, dòng phân rã dưỡng chất đa lượng (`Đạm ...g · Bột ...g · Béo ...g · Xơ ...g · X khẩu phần`), và nút xem công thức (`/recipes/:id`).
+- **Nâng cấp tầng DTO / Model / Mapper:** Bổ sung `formattedLabel`, `nutrition`, `estimatedTotals` cho ngày và `protein`, `carbs`, `fat`, `fiber`, `recipeId`, `customMealId` cho từng món ăn.
+- **Kiểm chứng:** `vitest` pass 34/34 tests `meal-program` và 48/48 tests `meal-plan`; `tsc --noEmit --incremental false` đạt 0 lỗi type.
+
 ## Đổi màu tag / nút lưu Bookmark — Updated 2026-11-16
 
 Cập nhật nút lưu Bookmark trên thẻ công thức (`RecipeCardBookmark`) và component `BookmarkButton` dùng màu xanh thương hiệu (`text-primary` / `bg-primary`): icon bookmark màu xanh ở trạng thái chưa lưu, hover chuyển nền xanh với icon màu trắng rõ nét (sửa lỗi icon bị ẩn do trùng màu xanh khi hover), và chuyển thành nút nền xanh với icon tô trắng khi đã lưu bookmark. `tsc --noEmit` đạt 0 lỗi.
