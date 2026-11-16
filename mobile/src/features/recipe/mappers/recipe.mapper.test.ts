@@ -107,3 +107,14 @@ test('pagination without constraints does not invent any', () => {
   const result = recipeMapper.toPaginationFromEnvelope([dto()], { page: 1, total: 1 });
   assert.equal(result.metadata.appliedConstraints, undefined);
 });
+
+test('authorNutrition keeps the author-typed numbers separate from published nutrition', () => {
+  const recipe = recipeMapper.toModel(
+    dto({ recipe: { servings: 1, nutrition: { calories: 500 }, authorNutrition: { calories: 420, proteinGrams: null, vitaminB12Mcg: 0 }, ingredients: [], steps: [] } })
+  );
+  assert.equal(recipe.nutrition.calories, 500);
+  assert.equal(recipe.authorNutrition?.calories, 420);
+  assert.equal(recipe.authorNutrition?.proteinGrams, null);
+  assert.equal(recipe.authorNutrition?.vitaminB12Mcg, 0);
+  assert.equal(recipeMapper.toModel(dto({ recipe: { servings: 1, ingredients: [], steps: [] } })).authorNutrition, null);
+});

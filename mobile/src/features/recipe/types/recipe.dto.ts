@@ -53,6 +53,8 @@ export interface RecipeDetailDto extends BasePostDto {
     cookTimeMinutes?: number;
     difficulty?: string;
     nutrition?: NutritionFactDto | null;
+    /** Số tác giả đã nhập cho revision này (khác `nutrition` đã công bố). */
+    authorNutrition?: NutritionFactDto | null;
     mealPlannerEligible?: boolean;
     allergenCodes?: string[];
     traditionWarnings?: TraditionWarningDto[];

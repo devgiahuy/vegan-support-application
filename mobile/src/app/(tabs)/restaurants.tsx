@@ -123,7 +123,8 @@ export default function RestaurantsScreen() {
     [data, lastMeta, externalResultsSuppressed, restaurants]
   );
   const isRefreshing = isFetching && !isFetchingNextPage && Boolean(data);
-  const emptyCopy = emptyStateCopy(resolvedMode, externalResultsSuppressed);
+  const externalDataUnavailable = data?.pages.some((page) => page.meta.externalDataUnavailable) ?? false;
+  const emptyCopy = emptyStateCopy(resolvedMode, externalResultsSuppressed, externalDataUnavailable);
 
   /** Đổi vị trí tìm kiếm thì bỏ khung vùng đã chốt, quay về tìm quanh vị trí mới. */
   const applyLocation = (next: UserLocation) => {

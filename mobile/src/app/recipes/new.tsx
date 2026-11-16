@@ -55,7 +55,7 @@ export default function CreateRecipeScreen() {
             if (getSubmitOutcome(result.revisionStatus) === 'DRAFT') {
               // Đã lưu nháp nhưng chưa gửi được: sang màn sửa, nơi gửi lại được.
               const feedback = getSubmitFeedback('DRAFT', 'công thức');
-              Alert.alert(feedback.title, feedback.message);
+              Alert.alert(feedback.title, result.submitFailure?.message ?? feedback.message);
               router.replace(`/recipes/${result.id}/edit` as Href);
               return;
             }
@@ -93,7 +93,7 @@ export default function CreateRecipeScreen() {
             </View>
             <Text className="text-xs leading-5 text-muted-foreground">
               {published
-                ? 'Giá trị dinh dưỡng của công thức này chưa được xác minh nên chưa hiển thị công khai. Ban biên tập vẫn có thể rà soát nội dung đã xuất bản.'
+                ? 'Các chỉ số dinh dưỡng là số do bạn khai và hiển thị kèm nhãn "Người dùng nhập", chưa được hệ thống hay Ban biên tập xác minh. Ban biên tập vẫn có thể rà soát nội dung đã xuất bản.'
                 : 'Nhằm đảm bảo 100% nguyên liệu thuần chay, dinh dưỡng an toàn và định lượng chính xác, công thức sẽ được Ban biên tập thẩm định trước khi xuất bản công khai.'}
             </Text>
           </View>

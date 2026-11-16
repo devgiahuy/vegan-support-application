@@ -76,6 +76,7 @@ export class RecipeDraftMapper {
       };
     }).filter((step) => step.instruction.length > 0);
     const provenance = pickField<Record<string, unknown> | null>(data, ['provenance'], null);
+    const timing = pickField<Record<string, unknown> | null>(data, ['suggestedTiming'], null);
 
     return {
       title: safeString(pickField(draft, ['title'], '')).trim(),
@@ -90,6 +91,13 @@ export class RecipeDraftMapper {
       assumptions: safeArray<string | null, string>(pickField(data, ['assumptions'], []), (note) => safeString(note)).filter(
         (note) => note.length > 0
       ),
+      suggestedTiming: timing
+        ? {
+            servings: Math.max(1, Math.trunc(safeNumber(timing.servings, 1))),
+            prepTimeMinutes: Math.max(0, Math.trunc(safeNumber(timing.prepTimeMinutes, 0))),
+            cookTimeMinutes: Math.max(0, Math.trunc(safeNumber(timing.cookTimeMinutes, 0))),
+          }
+        : null,
       provenance: provenance
         ? {
             provider: safeString(provenance.provider),

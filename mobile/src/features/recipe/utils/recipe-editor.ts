@@ -10,7 +10,7 @@ export const RECIPE_EDITOR_STEPS: { id: RecipeEditorStep; title: string; descrip
   { id: 'basics', title: 'Thông tin cơ bản', description: 'Tên món, mô tả ngắn, khẩu phần, thời gian và ảnh bìa.' },
   { id: 'ingredients', title: 'Nguyên liệu', description: 'Gõ tên rồi chọn từ gợi ý để liên kết danh mục chuẩn, kèm định lượng.' },
   { id: 'steps', title: 'Các bước nấu', description: 'Viết lần lượt từng bước, mỗi bước một thao tác. Có thể đổi thứ tự.' },
-  { id: 'classify', title: 'Phân loại', description: 'Danh mục, độ khó và cách hệ thống tính dinh dưỡng.' },
+  { id: 'classify', title: 'Phân loại', description: 'Danh mục, độ khó và dinh dưỡng mỗi khẩu phần.' },
   { id: 'review', title: 'Xem lại & gửi', description: 'Kiểm tra toàn bộ công thức trước khi gửi.' },
 ];
 
@@ -56,6 +56,30 @@ export interface EditorStep {
   affectedIngredientPositions?: number[];
 }
 
+/** 6 chỉ số dinh dưỡng mỗi khẩu phần do tác giả nhập (khoá trùng contract backend, đồng bộ `RECIPE_NUTRITION_FIELDS` của web). */
+export const RECIPE_NUTRITION_FIELDS = [
+  { key: 'calories', label: 'Năng lượng', unit: 'kcal', integer: true },
+  { key: 'proteinGrams', label: 'Protein', unit: 'g', integer: false },
+  { key: 'carbsGrams', label: 'Carbohydrate', unit: 'g', integer: false },
+  { key: 'fatGrams', label: 'Chất béo', unit: 'g', integer: false },
+  { key: 'fiberGrams', label: 'Chất xơ', unit: 'g', integer: false },
+  { key: 'vitaminB12Mcg', label: 'Vitamin B12', unit: 'mcg', integer: false },
+] as const;
+
+export type RecipeNutritionKey = (typeof RECIPE_NUTRITION_FIELDS)[number]['key'];
+
+/** Giá trị người dùng gõ cho từng chỉ số; ô trống = chưa nhập (không phải 0). */
+export type EditorNutrition = Record<RecipeNutritionKey, string>;
+
+/** Giá trị dinh dưỡng tác giả đã nhập, gửi lên backend (chỉ gồm chỉ số có nhập). */
+export type RecipeNutritionInput = Partial<Record<RecipeNutritionKey, number>>;
+
+export const MAX_NUTRITION_VALUE = 99_999;
+
+export function emptyNutrition(): EditorNutrition {
+  return { calories: '', proteinGrams: '', carbsGrams: '', fatGrams: '', fiberGrams: '', vitaminB12Mcg: '' };
+}
+
 export interface RecipeEditorValues {
   title: string;
   description: string;
@@ -66,6 +90,7 @@ export interface RecipeEditorValues {
   difficulty: RecipeDifficulty;
   ingredients: EditorIngredient[];
   steps: EditorStep[];
+  nutrition: EditorNutrition;
 }
 
 /** Dữ liệu ban đầu khi sửa công thức đã có. */
@@ -90,6 +115,8 @@ export interface RecipeFormInitial {
     position?: number;
   }[];
   steps?: Omit<EditorStep, 'key'>[];
+  /** Chỉ số tác giả đã nhập ở bản trước (`recipe.authorNutrition`); `null` = để trống. Không dùng `nutrition` đã công bố. */
+  authorNutrition?: Partial<Record<RecipeNutritionKey, number | null>> | null;
 }
 
 export function emptyIngredient(key: string): EditorIngredient {
@@ -122,7 +149,18 @@ export function toEditorValues(initial: RecipeFormInitial | undefined): RecipeEd
     difficulty: initial?.difficulty ?? RecipeDifficulty.MEDIUM,
     ingredients: ingredients.length > 0 ? ingredients : [emptyIngredient('new-ing-0')],
     steps: steps.length > 0 ? steps : [emptyStep('new-step-0')],
+    nutrition: toEditorNutrition(initial?.authorNutrition),
   };
+}
+
+/** Điền lại số tác giả đã nhập; số hệ thống tính ở bản trước không được mang sang. */
+function toEditorNutrition(author: RecipeFormInitial['authorNutrition']): EditorNutrition {
+  const nutrition = emptyNutrition();
+  for (const field of RECIPE_NUTRITION_FIELDS) {
+    const value = author?.[field.key];
+    if (typeof value === 'number' && Number.isFinite(value)) nutrition[field.key] = String(value);
+  }
+  return nutrition;
 }
 
 export interface RecipeFieldIssue {
@@ -145,11 +183,26 @@ function integerIssue(text: string, min: number, empty: string, notInteger: stri
   return null;
 }
 
+/** Contributor/Admin phải nhập đủ 6 chỉ số (backend vẫn kiểm tra lại theo role thật); Member để trống được. */
+function nutritionIssue(text: string, field: (typeof RECIPE_NUTRITION_FIELDS)[number], required: boolean): string | null {
+  if (text.trim() === '') return required ? `Nhập ${field.label.toLowerCase()} mỗi khẩu phần` : null;
+  const value = parseAmount(text);
+  if (Number.isNaN(value)) return 'Nhập số hợp lệ';
+  if (value < 0) return 'Không được âm';
+  if (value > MAX_NUTRITION_VALUE) return 'Giá trị quá lớn';
+  if (field.integer && !Number.isInteger(value)) return 'Nhập số nguyên';
+  return null;
+}
+
 /**
  * Kiểm tra giá trị form theo đúng luật của web (`recipe-form.schema.ts`) và thứ tự bước → field → dòng.
  * Thêm một luật mobile cần cho backend: `body` dựng từ các bước phải đủ 20 ký tự.
+ * `requireNutrition`: Contributor/Admin bắt buộc nhập đủ 6 chỉ số dinh dưỡng (`RECIPE_NUTRITION_REQUIRED`).
  */
-export function validateRecipeEditor(values: RecipeEditorValues): RecipeFieldIssue[] {
+export function validateRecipeEditor(
+  values: RecipeEditorValues,
+  options: { requireNutrition?: boolean } = {}
+): RecipeFieldIssue[] {
   const issues: RecipeFieldIssue[] = [];
   const add = (step: RecipeContentStep, path: string, message: string | null) => {
     if (message) issues.push({ path, step, message });
@@ -182,6 +235,9 @@ export function validateRecipeEditor(values: RecipeEditorValues): RecipeFieldIss
   }
 
   add('classify', 'categoryId', values.categoryId ? null : 'Chọn danh mục món ăn');
+  for (const field of RECIPE_NUTRITION_FIELDS) {
+    add('classify', `nutrition.${field.key}`, nutritionIssue(values.nutrition[field.key], field, options.requireNutrition === true));
+  }
   return issues;
 }
 
@@ -251,6 +307,18 @@ export function linkedIngredientIds(ingredients: EditorIngredient[]): Map<string
  * Giá trị form → payload `CreateRecipeInput`. Vị trí nguyên liệu bị đổi/xóa được dịch lại cho
  * `affectedIngredientPositions` của từng bước; tham chiếu tới nguyên liệu đã xóa bị bỏ.
  */
+/** Ô trống bị bỏ qua (backend tự tính cho Member); không biến ô trống thành 0. */
+export function buildNutritionInput(nutrition: EditorNutrition): RecipeNutritionInput {
+  const input: RecipeNutritionInput = {};
+  for (const field of RECIPE_NUTRITION_FIELDS) {
+    const text = nutrition[field.key];
+    if (text.trim() === '') continue;
+    const value = parseAmount(text);
+    if (Number.isFinite(value)) input[field.key] = value;
+  }
+  return input;
+}
+
 export function buildRecipeInput(
   values: RecipeEditorValues,
   extras: { coverAssetId?: string; tags?: string[] }
@@ -281,6 +349,7 @@ export function buildRecipeInput(
     prepTimeMinutes: Math.trunc(parseAmount(values.prepTime)),
     cookTimeMinutes: Math.trunc(parseAmount(values.cookTime)),
     difficulty: values.difficulty,
+    nutrition: buildNutritionInput(values.nutrition),
     ingredients: values.ingredients.map((ingredient) => ({
       displayName: ingredient.name.trim(),
       amount: parseAmount(ingredient.amount),

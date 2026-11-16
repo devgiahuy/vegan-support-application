@@ -43,5 +43,7 @@ export interface RecipeDraftSuggestion {
   steps: RecipeDraftStep[];
   confidence: number | null;
   assumptions: string[];
+  /** Ước tính riêng của AI; chỉ để hiển thị, không ghi đè giá trị tác giả đã nhập. `null` khi BE không trả. */
+  suggestedTiming: { servings: number; prepTimeMinutes: number; cookTimeMinutes: number } | null;
   provenance: { provider: string; model: string; templateVersion: string } | null;
 }

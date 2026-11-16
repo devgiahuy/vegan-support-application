@@ -47,6 +47,12 @@ export interface ReviewNutritionMetric {
   finalOrigin: ReviewNutritionOrigin | null;
   finalOriginLabel: string;
   isMissing: boolean;
+  /** Giá trị tác giả đã nhập; `null` khi để trống. Khi bỏ sửa tay, giá trị cuối quay về số này (nếu có). */
+  authorValue: number | null;
+  /** Độ lệch giữa số tác giả nhập và ước tính hệ thống, làm tròn %; `null` khi thiếu một trong hai. */
+  deviationPercent: number | null;
+  /** Lệch quá 30%: chỉ là tín hiệu để kiểm tra lại, không chặn duyệt. */
+  deviationWarning: boolean;
 }
 
 export interface ReviewNutritionUncoveredIngredient {

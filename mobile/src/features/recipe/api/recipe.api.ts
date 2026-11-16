@@ -5,7 +5,10 @@ import { recipeMapper } from '../mappers/recipe.mapper';
 import { stepsToBody } from '../utils/recipe-body';
 import type { RecipeDetailResponseDto, RecipeListResponseDto } from '../types/recipe.dto';
 import type { RelatedPostsResponseDto } from '@/features/post/types/post.dto';
-import type { Recipe, RecipePaginationResult } from '../types/recipe.model';
+import type { Recipe, RecipePaginationResult, RecipeSubmitFailure } from '../types/recipe.model';
+import type { RecipeNutritionInput } from '../utils/recipe-editor';
+import { getContentErrorMessage } from '../utils/recipe-errors';
+import { getApiErrorCode } from '@/lib/api-error';
 
 export interface RecipeQueryParams {
   page?: number;
@@ -52,6 +55,11 @@ export interface CreateRecipeInput {
   prepTimeMinutes: number;
   cookTimeMinutes: number;
   difficulty: RecipeDifficulty;
+  /**
+   * 6 chỉ số mỗi khẩu phần tác giả đã nhập; chỉ gồm ô có giá trị. Contributor/Admin phải có đủ 6
+   * khi gửi (backend trả `422 RECIPE_NUTRITION_REQUIRED` nếu thiếu), Member để trống được.
+   */
+  nutrition?: RecipeNutritionInput;
   ingredients: CreateRecipeIngredientInput[];
   steps: CreateRecipeStepInput[];
 }
@@ -77,6 +85,7 @@ function buildRecipePayload(input: CreateRecipeInput) {
       prepTimeMinutes: input.prepTimeMinutes,
       cookTimeMinutes: input.cookTimeMinutes,
       difficulty: input.difficulty,
+      ...(input.nutrition && Object.keys(input.nutrition).length > 0 ? { nutrition: input.nutrition } : {}),
       ingredients: input.ingredients.map((ing) => ({
         ...(ing.ingredientId ? { ingredientId: ing.ingredientId } : {}),
         displayName: ing.displayName,
@@ -94,6 +103,14 @@ function buildRecipePayload(input: CreateRecipeInput) {
           : {}),
       })),
     },
+  };
+}
+
+/** Lý do bước `POST /posts/:id/submit` thất bại sau khi bản nháp đã được lưu (ví dụ `RECIPE_NUTRITION_REQUIRED`). */
+function toSubmitFailure(error: unknown): RecipeSubmitFailure {
+  return {
+    code: getApiErrorCode(error) ?? null,
+    message: getContentErrorMessage(error, 'Công thức đã được lưu nhưng chưa gửi được. Hãy kiểm tra rồi gửi lại.'),
   };
 }
 
@@ -150,10 +167,10 @@ export const recipeApi = {
           { revisionId, expectedVersion }
         );
         return recipeMapper.toModel(submitRes.data.data);
-      } catch {
-        // Tạo thành công nhưng gửi duyệt thất bại — vẫn trả về bản draft vừa tạo,
-        // người dùng có thể thử gửi duyệt lại sau (chưa có màn quản lý draft riêng).
-        return recipeMapper.toModel(created);
+      } catch (error) {
+        // Tạo thành công nhưng gửi duyệt thất bại — vẫn trả về bản draft vừa tạo (kèm lý do) để màn hình
+        // chuyển sang sửa và gửi lại, tránh tạo thêm một bài trùng.
+        return { ...recipeMapper.toModel(created), submitFailure: toSubmitFailure(error) };
       }
     }
     return recipeMapper.toModel(created);
@@ -178,8 +195,8 @@ export const recipeApi = {
           { revisionId, expectedVersion: newExpectedVersion }
         );
         return recipeMapper.toModel(submitRes.data.data);
-      } catch {
-        return recipeMapper.toModel(updated);
+      } catch (error) {
+        return { ...recipeMapper.toModel(updated), submitFailure: toSubmitFailure(error) };
       }
     }
     return recipeMapper.toModel(updated);

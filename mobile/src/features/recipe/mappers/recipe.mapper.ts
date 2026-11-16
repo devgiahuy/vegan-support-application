@@ -25,6 +25,7 @@ import type {
   RecipeIngredient,
   RecipeInstructionStep,
   NutritionFact,
+  RecipeAuthorNutrition,
   TraditionWarning,
   DietCompatibility,
   RecipeEligibility,
@@ -103,6 +104,18 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       vitaminB12: nullableNumber(nutritionDto?.vitaminB12Mcg),
     };
 
+    const authorDto = detail?.authorNutrition ?? null;
+    const authorNutrition: RecipeAuthorNutrition | null = authorDto
+      ? {
+          calories: nullableNumber(authorDto.calories),
+          proteinGrams: nullableNumber(authorDto.proteinGrams),
+          carbsGrams: nullableNumber(authorDto.carbsGrams),
+          fatGrams: nullableNumber(authorDto.fatGrams),
+          fiberGrams: nullableNumber(authorDto.fiberGrams),
+          vitaminB12Mcg: nullableNumber(authorDto.vitaminB12Mcg),
+        }
+      : null;
+
     const ingredients: RecipeIngredient[] = safeArray<RecipeIngredientDto>(
       detail?.ingredients
     ).map((item, index) => ({
@@ -175,6 +188,7 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       difficultyLabel: getDifficultyLabel(difficulty),
       mealPlannerEligible: safeBoolean(detail?.mealPlannerEligible, false),
       nutrition,
+      authorNutrition,
       ingredients,
       steps,
       body,

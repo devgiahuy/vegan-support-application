@@ -132,9 +132,22 @@ function MetricRow({
           <Text className="text-base font-bold text-foreground">{formatNutritionValue(metric.finalValue, metric.unit)}</Text>
         )}
       </View>
+      {metric.authorValue !== null ? (
+        <Text className="text-[11px] leading-4 text-muted-foreground">
+          Tác giả nhập: {formatNutritionValue(metric.authorValue, metric.unit)} · Hệ thống ước tính: {formatNutritionValue(metric.estimateValue, metric.unit)}
+        </Text>
+      ) : null}
+      {metric.deviationWarning && metric.deviationPercent !== null ? (
+        <View className="flex-row items-start gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5">
+          <CircleAlert size={13} color={colors.warning} />
+          <Text className="flex-1 text-[11px] leading-4 text-amber-800 dark:text-amber-300">
+            Số tác giả nhập lệch {metric.deviationPercent}% so với ước tính của hệ thống. Hãy kiểm tra lại trước khi duyệt.
+          </Text>
+        </View>
+      ) : null}
       {metric.override ? (
         <Text className="text-[11px] leading-4 text-muted-foreground">
-          Sửa bởi {metric.override.updatedBy.displayName} lúc {metric.override.formattedUpdatedAt}. Ước tính gốc: {formatNutritionValue(metric.estimateValue, metric.unit)}
+          Sửa bởi {metric.override.updatedBy.displayName} lúc {metric.override.formattedUpdatedAt}. {metric.authorValue !== null ? `Số tác giả nhập: ${formatNutritionValue(metric.authorValue, metric.unit)}` : `Ước tính gốc: ${formatNutritionValue(metric.estimateValue, metric.unit)}`}
         </Text>
       ) : null}
       {metric.isMissing && metric.partialValue !== null ? (
@@ -146,7 +159,7 @@ function MetricRow({
       {metric.override && !editing ? (
         <Pressable accessibilityRole="button" disabled={clearing} onPress={onClearOverride} className={cn('flex-row items-center gap-1 self-start py-1', clearing && 'opacity-50')}>
           <Undo2 size={12} color={colors.primary} />
-          <Text className="text-[11px] font-semibold text-primary">Bỏ sửa tay</Text>
+          <Text className="text-[11px] font-semibold text-primary">{metric.authorValue !== null ? 'Bỏ sửa tay (về số tác giả nhập)' : 'Bỏ sửa tay'}</Text>
         </Pressable>
       ) : null}
     </View>

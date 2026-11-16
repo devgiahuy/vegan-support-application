@@ -1,4 +1,11 @@
-import { getApiErrorCode, getApiErrorMessage } from '@/lib/api-error';
+import { getApiErrorCode, getApiErrorFields, getApiErrorMessage } from '@/lib/api-error';
+
+/** Tên nguyên liệu chưa xác minh từ `fields.unverifiedIngredients` (bỏ phần tử không phải chuỗi). */
+function unverifiedIngredientNames(error: unknown): string[] {
+  const raw = getApiErrorFields(error)?.unverifiedIngredients;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).map((item) => item.trim());
+}
 
 /** Thông báo lỗi nghiệp vụ cho các thao tác thực đơn (luôn dựa vào `error.code`, không dựa vào text). */
 export function getMealPlanErrorMessage(error: unknown): string {
@@ -15,6 +22,12 @@ export function getMealPlanErrorMessage(error: unknown): string {
       return 'Không có món thay thế phù hợp với luật ăn và mục tiêu năng lượng.';
     case 'MEAL_PLAN_HARD_CONSTRAINT_VIOLATION':
       return 'Món này vi phạm chế độ ăn, dị ứng hoặc nguyên liệu bạn đã loại trừ nên không thể thêm vào thực đơn.';
+    case 'MEAL_PLAN_INGREDIENTS_UNVERIFIED': {
+      // Chưa xác minh được ≠ vi phạm: món vẫn bị chặn nhưng không được nói là vi phạm chế độ ăn.
+      const names = unverifiedIngredientNames(error);
+      const detail = names.length > 0 ? ` (${names.join(', ')})` : '';
+      return `Chưa xác minh được nguyên liệu của món này${detail} nên chưa thể kiểm tra dị ứng, nguyên liệu cần tránh và chế độ ăn. Đây không phải vi phạm đã xác định. Hãy liên kết nguyên liệu với danh mục chuẩn hoặc chọn món khác.`;
+    }
     case 'HEALTH_PROFILE_INCOMPLETE':
       return 'Hãy cập nhật hồ sơ sức khỏe trước khi tạo thực đơn.';
     case 'DIET_SCHEDULE_REQUIRED':

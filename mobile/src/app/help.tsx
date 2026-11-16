@@ -31,7 +31,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Tôi có thể chia sẻ công thức món chay của mình không?',
-    a: 'Được. Bạn đăng nhập rồi gửi công thức tại mục "Khám phá" → "Đăng công thức". Công thức sẽ được kiểm duyệt trước khi hiển thị cho cộng đồng.',
+    a: 'Được. Bạn đăng nhập rồi gửi công thức tại mục "Khám phá" → "Đăng công thức". Đội ngũ Người đóng góp (Contributor) và Ban quản trị sẽ hỗ trợ kiểm duyệt để công thức sớm xuất hiện cho cộng đồng.',
   },
   {
     q: 'Trợ lý AI của VeggieConnect có thể giúp tôi những gì?',
