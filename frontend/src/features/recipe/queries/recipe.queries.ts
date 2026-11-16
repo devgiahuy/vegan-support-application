@@ -17,7 +17,8 @@ export const RECIPE_QUERY_KEYS = {
   list: (params?: RecipeQueryParams, userId?: string) =>
     [...RECIPE_QUERY_KEYS.lists(), userId ?? 'guest', params] as const,
   details: () => [...RECIPE_QUERY_KEYS.all, 'detail'] as const,
-  detail: (idOrSlug: string) => [...RECIPE_QUERY_KEYS.details(), idOrSlug] as const,
+  detail: (idOrSlug: string, viewerId?: string) =>
+    [...RECIPE_QUERY_KEYS.details(), idOrSlug, ...(viewerId ? [viewerId] : [])] as const,
 };
 
 /**
@@ -38,11 +39,12 @@ export function useRecipesQuery(params?: RecipeQueryParams, options?: { enabled?
  * Hook truy vấn chi tiết một công thức nấu ăn
  */
 export function useRecipeDetailQuery(idOrSlug: string) {
+  const viewerId = useAuthStore((state) => (state.isAuthenticated ? state.user?.id : undefined));
   return useQuery({
-    queryKey: RECIPE_QUERY_KEYS.detail(idOrSlug),
+    queryKey: RECIPE_QUERY_KEYS.detail(idOrSlug, viewerId ?? 'guest'),
     queryFn: () => recipeApi.getRecipeDetail(idOrSlug),
     enabled: Boolean(idOrSlug),
-    staleTime: 60 * 1000,
+    staleTime: 0,
   });
 }
 

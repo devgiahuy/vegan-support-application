@@ -324,7 +324,7 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
           </div> */}
 
           {/* CẢNH BÁO DỊ ỨNG NỔI BẬT */}
-          <RecipeAllergenHighlight allergens={allergens} />
+          <RecipeAllergenHighlight warnings={recipe.allergyWarnings} />
 
           {/* INGREDIENTS CHECKLIST SECTION */}
           <Card className="border-border/60 shadow-sm overflow-hidden">

@@ -65,6 +65,68 @@ function backendRecipeDto(): RecipeDetailDto {
   };
 }
 
+describe('personal recipe allergy warnings', () => {
+  it('never converts the recipe’s SOY metadata into a personal warning', () => {
+    const dto = backendRecipeDto();
+    dto.recipe = { ...dto.recipe, allergenCodes: ['SOY'], allergyWarnings: [] };
+    const recipe = recipeMapper.toModel(dto);
+    expect(recipe.allergens).toEqual([{ code: 'SOY', name: 'Đậu nành' }]);
+    expect(recipe.allergyWarnings).toEqual([]);
+    delete dto.recipe.allergyWarnings;
+    expect(recipeMapper.toModel(dto).allergyWarnings).toEqual([]);
+  });
+
+  it('maps only backend matches, including a specific mushroom allergy', () => {
+    const dto = backendRecipeDto();
+    dto.recipe = {
+      ...dto.recipe,
+      allergenCodes: ['SOY', 'PEANUT'],
+      allergyWarnings: [
+        {
+          kind: 'ALLERGEN',
+          identifier: 'PEANUT',
+          label: null,
+          ingredientNames: ['Sốt đậu phộng', null],
+        },
+        {
+          kind: 'INGREDIENT',
+          identifier: 'shiitake-id',
+          label: 'Nấm hương tươi (đông cô)',
+          ingredientNames: ['Nấm hương'],
+        },
+      ],
+    };
+    expect(recipeMapper.toModel(dto).allergyWarnings).toEqual([
+      {
+        kind: 'ALLERGEN',
+        identifier: 'PEANUT',
+        label: 'Đậu phộng (lạc)',
+        ingredientNames: ['Sốt đậu phộng'],
+      },
+      {
+        kind: 'INGREDIENT',
+        identifier: 'shiitake-id',
+        label: 'Nấm hương tươi (đông cô)',
+        ingredientNames: ['Nấm hương'],
+      },
+    ]);
+  });
+
+  it('ignores malformed warning entries without inferring a match', () => {
+    const dto = backendRecipeDto();
+    dto.recipe = {
+      ...dto.recipe,
+      allergyWarnings: [
+        null,
+        {},
+        { kind: 'OTHER', identifier: 'SOY' },
+        { kind: 'INGREDIENT', identifier: 'id', label: '' },
+      ],
+    };
+    expect(recipeMapper.toModel(dto).allergyWarnings).toEqual([]);
+  });
+});
+
 describe('RecipeMapper', () => {
   it('maps backend postSchema recipe to Recipe Model correctly', () => {
     const model = recipeMapper.toModel(backendRecipeDto());

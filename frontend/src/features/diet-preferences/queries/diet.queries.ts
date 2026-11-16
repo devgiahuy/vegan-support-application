@@ -40,7 +40,7 @@ export const useSaveDietPreferencesMutation = () => {
       queryClient.setQueryData(DIET_QUERY_KEYS.preference(), preference);
       queryClient.invalidateQueries({ queryKey: DIET_QUERY_KEYS.all });
       queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEYS.detail() });
-      queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.lists() });
+      queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.all });
       queryClient.invalidateQueries({ queryKey: RECOMMENDATION_KEYS.all });
       queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.all });
       for (const key of ['meal-plans', 'meal-programs', 'meal-analysis']) {
@@ -60,7 +60,7 @@ export const useSaveDietScheduleMutation = () => {
       queryClient.setQueryData(DIET_QUERY_KEYS.schedule(), schedule);
       queryClient.invalidateQueries({ queryKey: DIET_QUERY_KEYS.all });
       queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEYS.detail() });
-      queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.lists() });
+      queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.all });
       queryClient.invalidateQueries({ queryKey: RECOMMENDATION_KEYS.all });
       queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.all });
       for (const key of ['meal-plans', 'meal-programs', 'meal-analysis']) {

@@ -28,7 +28,9 @@ import type {
   UpdateRecipeRequestDto,
   AppliedConstraintsDto,
   RecipeEligibilityDto,
+  RecipeAllergyWarningDto,
 } from '../types/recipe.dto';
+import type { RecipeAllergyWarning } from '../types/recipe.model';
 import type { PostMediaDto, PostRevisionDto } from '@/features/post/types/post.dto';
 import {
   getAllergenName,
@@ -241,6 +243,25 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       code,
       name: getAllergenName(code),
     }));
+    const allergyWarnings = safeArray<RecipeAllergyWarningDto | null>(
+      pickField(detail, ['allergyWarnings'], null)
+    ).flatMap<RecipeAllergyWarning>((warning) => {
+      const kind = safeString(warning?.kind);
+      const identifier = safeString(warning?.identifier).trim();
+      if ((kind !== 'ALLERGEN' && kind !== 'INGREDIENT') || !identifier) return [];
+      const label = safeString(warning?.label).trim();
+      if (kind === 'INGREDIENT' && !label) return [];
+      return [
+        {
+          kind,
+          identifier,
+          label: kind === 'ALLERGEN' ? getAllergenName(label || identifier) : label,
+          ingredientNames: safeArray<unknown>(warning?.ingredientNames).filter(
+            (name): name is string => typeof name === 'string' && Boolean(name.trim())
+          ),
+        },
+      ];
+    });
 
     const revisionId = safeString(revision?.id);
     const version = safeNumber(pickField(dto, ['version'], 1));
@@ -317,6 +338,7 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       dietTag: undefined,
       allergenCodes,
       allergens,
+      allergyWarnings,
       traditionWarnings,
       dietCompatibilities,
       usageCount,

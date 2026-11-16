@@ -297,6 +297,22 @@ export class ContentRepository {
     return loadIngredientSafetyCatalog(this.prisma);
   }
 
+  findRecipeAllergyProfile(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        allergies: {
+          where: { active: true },
+          select: { allergenCode: true, label: true },
+        },
+        ingredientAllergies: {
+          where: { active: true },
+          select: { ingredientId: true, ingredient: { select: { canonicalName: true } } },
+        },
+      },
+    });
+  }
+
   findPublishedPost(id: string): Promise<PublishedPostRecord | null> {
     return this.prisma.post.findFirst({
       where: {

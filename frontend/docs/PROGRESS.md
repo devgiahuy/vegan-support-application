@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Rebase cảnh báo dị ứng lên main — Updated 2026-11-16
+
+Nhánh `fix/recipe-profile-allergy-warnings` được rebase lên `origin/main` (`394a8ac`), chỉ có một commit sửa dị ứng so với main. Giải quyết conflict BACKEND_INTEGRATION/PROGRESS bằng cách giữ cả cập nhật mobile/meal-program trên main và bản sửa hiện tại; integration tăng lên 4.79, không ghi đè changelog mobile 4.78. Sau rebase: frontend typecheck, 112 files / 874 tests và build đạt; các kiểm tra backend cô lập/served OpenAPI đạt, backend source không đổi so với lần đã qua lint/typecheck/build. Giữ nguyên % tính năng; diagram và `.DS_Store` không nằm trong commit. Chi tiết tại WORK-LOG.
+
 ## Làm tròn các chỉ số dinh dưỡng về tối đa 2 chữ số thập phân — Updated 2026-11-16
 
 Khắc phục lỗi dấu phẩy động (floating point precision error) hiển thị chuỗi thập phân dài bất thường (như `1975.8900000000003g` ở tinh bột / carbs):
@@ -32,6 +36,14 @@ Cập nhật nút lưu Bookmark trên thẻ công thức (`RecipeCardBookmark`) 
 ## Thông báo lỗi đăng nhập dạng Toast — Updated 2026-11-16
 
 Chuyển thông báo lỗi đăng nhập (sai mật khẩu, tài khoản bị khoá, lỗi hệ thống) trong `LoginForm` từ dạng inline alert box sang `toast.error` bằng Sonner. Form đăng nhập giữ thiết kế sạch sẽ, không bị đẩy thụt layout khi phát sinh lỗi. Field validation errors vẫn hiển thị dưới từng ô nhập. `tsc --noEmit` đạt 0 lỗi.
+
+## Cảnh báo dị ứng theo hồ sơ — Updated 2026-11-16
+
+Theo yêu cầu tiếp theo của người dùng, thay khối dị ứng chung bằng cảnh báo chỉ khi backend xác nhận trùng dị ứng đang bật trong hồ sơ. Đối chiếu mã nhóm, ID nguyên liệu cụ thể và thành phần con; khách/chưa khai báo/không có khớp không có banner, không có thông báo “an toàn”. Web nhận `allergyWarnings`, cache detail theo người xem và invalidate khi sửa hồ sơ. Backend gates/OpenAPI/sync, 12 checks cô lập cùng service/router/controller HTTP, frontend typecheck/scoped lint/871 tests/build và browser preview đạt. MongoDB local không chạy nên chưa có E2E hồ sơ thật. Không đổi % scaffold hoặc hard constraints. Mục làm rõ nhãn bên dưới là lần sửa trước, đã được yêu cầu này thay thế.
+
+## Làm rõ dị nguyên của công thức — Updated 2026-11-16
+
+Khối thông tin dị ứng ở chi tiết công thức ghi rõ đây là nhóm được ghi nhận trong món, chưa đối chiếu với hồ sơ dị ứng cá nhân. Giữ nhãn SOY/PEANUT theo dữ liệu món; trạng thái chưa ghi nhận chuyển sang thông tin trung tính, bỏ khẳng định “An toàn dinh dưỡng”. Typecheck, lint phần sửa, 864 tests và build đạt; bản render component thật với CSS dự án được kiểm tra ở desktop và 375px, ba trạng thái không tràn ngang. Chưa kiểm thử API/database thực vì MongoDB local không chạy. UC-02 giữ 95%; không đổi API hoặc logic lọc dị ứng.
 
 ## Đồng nhất kết quả theo bán kính — Updated 2026-11-14
 
@@ -521,6 +533,8 @@ Roadmap Phase 2 features are tracked only in `/docs/ROADMAP_PHASE_2.md`; they mu
 ## Lịch sử cập nhật (mỗi dòng = 1 lần agent sửa %)
 
 | Ngày (UTC) | Task | % cũ → % mới | Lý do |
+| 2026-11-16 | Chỉ cảnh báo khi trùng dị ứng cá nhân | UC-02 95% → 95% | Backend đối chiếu hồ sơ/graph, DTO/Model/Mapper và cache theo tài khoản; guest/không khớp ẩn toàn bộ banner. Backend gates, FE 871 tests/build và preview đạt; E2E DB thật chưa chạy. |
+| 2026-11-16 | Làm rõ dị nguyên công thức và hồ sơ cá nhân | UC-02 95% → 95% | Sửa nhãn/mô tả, bỏ thông điệp an toàn khi thiếu dữ liệu; typecheck, scoped lint, 864 tests, build và browser component preview đạt. Không thêm đối chiếu hồ sơ hoặc thay đổi backend. |
 | 2026-11-08 | Sửa luồng chat AI | UC-07 95% → 95% | Sửa xác thực SSE, refresh và quota; kiểm thử end-to-end còn chờ MongoDB. |
 | 2026-11-05 | Kiểm tra lại response và lỗi API | % các feature giữ nguyên | Bỏ fixture fallback trên `/posts` READY, phân biệt 404 chưa phân tích với 409 stale, kiểm tra envelope meal program và bỏ upload signature cũ; 783 tests, typecheck, build pass. |
 | 2026-11-05 | Rà soát cuối response frontend | Phase 15/17/19 100% → 100% | Sửa `data[]`/`meta` meal program; loại fallback sai ở custom meal và storage; 787 tests, typecheck, scoped lint, build 47 routes pass. |

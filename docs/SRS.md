@@ -1,8 +1,8 @@
 # Software Requirements Specification — Vegan Support Application
 
-**Version:** 1.8
+**Version:** 1.9
 
-**Updated:** 2026-11-06
+**Updated:** 2026-11-16
 
 **Status:** Approved product baseline
 
@@ -84,6 +84,8 @@ When a user selects a diet pattern or tradition, the backend provides a default 
 Restaurant directory discovery and place details are an approved exception (2026-10-25): they do not automatically apply the personal dietary profile. Restaurant search applies only filters explicitly selected for that request; provider labels do not establish dietary or allergy compatibility.
 
 User-approved 2026-10-25 allergy/composition extension: members select allergies by catalog names and approved synonyms, without entering internal codes. Backend validates active definitions and checks reviewed ingredient components transitively. Unknown, partial, inactive or cyclic composition cannot pass any active diet, allergy, explicit ingredient exclusion or tradition constraint. Exact packaged-product/formulation scope, source/license/version and review audit are required for completeness; AI cannot promote composition. Existing demo data is normalized directly, without a legacy manual-code UI. Stored-plan analysis and program confirmation recheck current dietary constraints.
+
+User-approved 2026-11-16 recipe detail warning: show an allergy warning only for a known match between that recipe and the authenticated viewer's active saved allergy groups or specific ingredient allergies, including canonical transitive components. Guests, profiles without allergies and recipes without a known match show no allergy banner. Do not substitute the recipe's complete allergen list for a personal warning or label absence of warnings as proof of safety. Existing hard-constraint filtering and planning enforcement remain unchanged.
 
 ## 5. Functional requirements
 
