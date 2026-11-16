@@ -45,7 +45,9 @@ export function BookmarkButton({
       aria-label={bookmarked ? 'Gỡ lưu' : saveLabel}
       className={cn('gap-1.5', className)}
     >
-      <Bookmark className={cn(bookmarked && 'fill-current')} />
+      <Bookmark
+        className={cn('h-4 w-4 shrink-0 transition-colors', bookmarked && 'fill-current')}
+      />
       {!iconOnly && <span>{bookmarked ? savedLabel : saveLabel}</span>}
     </Button>
   );

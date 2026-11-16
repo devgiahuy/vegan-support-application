@@ -1,5 +1,13 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Đổi màu tag / nút lưu Bookmark — Updated 2026-11-16
+
+Cập nhật nút lưu Bookmark trên thẻ công thức (`RecipeCardBookmark`) và component `BookmarkButton` dùng màu xanh thương hiệu (`text-primary` / `bg-primary`): icon bookmark màu xanh ở trạng thái chưa lưu, hover chuyển nền xanh với icon màu trắng rõ nét (sửa lỗi icon bị ẩn do trùng màu xanh khi hover), và chuyển thành nút nền xanh với icon tô trắng khi đã lưu bookmark. `tsc --noEmit` đạt 0 lỗi.
+
+## Thông báo lỗi đăng nhập dạng Toast — Updated 2026-11-16
+
+Chuyển thông báo lỗi đăng nhập (sai mật khẩu, tài khoản bị khoá, lỗi hệ thống) trong `LoginForm` từ dạng inline alert box sang `toast.error` bằng Sonner. Form đăng nhập giữ thiết kế sạch sẽ, không bị đẩy thụt layout khi phát sinh lỗi. Field validation errors vẫn hiển thị dưới từng ô nhập. `tsc --noEmit` đạt 0 lỗi.
+
 ## Đồng nhất kết quả theo bán kính — Updated 2026-11-14
 
 SerpApi radius <=5km dùng chung bounded snapshot và lọc khoảng cách thật; partial retry giữ những quán đã tìm được. FE làm mới partial query khi quay lại và phân biệt lỗi dữ liệu với không có quán. Key mới của người dùng đã nạp vào runtime; API/browser thật quanh địa chỉ công khai Chi Cao đạt 15→12→39→12 quán cho 3→1→5→1km, nested IDs và chọn Chi Cao trên map 1km. Backend gates/OpenAPI/sync, chín isolated groups, FE typecheck/scoped lint/864 tests/build đạt. Truncation vẫn hiển thị, không cam kết phủ hết quán ngoài thực tế; không đổi % scaffold/mobile/schema/seed. Chi tiết tại WORK-LOG.

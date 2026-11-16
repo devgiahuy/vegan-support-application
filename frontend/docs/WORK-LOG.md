@@ -1,5 +1,34 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-16] — Sửa lỗi mất icon khi hover nút Bookmark
+
+- **Yêu cầu:** Khắc phục lỗi khi hover vào nút Bookmark ở góc thẻ món ăn thì biến thành vòng tròn xanh đặc, mất icon bên trong.
+- **Nguyên nhân:** Icon `<Bookmark>` trong `BookmarkButton` bị gắn cứng class `text-primary` khiến khi hover (nút nhận nền `hover:bg-primary`), màu của icon không chuyển sang trắng mà tiếp tục giữ màu xanh `text-primary`, dẫn đến hiện tượng icon bị chìm/trùng màu nền 100%.
+- **Thay đổi:**
+  - `src/features/community/components/bookmark-button.tsx`: Gỡ bỏ class `text-primary` gán trực tiếp lên icon `<Bookmark>`, cho phép icon kế thừa `currentColor` linh hoạt từ parent button (bình thường màu xanh theo button, khi hover nhận `text-primary-foreground` trắng nổi bật).
+- **Kiểm chứng:**
+  - `npx tsc --noEmit --incremental false`: 0 lỗi type.
+
+## [2026-11-16] — Đổi màu tag / nút lưu Bookmark thành màu xanh
+
+- **Yêu cầu:** Chỉnh màu tag / nút lưu bookmark (ở góc thẻ công thức món ăn) thành màu xanh thương hiệu.
+- **Thay đổi:**
+  - `src/features/recipe/components/recipe-card-bookmark.tsx`: Cập nhật style của nút `BookmarkButton` trên thẻ công thức món ăn:
+    - Trạng thái chưa lưu: Nền kính mờ `bg-background/90`, icon bookmark màu xanh `text-primary`, hover chuyển nền xanh `hover:bg-primary hover:text-primary-foreground`.
+    - Trạng thái đã lưu: Nền màu xanh `bg-primary text-primary-foreground`, icon bookmark tô đầy màu trắng (`fill-current`), hover màu xanh đậm hơn `hover:bg-primary/90`.
+  - `src/features/community/components/bookmark-button.tsx`: Cập nhật icon `Bookmark` khi chưa lưu mặc định nhận màu xanh `text-primary` (kích thước `h-4 w-4`).
+- **Kiểm chứng:**
+  - `npx tsc --noEmit --incremental false`: 0 lỗi type.
+
+## [2026-11-16] — Chuyển thông báo lỗi đăng nhập sang Sonner Toast
+
+- **Yêu cầu:** Điều chỉnh giao diện đăng nhập: sử dụng thông báo toast (`toast.error`) khi đăng nhập thất bại (sai thông tin, tài khoản bị khoá, lỗi hệ thống) thay vì hiển thị khối cảnh báo inline trên form điền thông tin.
+- **Thay đổi:**
+  - `src/features/auth/components/login-form.tsx`: Loại bỏ state `formError` và khối `<div role="alert">...</div>` inline; chuyển các thông báo lỗi (`INVALID_CREDENTIALS`, `ACCOUNT_LOCKED`, `ACCOUNT_BANNED`, lỗi hệ thống chung) sang gọi `toast.error` từ thư viện `sonner`. Giữ lại mapping lỗi field validation trực tiếp vào input field (`form.setError`).
+- **Kiểm chứng:**
+  - `npx tsc --noEmit --incremental false`: 0 lỗi type.
+  - Đảm bảo Toaster đã được nạp sẵn tại layout cấp cao nhất (`src/app/layout.tsx`).
+
 ## [2026-11-14] — Giữ quán gần khi đổi bán kính 1–3–5 km
 
 - **Yêu cầu:** Tăng 3→5km mất quán, giảm 3→1km mất quán Chi Cao cách 132m; tiếp tục push và merge PR #59 vào dev.
