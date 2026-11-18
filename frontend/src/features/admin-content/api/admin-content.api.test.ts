@@ -42,4 +42,12 @@ describe('admin content response mapping', () => {
     expect(result.rows).toHaveLength(2);
     expect(result).toMatchObject({ totalItems: 5, totalPages: 2, source: 'published-only' });
   });
+
+  it('passes silent: true when submitting content for review', async () => {
+    const postSpy = vi.spyOn(api, 'post').mockResolvedValueOnce({ data: { success: true } });
+
+    await adminContentApi.submitContent('p1', { revisionId: 'rev-1', expectedVersion: 2 });
+
+    expect(postSpy.mock.calls[0]?.[2]).toEqual({ silent: true });
+  });
 });

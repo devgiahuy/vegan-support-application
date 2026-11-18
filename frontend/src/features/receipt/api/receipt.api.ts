@@ -21,7 +21,8 @@ export const receiptApi = {
   createJob: async (input: CreateReceiptJobInput): Promise<ReceiptJob> => {
     const payload = receiptMapper.toCreateJobDto(input);
     const res = await api.post<ReceiptJobEnvelopeDto>(RECEIPT_JOBS_ENDPOINTS.JOBS, payload, {
-      showErrorToast: true,
+      // Component upload zone tự hiển thị toast lỗi (gồm cả lỗi upload & tạo job); tránh toast trùng từ interceptor.
+      silent: true,
     });
     return receiptMapper.toModel(res.data.data);
   },

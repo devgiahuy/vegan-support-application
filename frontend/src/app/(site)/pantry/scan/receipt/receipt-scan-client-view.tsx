@@ -45,7 +45,7 @@ export function ReceiptScanClientView() {
   const handleJobCreated = (newJob: ReceiptJob) => {
     setActiveJobId(newJob.id);
     if (typeof window !== 'undefined') {
-      window.history.replaceState(null, '', `/receipts/scan?jobId=${newJob.id}`);
+      window.history.replaceState(null, '', `/pantry/scan/receipt?jobId=${newJob.id}`);
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
   };
@@ -54,7 +54,7 @@ export function ReceiptScanClientView() {
     setActiveJobId(null);
     setConfirmationDiff(null);
     if (typeof window !== 'undefined') {
-      window.history.replaceState(null, '', '/receipts/scan');
+      window.history.replaceState(null, '', '/pantry/scan/receipt');
     }
   };
 
@@ -62,7 +62,7 @@ export function ReceiptScanClientView() {
     setActiveJobId(null);
     setConfirmationDiff(null);
     if (typeof window !== 'undefined') {
-      window.history.replaceState(null, '', '/receipts/scan');
+      window.history.replaceState(null, '', '/pantry/scan/receipt');
     }
   };
 

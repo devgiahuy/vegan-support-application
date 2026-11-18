@@ -7,6 +7,80 @@
 - **Verify sau rebase:** `npx tsc --noEmit --incremental false` pass; `npm test` 112 files / 874 tests pass; `npm run build` pass. Script cô lập `/tmp/veggie-personal-allergy/verify.mjs` kiểm tra matching, viewer/profile update, router/controller response/cache headers và served OpenAPI so với file generated đều pass. Backend source/package không đổi so với commit trước rebase đã qua lint/typecheck/build. Không còn conflict markers; `git diff --check` pass.
 - **PROGRESS / giới hạn:** Không đổi % scaffold. Local MongoDB/Docker daemon vẫn không chạy, chưa có E2E trên hồ sơ thật; PR ghi rõ giới hạn này. Chuẩn bị push nhánh và mở PR thường vào main; chưa yêu cầu merge.
 
+## [2026-11-18] — Chuẩn hóa và khắc phục toàn bộ lỗi hiển thị nhiều toast trùng lặp trên Frontend
+
+- **Yêu cầu:** Rà soát toàn bộ `frontend/src` (121 mutation hook, API module và component) để khắc phục triệt để các điểm hiển thị nhiều toast trùng lặp.
+- **Thay đổi thực hiện:**
+  - **Nhóm 1 — Loại bỏ 2 toast thành công trùng lặp:**
+    - `src/features/ai-artifacts/components/save-artifact-button.tsx`: Gỡ `toast.success` trùng lặp (đã có trong `useCreateAiArtifactMutation.onSuccess`).
+    - `src/features/profile/queries/profile.queries.ts` & `src/features/profile/components/basic-profile-form.tsx`: Thêm tùy chọn `silent?: boolean` cho `useUpdateBasicProfileMutation` (không gửi kèm lên API) để thao tác đổi/xóa ảnh đại diện chỉ hiện 1 toast cụ thể.
+  - **Nhóm 2 — Loại bỏ 2 toast lỗi trùng lặp (`showErrorToast: true` vs `onError`/`catch`):**
+    - `src/features/ingredient-vision/api/ingredient-recognition.api.ts`, `fridge-upload-zone.tsx`, `src/features/receipt/api/receipt.api.ts`, `receipt-upload-zone.tsx`: Đổi `createJob` sang `{ silent: true }` và dùng `getApiErrorMessage` tại `catch` của upload zone.
+    - `src/features/admin-content/api/admin-content.api.ts`: Đổi `submitContent` sang `{ silent: true }`.
+    - `src/features/community/api/community.api.ts`, `src/features/meal-plan/api/meal-plan.api.ts`, `src/features/meal-analysis/api/meal-analysis.api.ts`, `src/features/chat/api/chat.api.ts`, `src/features/receipt/api/shopping.api.ts`, `src/features/recommendation/api/recommendation.api.ts`: Đổi toàn bộ mutation API có hook `onError` tự toast sang `{ silent: true }`.
+    - `src/features/meal-analysis/queries/meal-analysis.queries.ts`, `src/features/chat/queries/chat.queries.ts`, `src/features/receipt/queries/shopping.queries.ts`: Dùng `getApiErrorMessage` / `toastApiError` và loại bỏ `error: any` tại `shopping.queries.ts`.
+  - **Nhóm 3 — Gom toast khi chọn nhiều ảnh không hợp lệ cùng lúc:**
+    - `src/features/storage/hooks/use-selected-upload-images.ts`: Thêm `formatInvalidUploadFilesMessage` để gom toàn bộ lỗi validate nhiều file thành đúng 1 toast tóm tắt.
+  - **Unit Tests:** Cập nhật `community.api.test.ts`, `meal-plan.api.test.ts`, `meal-analysis.api.test.ts`, `chat.api.test.ts`, `recommendation.api.test.ts`, `admin-content.api.test.ts`; bổ sung `use-selected-upload-images.test.ts` (4 test) và `shopping.api.test.ts` (1 test).
+- **Kiểm chứng:**
+  - Chạy lại audit toàn bộ 121 mutation hook: 0 cặp `showErrorToast: true` + `onError` toast trùng lặp.
+  - `npx.cmd tsc --noEmit --incremental false`: 0 lỗi type.
+  - `npx.cmd eslint` trên toàn bộ file chỉnh sửa/thêm mới: 0 lỗi (1 cảnh báo có sẵn của React Compiler với `form.watch` trong `basic-profile-form.tsx`).
+  - `npm.cmd test`: 115 file / 886 test pass.
+  - `npx.cmd next build --webpack`: thành công 46/46 route.
+  - `git diff --check`: pass.
+
+## [2026-11-18] — Fix lỗi spam API và nhiều toast khi xác nhận nguyên liệu từ /pantry/scan/fridge và /pantry/scan/receipt
+
+- **Yêu cầu:** Sửa lỗi khi thêm nguyên liệu vào tủ bếp tại `/pantry/scan/fridge` và `/pantry/scan/receipt` bị gọi lặp hàng loạt API `PATCH /candidates/:id` + `GET /entitlements/me` và hiển thị chồng nhiều toast cập nhật từng dòng hàng.
+- **Nguyên nhân:**
+  - `CandidateReviewScreen.handleSave` (tủ lạnh) và `ReceiptInspectionView.handleSave` (hóa đơn) lặp qua toàn bộ `items` (kể cả các món người dùng đã loại bỏ `isRejected`) để gọi `PATCH /candidates/:id` từng món một, dù backend `POST .../confirm` đã tự động đánh dấu `REJECTED` cho mọi ứng viên không nằm trong danh sách xác nhận.
+  - `useUpdateCandidateMutation.onSuccess` và `useUpdateReceiptCandidateMutation.onSuccess` gọi `invalidateQueries(BILLING_QUERY_KEYS.all)` (gây spam `GET /entitlements/me` sau mỗi lần PATCH dù cập nhật ứng viên không đổi hạn ngạch) và luôn bắn toast thành công cho từng món trong batch save.
+  - `useConfirmRecognitionJobMutation` và `useConfirmReceiptJobMutation` gọi trùng lặp `invalidateQueries(BILLING_QUERY_KEYS.all)` 2 lần trong cùng `onSuccess`, cộng thêm `useEffect` trong `useRecognitionJobQuery` / `useReceiptJobQuery` kích hoạt thêm lần thứ 3 khi `job.status` chuyển sang `'CONFIRMED'`.
+  - Riêng `ReceiptInspectionView.handleSave` còn bắn thêm một `toast.error` trùng lặp khi gặp lỗi `RECEIPT_REVIEW_DECISION_REQUIRED` dù `receiptApi.confirmJob` đã bật `showErrorToast: true`, và chưa đồng bộ lại `initial*` khi `version` tăng sau PATCH.
+- **Thay đổi thực hiện:**
+  - `src/features/ingredient-vision/lib/candidate-save.ts` & `candidate-save.test.ts`: Thêm helper thuần `getCandidatesToPatchBeforeConfirm` và `shouldRefreshBillingForJobStatus` kèm 5 unit test.
+  - `src/features/ingredient-vision/queries/ingredient-recognition.queries.ts` & `src/features/ingredient-vision/components/candidate-review-screen.tsx`: Gỡ billing invalidation thừa, thêm `silent?: boolean` cho batch PATCH, chỉ PATCH các món giữ lại có thay đổi và chặn submit lặp.
+  - `src/features/receipt/lib/receipt-candidate-save.ts` & `receipt-candidate-save.test.ts`: Thêm helper thuần `getReceiptCandidatesToPatchBeforeConfirm` và `shouldRefreshBillingForReceiptJobStatus` kèm 5 unit test.
+  - `src/features/receipt/queries/receipt.queries.ts` & `src/features/receipt/components/receipt-inspection-view.tsx`: Áp dụng đồng bộ toàn bộ bản sửa cho luồng quét hóa đơn, đồng bộ lại `initial*` khi `version` tăng trên server, và gỡ `toast.error` trùng lặp với interceptor khi `RECEIPT_REVIEW_DECISION_REQUIRED`.
+- **Kiểm chứng:**
+  - `npx.cmd tsc --noEmit --incremental false`: 0 lỗi type.
+  - `npx.cmd eslint` trên toàn bộ file chỉnh sửa/thêm mới của `ingredient-vision` và `receipt`: 0 lỗi, 0 cảnh báo.
+  - `npm.cmd test`: 113 file / 878 test pass.
+  - `npx.cmd next build --webpack`: thành công 46/46 route (`npm run build` mặc định với Turbopack gặp lỗi nội bộ PostCSS worker của môi trường Windows hiện tại).
+
+## [2026-11-18] — Đồng bộ route scan tủ lạnh và hóa đơn dưới /pantry
+
+- **Yêu cầu:** hai luồng scan đang nằm ở `/pantry/scan` và `/receipts/scan`, không cùng khu vực điều hướng.
+- **Thay đổi thực hiện:**
+  - Di chuyển route scan tủ lạnh sang `src/app/(site)/pantry/scan/fridge/` (page + client view).
+  - Di chuyển route scan hóa đơn sang `src/app/(site)/pantry/scan/receipt/` (page + client view).
+  - Thêm redirect trong `next.config.ts`: `/pantry/scan` → `/pantry/scan/fridge`, `/receipts/scan` → `/pantry/scan/receipt`, `/receipts` → `/pantry/scan/receipt`, `/receipts/[id]` → `/pantry/scan/receipt?jobId=:id` (307, giữ query).
+  - Xóa 4 file route landing/detail cũ: `receipts/page.tsx`, `receipts-client-view.tsx`, `receipts/[id]/page.tsx`, `receipts/[id]/receipt-job-client-view.tsx`; giữ feature `features/receipt`.
+  - Cập nhật link tại `pantry-header.tsx`, `receipts-client-view.tsx`, `receipt-job-client-view.tsx`, `receipt-scan-client-view.tsx`, `site-footer.tsx`, `site-header.tsx`.
+  - Cập nhật `site-footer-routes.ts` và test: bỏ prefix `/receipts/scan`, kiểm tra hai route scan mới.
+  - Cập nhật `BACKEND_INTEGRATION.md`, `mobile/docs/SCAN_DEV.md`, defense-study 04/06.
+- **Kiểm chứng:**
+  - `npx.cmd tsc --noEmit --incremental false`: 0 lỗi type.
+  - `npm.cmd test`: 111 file / 868 test pass.
+  - `npm.cmd run build`: thành công 46 route; build có `/pantry/scan/fridge` và `/pantry/scan/receipt`, không còn `/receipts` hay `/receipts/[id]`.
+  - Chạy `next start` và kiểm tra redirect: `/receipts` → 307 `/pantry/scan/receipt`; `/receipts/abc` → 307 `/pantry/scan/receipt?jobId=abc`; `/receipts/scan?jobId=abc` → 307 `/pantry/scan/receipt?jobId=abc`; `/pantry/scan` → 307 `/pantry/scan/fridge`; hai route mới trả 200.
+- **Rủi ro còn lại:** link ngoài repo/bookmark cũ phụ thuộc redirect; nếu ổn định sẽ đổi `permanent: true`.
+
+## [2026-11-17] — Tắt SiteFooter trong trang /recipes/new
+
+- **Yêu cầu:** Tắt footer trong trang `/recipes/new`.
+- **Hiện trạng & Giải pháp:**
+  - Hệ thống quản lý danh sách các trang ẩn footer tập trung tại `src/components/layout/site-footer-routes.ts` với mảng `HIDDEN_FOOTER_PREFIXES` và hàm `isFooterHidden(pathname)`.
+  - Bổ sung `'/recipes/new'` vào `HIDDEN_FOOTER_PREFIXES` để ẩn `SiteFooter` khi người dùng ở trang tạo công thức mới (dạng studio soạn thảo), đảm bảo không gian làm việc tập trung và sạch sẽ.
+- **Thay đổi thực hiện:**
+  - `src/components/layout/site-footer-routes.ts`: Thêm `'/recipes/new'` vào `HIDDEN_FOOTER_PREFIXES`.
+  - `src/components/layout/site-footer.tsx`: Cập nhật chú thích các route ẩn footer.
+  - `src/components/layout/site-footer-routes.test.ts`: Bổ sung test case kiểm tra `HIDDEN_FOOTER_PREFIXES` và route `/recipes/new` cùng subpaths.
+- **Kiểm chứng:**
+  - `npx vitest run src/components/layout/site-footer-routes.test.ts`: 9/9 tests pass 100%.
+  - `npx tsc --noEmit --incremental false`: 0 lỗi type.
+
 ## [2026-11-16] — Làm tròn các chỉ số dinh dưỡng về tối đa 2 chữ số thập phân
 
 - **Yêu cầu:** Chỉ số ở tinh bột (carbs) đang khá dài (ví dụ: `1975.8900000000003g` trong ảnh tải lên), cần làm tròn các số về tối đa 2 chữ số thập phân.
@@ -159,7 +233,6 @@
 - **Giới hạn:** SerpApi vẫn có thể partial/timeout hoặc thay đổi kết quả; filter paging cố ý báo giới hạn. Nền công cộng phụ thuộc kết nối/WebGL; cấu hình qua NEXT_PUBLIC_RESTAURANT_MAP_STYLE_URL. Chưa kiểm thử GPS permission, tài khoản đăng nhập hoặc native mobile; mobile app không được thay renderer trong task này. Không chạy full-repository frontend lint vì lỗi nền đã ghi nhận; scoped lint đạt. Chưa commit/push thay đổi.
 - **Bằng chứng:** `/tmp/vegan-restaurant-map-upgrade/desktop.png`, `/tmp/vegan-restaurant-map-upgrade/mobile.png`. App/DB tiếp tục chạy tại frontend 3000/backend 4000.
 
-
 ## [2026-11-14] — E2E tìm quán, SerpApi và sơ đồ vị trí
 
 - **Yêu cầu:** Chạy ứng dụng và kiểm tra tìm quán bằng bản đồ do người dùng báo hoạt động không ổn định. Thực hiện trên nhánh `fix/combined-nutrition-pantry-meal-plan` tại workspace chính.
@@ -176,7 +249,6 @@
 - **Gates:** Backend lint/typecheck/build/OpenAPI pass; 11 one-shot provider/service assertions pass (stub fetch, không thêm test suite/backend infrastructure); frontend typecheck, scoped ESLint, 105 files/841 tests và build 47 routes pass. OpenAPI/catalog đồng bộ; `git diff --check` pass.
 - **Giới hạn còn lại:** Có lần SerpApi trả partial do budget `MAPS_TIMEOUT_MS=5000`; các lần gọi có thể khác tổng quán khi thu thập được số trang khác nhau. Provider có thể trả kết quả gần nghĩa ngay cả với từ khóa khó; không khẳng định keyword khớp chính xác. Chưa kiểm thử Google Maps JavaScript thật, GPS/device permission, luồng tài khoản đăng nhập hoặc native mobile. Ở 375 px, header chung của app còn bị cắt ngang; chưa sửa header ngoài phạm vi tìm quán. Endpoint giữ READY; không đổi business rules, schema, auth hay % scaffold. Chưa commit/push thay đổi.
 - **Bằng chứng:** `/tmp/vegan-restaurant-e2e/api-results.json`, `desktop-map.jpg`, `mobile-map.jpg`, `final-map.jpg`. Để app/DB chạy cho người dùng kiểm tra lại.
-
 
 ## [2026-11-14] — Rebase nhánh dinh dưỡng/tủ bếp/thực đơn lên dev
 
@@ -335,6 +407,7 @@
 - **Thay đổi**: `chat-stream.ts` gửi bearer token như API client, refresh một lần khi nhận 401 với phiên đăng nhập, tiếp tục đọc event quota sau message_complete và báo lỗi khi stream kết thúc chưa hoàn tất. `chat-stream.test.ts` kiểm tra token, refresh, khách, quota và stream bị ngắt.
 - **Kiểm chứng**: Swagger được tạo từ backend và đồng bộ thành công; `npx tsc --noEmit`, lint các file sửa và `npm run build` pass; `npm test` 69 files / 735 tests pass. Backend và MongoDB local không chạy (MongoDB cổng 27018 không kết nối, Docker daemon không hoạt động), nên chưa kiểm thử trình duyệt hoặc OpenAI end-to-end. UC-07 giữ 95% → 95%.
 - **Kiểm tra lại sau khi chạy Docker**: health/database OK; guest và member seed tạo phiên, gửi SSE, nhận đủ message_start/content_delta/message_complete/quota; lịch sử member có hai tin nhắn. Cả hai nhận local fallback. Kiểm tra provider: Responses API hoạt động, Moderations API trả 503 `model_not_found` cho `omni-moderation-latest`; danh sách model khả dụng không có model moderation. Cần provider/credentials hỗ trợ moderation, không bỏ qua kiểm duyệt. Chưa kiểm tra trình duyệt và chưa xác nhận câu trả lời AI thực qua luồng chat.
+
 ## [2026-11-07] — Cho phép AI bổ sung thông tin công thức còn trống
 
 - **Mục tiêu:** Cho phép bỏ trống thông tin cơ bản để AI gợi ý, giữ dữ liệu tác giả và kiểm tra khi gửi.
@@ -520,7 +593,6 @@
   - `npx tsc --noEmit` pass 0 lỗi type.
   - `npm test` toàn bộ 68 test suite (731 tests pass).
   - `npm run build` pass thành công toàn bộ 47 routes.
-
 
 ## [2026-10-28] — Trang /pantry: Bổ sung tùy chọn tự nhập nguyên liệu chuẩn & dropdown đơn vị thông dụng
 
@@ -5224,6 +5296,7 @@
 - Đã làm: merge `origin/dev` vào `feature/mobile-table-completion`, giữ cả mục mobile follow-up và mục sửa font footer trong `frontend/docs/WORK-LOG.md`.
 - Verify: mobile `npx tsc --noEmit`, `npm run lint` và `git diff --check` đều pass sau merge.
 - PROGRESS: không đổi phần trăm tính năng; chỉ giải quyết xung đột nhật ký. Thay đổi chưa commit ở workspace chính được giữ nguyên.
+
 ## [2026-10-25] — Sửa responsive card nguyên liệu `/pantry`
 
 - Mục tiêu: khắc phục nội dung card bị dồn/chèn trên viewport hẹp như ảnh người dùng cung cấp.

@@ -36,6 +36,7 @@ import {
   useRetryReceiptJobMutation,
   useUpdateReceiptCandidateMutation,
 } from '../queries/receipt.queries';
+import { getReceiptCandidatesToPatchBeforeConfirm } from '../lib/receipt-candidate-save';
 import type {
   ReceiptCandidate,
   ReceiptConfirmationDiff,
@@ -123,15 +124,19 @@ export function ReceiptInspectionView({
         const qUnit = c.quantity.unit || '';
 
         if (existing) {
+          const isVersionUpdated = existing.version !== c.version;
           const isUserEdited =
-            existing.name !== existing.initialName ||
-            existing.quantity !== existing.initialQuantity ||
-            existing.unit !== existing.initialUnit ||
-            existing.isRejected !== existing.initialIsRejected;
+            !isVersionUpdated &&
+            (existing.name !== existing.initialName ||
+              existing.quantity !== existing.initialQuantity ||
+              existing.unit !== existing.initialUnit ||
+              existing.isRejected !== existing.initialIsRejected);
 
           return {
             ...existing,
             version: c.version,
+            ingredientId: c.ingredientSuggestion?.id || null,
+            ingredientName: c.ingredientSuggestion?.name,
             confidencePercent: c.confidencePercent,
             confidenceTier: c.confidenceTier,
             uncertaintyNote: c.uncertaintyNote,
@@ -140,6 +145,10 @@ export function ReceiptInspectionView({
             quantity: isUserEdited ? existing.quantity : qVal,
             unit: isUserEdited ? existing.unit : qUnit,
             isRejected: isUserEdited ? existing.isRejected : c.isRejected,
+            initialName: c.name,
+            initialQuantity: qVal,
+            initialUnit: qUnit,
+            initialIsRejected: c.isRejected,
           };
         }
 
@@ -191,8 +200,12 @@ export function ReceiptInspectionView({
     return true;
   });
 
+  const isSaving = isSavingLocal || confirmMutation.isPending || updateCandidateMutation.isPending;
+
   // Lưu toàn bộ chỉnh sửa và xác nhận nhập vào Tủ bếp
   const handleSave = async () => {
+    if (isSaving) return;
+
     const activeItems = items.filter((it) => !it.isRejected);
     if (activeItems.length === 0) {
       toast.error('Vui lòng giữ lại ít nhất một mặt hàng thực phẩm để lưu vào Tủ bếp.');
@@ -215,48 +228,43 @@ export function ReceiptInspectionView({
 
     setIsSavingLocal(true);
     try {
-      // 1. Cập nhật các món có thay đổi so với dữ liệu ban đầu
+      // 1. Chỉ cập nhật các món được giữ lại có thay đổi so với dữ liệu máy chủ.
+      // Các món đã loại không cần PATCH lẻ vì POST /confirm tự động đánh dấu REJECTED trên server.
       const currentVersions: Record<string, number> = {};
       job.candidates.forEach((c) => {
         currentVersions[c.id] = c.version;
       });
 
-      for (const item of items) {
-        const isNameChanged = item.name.trim() !== item.initialName.trim();
-        const isQtyChanged = item.quantity.trim() !== item.initialQuantity.trim();
-        const isUnitChanged = item.unit.trim() !== item.initialUnit.trim();
-        const isRejectChanged = item.isRejected !== item.initialIsRejected;
+      const itemsToPatch = getReceiptCandidatesToPatchBeforeConfirm(items);
 
-        if (isNameChanged || isQtyChanged || isUnitChanged || isRejectChanged) {
-          const parsedQty = item.quantity.trim() ? Number(item.quantity) : null;
-          const parsedUnit = item.unit.trim() || null;
+      for (const item of itemsToPatch) {
+        const parsedQty = item.quantity.trim() ? Number(item.quantity) : null;
+        const parsedUnit = item.unit.trim() || null;
 
-          const updatedJob = await updateCandidateMutation.mutateAsync({
-            candidateId: item.id,
-            input: {
-              expectedVersion: currentVersions[item.id] ?? item.version,
-              detectedName: item.name.trim(),
-              quantity: parsedQty,
-              unit: parsedUnit,
-              decision: item.isRejected ? 'REJECT' : 'KEEP',
-              ingredientId: item.ingredientId,
-            },
-          });
+        const updatedJob = await updateCandidateMutation.mutateAsync({
+          candidateId: item.id,
+          input: {
+            expectedVersion: currentVersions[item.id] ?? item.version,
+            detectedName: item.name.trim(),
+            quantity: parsedQty,
+            unit: parsedUnit,
+            decision: 'KEEP',
+            ingredientId: item.ingredientId,
+          },
+          silent: true,
+        });
 
-          const updatedCandidate = updatedJob.candidates.find((c) => c.id === item.id);
-          if (updatedCandidate) {
-            currentVersions[item.id] = updatedCandidate.version;
-          }
+        const updatedCandidate = updatedJob.candidates.find((c) => c.id === item.id);
+        if (updatedCandidate) {
+          currentVersions[item.id] = updatedCandidate.version;
         }
       }
 
       // 2. Gom danh sách ứng viên hợp lệ để xác nhận vào kho Tủ bếp
-      const validCandidatesToConfirm = items
-        .filter((it) => !it.isRejected)
-        .map((it) => ({
-          id: it.id,
-          expectedVersion: currentVersions[it.id] ?? it.version,
-        }));
+      const validCandidatesToConfirm = activeItems.map((it) => ({
+        id: it.id,
+        expectedVersion: currentVersions[it.id] ?? it.version,
+      }));
 
       const diff = await confirmMutation.mutateAsync({
         candidates: validCandidatesToConfirm,
@@ -278,9 +286,6 @@ export function ReceiptInspectionView({
           decision: receiptReviewDecision,
           requiredByServer: true,
         });
-        toast.error(
-          'BE cần bạn xác nhận đây là cùng hóa đơn hay lần mua riêng trước khi nhập kho.'
-        );
         return;
       }
       console.error('Lỗi khi lưu hóa đơn vào tủ bếp:', err);
@@ -334,8 +339,6 @@ export function ReceiptInspectionView({
       </div>
     );
   }
-
-  const isSaving = isSavingLocal || confirmMutation.isPending || updateCandidateMutation.isPending;
 
   return (
     <div className="space-y-6">

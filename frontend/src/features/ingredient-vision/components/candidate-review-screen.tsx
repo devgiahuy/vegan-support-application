@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import {
   CheckCircle2,
@@ -9,11 +9,9 @@ import {
   Sparkles,
   Loader2,
   Trash2,
-  Layers,
   ArrowRight,
   Camera,
   Maximize2,
-  Scale,
   Pencil,
   Eye,
   Info,
@@ -29,6 +27,7 @@ import {
   useUpdateCandidateMutation,
   useConfirmRecognitionJobMutation,
 } from '../queries/ingredient-recognition.queries';
+import { getCandidatesToPatchBeforeConfirm } from '../lib/candidate-save';
 import type {
   RecognitionJob,
   RecognitionCandidate,
@@ -101,18 +100,40 @@ export function CandidateReviewScreen({
   const updateCandidateMutation = useUpdateCandidateMutation();
   const confirmMutation = useConfirmRecognitionJobMutation();
 
-  // Local state for list of candidates with inline quantity & unit inputs
-  const [items, setItems] = useState<EditableCandidateItem[]>(() =>
-    job.candidates.map((c) => {
+  // Quản lý các chỉnh sửa nháp inline của người dùng theo candidateId
+  const [drafts, setDrafts] = useState<
+    Record<
+      string,
+      {
+        name?: string;
+        quantity?: string;
+        unit?: string;
+        isRejected?: boolean;
+      }
+    >
+  >({});
+  const [prevJobId, setPrevJobId] = useState(job.id);
+
+  // Reset drafts khi chuyển sang job khác (theo khuyến nghị React: adjusting state during render)
+  if (prevJobId !== job.id) {
+    setPrevJobId(job.id);
+    setDrafts({});
+  }
+
+  // Danh sách ứng viên được tính toán trực tiếp từ props job và các chỉnh sửa nháp của người dùng
+  const items: EditableCandidateItem[] = useMemo(() => {
+    return job.candidates.map((c) => {
       const qVal =
         c.quantity.value !== null && c.quantity.value !== undefined ? String(c.quantity.value) : '';
       const qUnit = c.quantity.unit || '';
+      const draft = drafts[c.id];
+
       return {
         id: c.id,
-        name: c.name,
-        quantity: qVal,
-        unit: qUnit,
-        isRejected: c.isRejected,
+        name: draft?.name !== undefined ? draft.name : c.name,
+        quantity: draft?.quantity !== undefined ? draft.quantity : qVal,
+        unit: draft?.unit !== undefined ? draft.unit : qUnit,
+        isRejected: draft?.isRejected !== undefined ? draft.isRejected : c.isRejected,
         version: c.version,
         ingredientId: c.ingredientSuggestion?.id || null,
         ingredientName: c.ingredientSuggestion?.name,
@@ -126,68 +147,20 @@ export function CandidateReviewScreen({
         initialUnit: qUnit,
         initialIsRejected: c.isRejected,
       };
-    })
-  );
-
-  // Đồng bộ lại khi job thay đổi, bảo toàn các chỉnh sửa thủ công của người dùng
-  useEffect(() => {
-    setItems((prevItems) => {
-      const prevMap = new Map(prevItems.map((it) => [it.id, it]));
-      return job.candidates.map((c) => {
-        const existing = prevMap.get(c.id);
-        const qVal =
-          c.quantity.value !== null && c.quantity.value !== undefined
-            ? String(c.quantity.value)
-            : '';
-        const qUnit = c.quantity.unit || '';
-
-        if (existing) {
-          const isUserEdited =
-            existing.name !== existing.initialName ||
-            existing.quantity !== existing.initialQuantity ||
-            existing.unit !== existing.initialUnit ||
-            existing.isRejected !== existing.initialIsRejected;
-
-          return {
-            ...existing,
-            version: c.version,
-            confidencePercent: c.confidencePercent,
-            confidenceTier: c.confidenceTier,
-            freshnessObservation: c.freshnessObservation,
-            uncertaintyNote: c.uncertaintyNote,
-            evidence: c.evidence,
-            name: isUserEdited ? existing.name : c.name,
-            quantity: isUserEdited ? existing.quantity : qVal,
-            unit: isUserEdited ? existing.unit : qUnit,
-            isRejected: isUserEdited ? existing.isRejected : c.isRejected,
-          };
-        }
-
-        return {
-          id: c.id,
-          name: c.name,
-          quantity: qVal,
-          unit: qUnit,
-          isRejected: c.isRejected,
-          version: c.version,
-          ingredientId: c.ingredientSuggestion?.id || null,
-          ingredientName: c.ingredientSuggestion?.name,
-          confidencePercent: c.confidencePercent,
-          confidenceTier: c.confidenceTier,
-          freshnessObservation: c.freshnessObservation,
-          uncertaintyNote: c.uncertaintyNote,
-          evidence: c.evidence,
-          initialName: c.name,
-          initialQuantity: qVal,
-          initialUnit: qUnit,
-          initialIsRejected: c.isRejected,
-        };
-      });
     });
-  }, [job.id, job.candidates]);
+  }, [job.candidates, drafts]);
 
-  const updateItem = (id: string, updates: Partial<EditableCandidateItem>) => {
-    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...updates } : item)));
+  const updateItem = (
+    id: string,
+    updates: Partial<{ name: string; quantity: string; unit: string; isRejected: boolean }>
+  ) => {
+    setDrafts((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        ...updates,
+      },
+    }));
   };
 
   const images = job.images || [];
@@ -222,8 +195,12 @@ export function CandidateReviewScreen({
     }
   };
 
+  const isSaving = isSavingLocal || isConfirming || confirmMutation.isPending;
+
   // Lưu toàn bộ thay đổi và hoàn tất luồng thêm vào tủ bếp
   const handleSave = async () => {
+    if (isSaving) return;
+
     const activeItems = items.filter((it) => !it.isRejected);
     if (activeItems.length === 0) {
       toast.error('Vui lòng giữ lại ít nhất một nguyên liệu để lưu vào Tủ bếp.');
@@ -246,49 +223,44 @@ export function CandidateReviewScreen({
 
     setIsSavingLocal(true);
     try {
-      // 1. Cập nhật các món có thay đổi so với dữ liệu ban đầu
+      // 1. Chỉ cập nhật các món được giữ lại có thay đổi so với dữ liệu máy chủ.
+      // Các món đã loại không cần PATCH lẻ vì POST /confirm tự động đánh dấu REJECTED trên server.
       const currentVersions: Record<string, number> = {};
       job.candidates.forEach((c) => {
         currentVersions[c.id] = c.version;
       });
 
-      for (const item of items) {
-        const isNameChanged = item.name.trim() !== item.initialName.trim();
-        const isQtyChanged = item.quantity.trim() !== item.initialQuantity.trim();
-        const isUnitChanged = item.unit.trim() !== item.initialUnit.trim();
-        const isRejectChanged = item.isRejected !== item.initialIsRejected;
+      const itemsToPatch = getCandidatesToPatchBeforeConfirm(items);
 
-        if (isNameChanged || isQtyChanged || isUnitChanged || isRejectChanged) {
-          const parsedQty = item.quantity.trim() ? Number(item.quantity) : null;
-          const parsedUnit = item.unit.trim() || null;
+      for (const item of itemsToPatch) {
+        const parsedQty = item.quantity.trim() ? Number(item.quantity) : null;
+        const parsedUnit = item.unit.trim() || null;
 
-          const updatedJob = await updateCandidateMutation.mutateAsync({
-            jobId: job.id,
-            candidateId: item.id,
-            input: {
-              expectedVersion: currentVersions[item.id] ?? item.version,
-              detectedName: item.name.trim(),
-              quantity: parsedQty,
-              unit: parsedUnit,
-              decision: item.isRejected ? 'REJECT' : 'KEEP',
-              ingredientId: item.ingredientId,
-            },
-          });
+        const updatedJob = await updateCandidateMutation.mutateAsync({
+          jobId: job.id,
+          candidateId: item.id,
+          input: {
+            expectedVersion: currentVersions[item.id] ?? item.version,
+            detectedName: item.name.trim(),
+            quantity: parsedQty,
+            unit: parsedUnit,
+            decision: 'KEEP',
+            ingredientId: item.ingredientId,
+          },
+          silent: true,
+        });
 
-          const updatedCandidate = updatedJob.candidates.find((c) => c.id === item.id);
-          if (updatedCandidate) {
-            currentVersions[item.id] = updatedCandidate.version;
-          }
+        const updatedCandidate = updatedJob.candidates.find((c) => c.id === item.id);
+        if (updatedCandidate) {
+          currentVersions[item.id] = updatedCandidate.version;
         }
       }
 
       // 2. Gom danh sách ứng viên hợp lệ để xác nhận vào kho Tủ bếp
-      const validCandidatesToConfirm = items
-        .filter((it) => !it.isRejected)
-        .map((it) => ({
-          id: it.id,
-          expectedVersion: currentVersions[it.id] ?? it.version,
-        }));
+      const validCandidatesToConfirm = activeItems.map((it) => ({
+        id: it.id,
+        expectedVersion: currentVersions[it.id] ?? it.version,
+      }));
 
       if (onConfirmSuccess) {
         const diff = await confirmMutation.mutateAsync({
@@ -305,8 +277,6 @@ export function CandidateReviewScreen({
       setIsSavingLocal(false);
     }
   };
-
-  const isSaving = isSavingLocal || isConfirming || confirmMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -560,14 +530,16 @@ export function CandidateReviewScreen({
                           )}
 
                           {item.freshnessObservation && (
-                            <span className="text-[11px] text-amber-600 dark:text-amber-400">
-                              · {item.freshnessObservation}
+                            <span className="inline-flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
+                              <AlertTriangle className="h-3 w-3 shrink-0" />
+                              <span>{item.freshnessObservation}</span>
                             </span>
                           )}
 
                           {item.uncertaintyNote && (
-                            <span className="text-[11px] text-amber-600 dark:text-amber-400">
-                              · {item.uncertaintyNote}
+                            <span className="inline-flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
+                              <Info className="h-3 w-3 shrink-0" />
+                              <span>{item.uncertaintyNote}</span>
                             </span>
                           )}
                         </div>
@@ -617,16 +589,17 @@ export function CandidateReviewScreen({
                         {/* Các nút hành động */}
                         <div className="flex items-center gap-1">
                           {/* Nút xem góc ảnh */}
-                          {/* <Button
+                          <Button
                             type="button"
                             variant="ghost"
                             size="icon"
                             onClick={() => handleFocusCandidateImage(item)}
+                            disabled={isSaving}
                             className="h-9 w-9 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg"
                             title="Xem góc ảnh chụp món này"
                           >
                             <Eye className="h-4 w-4" />
-                          </Button> */}
+                          </Button>
 
                           {/* Nút sửa nâng cao */}
                           <Button
@@ -748,7 +721,18 @@ export function CandidateReviewScreen({
       {/* Modal chỉnh sửa chi tiết ứng viên */}
       <CandidateEditDialog
         open={Boolean(editingCandidate)}
-        onOpenChange={(open) => !open && setEditingCandidate(null)}
+        onOpenChange={(open) => {
+          if (!open && editingCandidate) {
+            // Khi đóng modal sửa nâng cao, xóa nháp inline để nạp dữ liệu chuẩn mới nhất
+            setDrafts((prev) => {
+              if (!prev[editingCandidate.id]) return prev;
+              const next = { ...prev };
+              delete next[editingCandidate.id];
+              return next;
+            });
+            setEditingCandidate(null);
+          }
+        }}
         candidate={editingCandidate}
         jobId={job.id}
       />

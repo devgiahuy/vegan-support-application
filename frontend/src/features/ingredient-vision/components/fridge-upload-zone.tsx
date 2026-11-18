@@ -27,6 +27,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/api-error';
 import {
   uploadWithReservation,
   type UploadProgressInfo,
@@ -148,7 +149,7 @@ export function FridgeUploadZone({ onJobCreated, disabled = false }: FridgeUploa
       toast.success('Đã tải ảnh lên và khởi tạo nhận diện thành công!');
       onJobCreated(job);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Không thể khởi tạo tác vụ nhận diện.';
+      const message = getApiErrorMessage(err, 'Không thể khởi tạo tác vụ nhận diện.');
       toast.error(message);
     } finally {
       setIsUploading(false);

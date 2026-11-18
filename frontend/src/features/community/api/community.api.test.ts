@@ -15,7 +15,7 @@ describe('communityApi bookmarks', () => {
 
     expect(USE_FIXTURES).toBe(false);
     expect(spy).toHaveBeenCalledWith(COMMUNITY_ENDPOINTS.BOOKMARK('recipe-1'), undefined, {
-      showErrorToast: true,
+      silent: true,
     });
   });
 
@@ -27,8 +27,37 @@ describe('communityApi bookmarks', () => {
     await communityApi.deleteBookmark('recipe-1');
 
     expect(spy).toHaveBeenCalledWith(COMMUNITY_ENDPOINTS.BOOKMARK('recipe-1'), {
-      showErrorToast: true,
+      silent: true,
     });
+  });
+
+  it('passes silent: true on comment, vote, and rating mutations so hooks own error toasts', async () => {
+    const postSpy = vi.spyOn(api, 'post').mockResolvedValueOnce({
+      data: { data: { id: 'c1', content: 'Rất ngon' } },
+    });
+    const putSpy = vi
+      .spyOn(api, 'put')
+      .mockResolvedValueOnce({ data: { data: { postId: 'p1', voted: true, voteCount: 1 } } })
+      .mockResolvedValueOnce({
+        data: { data: { postId: 'p1', rating: { taste: 5, difficulty: 2 } } },
+      });
+
+    await communityApi.createComment('p1', 'Rất ngon');
+    await communityApi.putVote('p1');
+    await communityApi.putRating('p1', 5, 2);
+
+    expect(postSpy).toHaveBeenCalledWith(
+      COMMUNITY_ENDPOINTS.COMMENTS('p1'),
+      { content: 'Rất ngon' },
+      { silent: true }
+    );
+    expect(putSpy).toHaveBeenNthCalledWith(1, COMMUNITY_ENDPOINTS.VOTE('p1'), {}, { silent: true });
+    expect(putSpy).toHaveBeenNthCalledWith(
+      2,
+      COMMUNITY_ENDPOINTS.RATING('p1'),
+      { taste: 5, difficulty: 2 },
+      { silent: true }
+    );
   });
 });
 

@@ -7,14 +7,16 @@ describe('site-footer-routes', () => {
     expect(HIDDEN_FOOTER_PREFIXES).toContain('/meal-plans');
     expect(HIDDEN_FOOTER_PREFIXES).toContain('/restaurants');
     expect(HIDDEN_FOOTER_PREFIXES).toContain('/pantry');
-    expect(HIDDEN_FOOTER_PREFIXES).toContain('/receipts/scan');
+    expect(HIDDEN_FOOTER_PREFIXES).not.toContain('/receipts/scan');
     expect(HIDDEN_FOOTER_PREFIXES).toContain('/profile');
+    expect(HIDDEN_FOOTER_PREFIXES).toContain('/recipes/new');
   });
 
-  it('hides footer on /pantry, /pantry/scan and /receipts/scan', () => {
+  it('hides footer on /pantry and both scan routes', () => {
     expect(isFooterHidden('/pantry')).toBe(true);
     expect(isFooterHidden('/pantry/scan')).toBe(true);
-    expect(isFooterHidden('/receipts/scan')).toBe(true);
+    expect(isFooterHidden('/pantry/scan/fridge')).toBe(true);
+    expect(isFooterHidden('/pantry/scan/receipt')).toBe(true);
   });
 
   it('hides footer on /meal-plans and subpaths', () => {
@@ -36,6 +38,11 @@ describe('site-footer-routes', () => {
   it('hides footer on /profile and subpaths', () => {
     expect(isFooterHidden('/profile')).toBe(true);
     expect(isFooterHidden('/profile/settings')).toBe(true);
+  });
+
+  it('hides footer on /recipes/new and its subpaths', () => {
+    expect(isFooterHidden('/recipes/new')).toBe(true);
+    expect(isFooterHidden('/recipes/new/step-1')).toBe(true);
   });
 
   it('keeps footer visible on content routes', () => {

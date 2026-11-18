@@ -34,7 +34,10 @@ export const mealAnalysisApi = {
   ): Promise<MealPlanAnalysis> => {
     const res = await api.post<
       MealPlanAnalysisResponseDto | { success?: boolean; data: MealPlanAnalysisResponseDto }
-    >(MEAL_PLANS_ENDPOINTS.ANALYZE(planId), payload, { showErrorToast: true });
+    >(MEAL_PLANS_ENDPOINTS.ANALYZE(planId), payload, {
+      // Hook tự toast lỗi qua onError; tránh toast trùng từ interceptor.
+      silent: true,
+    });
     return mealAnalysisMapper.toModel(unwrapAnalysis(res.data), payload.expectedPlanVersion);
   },
 

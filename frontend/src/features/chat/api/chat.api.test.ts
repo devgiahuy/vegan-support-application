@@ -23,8 +23,9 @@ describe('chat API response mapping', () => {
     expect((await chatApi.getMessages('s1')).items[0].content).toBe('Xin chào');
   });
 
-  it('maps session creation and feedback', async () => {
-    vi.spyOn(api, 'post')
+  it('maps session creation and feedback with silent: true', async () => {
+    const postSpy = vi
+      .spyOn(api, 'post')
       .mockResolvedValueOnce({ data: { data: { id: 's1' } } })
       .mockResolvedValueOnce({ data: { data: { messageId: 'm1', value: 'UP' } } });
     expect((await chatApi.createSession()).id).toBe('s1');
@@ -32,5 +33,6 @@ describe('chat API response mapping', () => {
       messageId: 'm1',
       value: 'UP',
     });
+    expect(postSpy.mock.calls[1]?.[2]).toEqual({ silent: true });
   });
 });

@@ -4,17 +4,17 @@
  * - /assistant (canvas AI toàn màn hình)
  * - /meal-plans (bảng lập thực đơn tuần dạng app)
  * - /restaurants (bản đồ tìm kiếm quán chay toàn màn hình)
- * - /pantry (quản lý tủ bếp gia đình & quét tủ lạnh)
- * - /receipts/scan (quét và kiểm duyệt hóa đơn OCR)
+ * - /pantry (quản lý tủ bếp gia đình, quét tủ lạnh & quét hóa đơn)
  * - /profile (hồ sơ cá nhân và quản lý dữ liệu người dùng)
+ * - /recipes/new (trình soạn thảo tạo công thức mới dạng studio)
  */
 export const HIDDEN_FOOTER_PREFIXES: readonly string[] = [
   '/assistant',
   '/meal-plans',
   '/restaurants',
   '/pantry',
-  '/receipts/scan',
   '/profile',
+  '/recipes/new',
 ];
 
 /**

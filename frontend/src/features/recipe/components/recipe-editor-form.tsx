@@ -340,6 +340,8 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
     };
 
     const errors = form.formState.errors;
+
+    // Dữ liệu đầu vào cho AI: chỉ lấy các trường cơ bản, bỏ qua các bước nấu và dinh dưỡng.
     const seed: AiRecipeDraftSeed = {
       title: values.title ?? '',
       description: values.description ?? '',
@@ -360,7 +362,7 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
           // Enter trong ô nhập không được gửi form giữa chừng — chỉ nút "Gửi" ở bước cuối.
           if (e.key === 'Enter' && e.target instanceof HTMLInputElement) e.preventDefault();
         }}
-        className="flex scroll-mt-24 flex-col gap-6"
+        className="flex flex-col gap-6 scroll-mt-24"
       >
         <div ref={topRef} className="scroll-mt-24" />
 
@@ -377,7 +379,7 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
                     disabled={isSubmitting}
                     aria-current={active ? 'step' : undefined}
                     onClick={() => goTo(s.id)}
-                    className="group flex w-full flex-col gap-2 text-left disabled:cursor-not-allowed"
+                    className="flex flex-col w-full gap-2 text-left group disabled:cursor-not-allowed"
                   >
                     <span
                       aria-hidden
@@ -613,7 +615,7 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
                             />
                             <FieldError className="text-xs" errors={[stepError]} />
                           </Field>
-                          <div className="flex shrink-0 flex-col gap-1">
+                          <div className="flex flex-col gap-1 shrink-0">
                             <Button
                               type="button"
                               variant="ghost"
@@ -765,7 +767,7 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
                     </RadioGroup>
                   </Field>
 
-                  <FieldSet id={fieldDomId('nutrition')} className="rounded-xl border p-4">
+                  <FieldSet id={fieldDomId('nutrition')} className="p-4 border rounded-xl">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex flex-col gap-1">
                         <FieldLegend variant="label">
@@ -837,7 +839,7 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
               )}
             </CardContent>
 
-            <CardFooter className="flex flex-col-reverse gap-2 border-t pt-6 sm:flex-row sm:justify-between">
+            <CardFooter className="flex flex-col-reverse gap-2 pt-6 border-t sm:flex-row sm:justify-between">
               {prev ? (
                 <Button
                   type="button"

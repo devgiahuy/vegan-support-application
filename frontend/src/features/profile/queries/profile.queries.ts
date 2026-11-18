@@ -54,11 +54,22 @@ export const useUpdateBasicProfileMutation = () => {
   const setUser = useAuthStore((s) => s.setUser);
 
   return useMutation({
-    mutationFn: (payload: { displayName?: string; avatarUrl?: string | null }) =>
-      profileApi.patchBasicProfile(payload),
-    onSuccess: (detailed) => {
+    mutationFn: ({
+      silent: _silent,
+      ...payload
+    }: {
+      displayName?: string;
+      avatarUrl?: string | null;
+      silent?: boolean;
+    }) => {
+      void _silent;
+      return profileApi.patchBasicProfile(payload);
+    },
+    onSuccess: (detailed, variables) => {
       syncProfileUpdateCaches(queryClient, detailed, setUser);
-      toast.success('Đã cập nhật hồ sơ.');
+      if (!variables.silent) {
+        toast.success('Đã cập nhật hồ sơ.');
+      }
     },
   });
 };

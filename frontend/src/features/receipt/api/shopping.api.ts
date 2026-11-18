@@ -11,7 +11,8 @@ export const shoppingApi = {
   previewShoppingGaps: async (meals: SelectedMealInput[]): Promise<ShoppingGapPreview> => {
     const payload = shoppingGapMapper.toPreviewRequestDto(meals);
     const res = await api.post<ShoppingGapEnvelopeDto>(SHOPPING_LISTS_ENDPOINTS.PREVIEW, payload, {
-      showErrorToast: true,
+      // Hook tự toast lỗi qua onError; tránh toast trùng từ interceptor.
+      silent: true,
     });
     return shoppingGapMapper.toModel(res.data.data);
   },

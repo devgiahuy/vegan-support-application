@@ -48,7 +48,7 @@ export function BasicProfileForm({
   const handleAutoSaveAvatar = async (newAvatarUrl: string | null) => {
     setFormError(null);
     try {
-      await updateMutation.mutateAsync({ avatarUrl: newAvatarUrl });
+      await updateMutation.mutateAsync({ avatarUrl: newAvatarUrl, silent: true });
       form.setValue('avatarUrl', newAvatarUrl ?? '', { shouldDirty: false });
       toast.success(
         newAvatarUrl
