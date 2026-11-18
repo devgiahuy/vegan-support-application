@@ -231,7 +231,7 @@ export function SiteHeader() {
                   </Link>
                 </DropdownMenuItem>
                 {/* <DropdownMenuItem asChild>
-                  <Link href="/receipts">
+                  <Link href="/pantry/scan/receipt">
                     <Receipt className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Hóa đơn
                     mua sắm
                   </Link>

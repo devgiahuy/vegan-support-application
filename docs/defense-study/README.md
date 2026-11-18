@@ -2,6 +2,8 @@
 
 **Đối chiếu:** 08/11/2026, nhánh `dev`, `HEAD 0feaca2` trước thay đổi tài liệu này. Đây là kiểm tra tĩnh source và registry, không phải bằng chứng đã chạy end-to-end trên môi trường chấm. Các nhánh khác có thể chứa code khác; kiểm tra lại `git status` và commit trước demo.
 
+**Cập nhật 16/11/2026 (bổ sung kỹ thuật):** thêm [chiến lược tổng duyệt](07_CHIEN_LUOC_TONG_DUYET.md), [bản đồ luồng code](08_LUONG_CODE_CHI_TIET.md) và [ngân hàng câu hỏi](09_NGAN_HANG_CAU_HOI.md), đối chiếu `dev` @ `3c6c59c`, SRS 1.8, BACKEND_INTEGRATION 4.78. Ghi chú đính chính: AI recipe draft hiện `READY` (2026-11-07), không còn `IN_PROGRESS` như dòng tổng kết cũ bên dưới; scan ảnh vẫn `IN_PROGRESS`.
+
 ## Đọc theo thứ tự
 
 1. [Sơ đồ và nguyên tắc nghiệp vụ](01_SO_DO_NGHIEP_VU.md): học thuộc tác nhân, các ranh giới an toàn và vòng đời dữ liệu.
@@ -10,6 +12,15 @@
 4. [Chiến lược 5 buổi và demo](04_CHIEN_LUOC_BAO_VE.md): luyện nói, chuẩn bị dữ liệu và phương án khi demo gặp lỗi.
 5. [Khoảng trống cần xử lý](05_KHOANG_TRONG_CANH_BAO.md): kiểm tra lại trước buổi chấm, đặc biệt các chức năng AI và thay đổi local.
 6. [Bộ chạy test tay 16 luồng](06_KICH_BAN_TEST_TAY_16_LUONG.md): dữ liệu demo, thao tác, kết quả mong đợi, ca lỗi và mẫu biên bản PASS/FAIL/BLOCKED.
+7. [Chiến lược tổng duyệt](07_CHIEN_LUOC_TONG_DUYET.md): định vị 20 giây, 3 phương án demo, fallback matrix, lịch 7 ngày, checklist 24h.
+8. [Bản đồ luồng code](08_LUONG_CODE_CHI_TIET.md): request pipeline, auth/refresh, SSE chat, AI recipe draft, scan tủ lạnh/hóa đơn, meal plan, duyệt nội dung, pantry, billing — kèm file để mở.
+9. [Ngân hàng câu hỏi](09_NGAN_HANG_CAU_HOI.md): ~80 câu nghiệp vụ/kỹ thuật/bẫy, đáp án 45 giây và file bằng chứng.
+10. [Kịch bản nói 2 phút — tạo recipe](10_KICH_BAN_NOI_TAO_RECIPE.md): lời nói từng câu, chỗ dừng mở file, bản rút gọn 45 giây và các câu tuyệt đối tránh.
+11. [Luồng hồ sơ Member → tìm kiếm → lọc cứng → xếp hạng](11_LUONG_HO_SO_VA_KHAM_PHA.md): đánh giá sơ đồ Personalized recipe discovery, constraint, composition, consent và kịch bản 90 giây.
+12. [Kịch bản nói 2 phút — khám phá cá nhân hóa](12_KICH_BAN_NOI_KHAM_PHA.md): lời nói từng câu, chỗ dừng mở file, bản 45 giây và các câu tuyệt đối tránh.
+13. [Các loại thông tin ăn chay của User](13_THONG_TIN_CHE_DO_AN.md): giải thích DietPattern, PracticeSchedule, Tradition, rule seed, dị ứng/kiêng và thứ tự ưu tiên.
+14. [Nói đơn giản về chế độ ăn chay](14_NOI_DON_GIAN_VE_CHE_DO_AN.md): 4 câu hỏi, ví dụ một người, kịch bản 30/60 giây và bảng dịch thuật ngữ khi bị hỏi sâu.
+15. [Luồng Scan tủ lạnh](15_LUONG_SCAN_TU_LANH.md): upload → job nền → candidate → confirm → Pantry, state machine, credit, retry và giới hạn demo.
 
 [Bản bổ sung 21/10](BO_SUNG_CAP_NHAT_2026-10-21.md) giữ lịch sử các thay đổi meal plan, đa ảnh, payOS và mobile, có ghi chú đính chính hiện hành. [Bản review frontend 15/10](../../frontend/docs/FRONTEND_ARCHITECTURE_REVIEW_2026-10-15.md) là snapshot kỹ thuật cũ; không dùng số lint/test/build ở đó như số hiện tại.
 

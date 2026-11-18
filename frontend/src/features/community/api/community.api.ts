@@ -98,7 +98,8 @@ export const communityApi = {
       const res = await api.post<CommunityCommentResponseDto>(
         COMMUNITY_ENDPOINTS.COMMENTS(postId),
         { content, ...(parentId ? { parentId } : {}) },
-        { showErrorToast: true }
+        // Hook tự toast lỗi qua onError; tránh toast trùng từ interceptor.
+        { silent: true }
       );
       return communityMapper.toSingleComment(res.data?.data);
     }
@@ -133,7 +134,7 @@ export const communityApi = {
       const res = await api.patch<CommunityCommentResponseDto>(
         COMMUNITY_ENDPOINTS.COMMENT(id),
         { content },
-        { showErrorToast: true }
+        { silent: true }
       );
       return communityMapper.toSingleComment(res.data?.data);
     }
@@ -159,7 +160,7 @@ export const communityApi = {
   deleteComment: async (id: string): Promise<CommunityComment> => {
     if (!USE_FIXTURES) {
       const res = await api.delete<CommunityCommentResponseDto>(COMMUNITY_ENDPOINTS.COMMENT(id), {
-        showErrorToast: true,
+        silent: true,
       });
       return communityMapper.toSingleComment(res.data?.data);
     }
@@ -201,7 +202,7 @@ export const communityApi = {
       const res = await api.put<CommunityVoteResponseDto>(
         COMMUNITY_ENDPOINTS.VOTE(postId),
         {},
-        { showErrorToast: true }
+        { silent: true }
       );
       return communityMapper.toVoteModel(res.data?.data);
     }
@@ -220,7 +221,7 @@ export const communityApi = {
   ): Promise<{ postId: string; voted: boolean; voteCount: number }> => {
     if (!USE_FIXTURES) {
       const res = await api.delete<CommunityVoteResponseDto>(COMMUNITY_ENDPOINTS.VOTE(postId), {
-        showErrorToast: true,
+        silent: true,
       });
       return communityMapper.toVoteModel(res.data?.data);
     }
@@ -243,7 +244,7 @@ export const communityApi = {
       const res = await api.put<CommunityRatingResponseDto>(
         COMMUNITY_ENDPOINTS.RATING(postId),
         { taste, difficulty },
-        { showErrorToast: true }
+        { silent: true }
       );
       return communityMapper.toRatingModel(res.data?.data);
     }
@@ -261,7 +262,7 @@ export const communityApi = {
       const res = await api.put<CommunityBookmarkResponseDto>(
         COMMUNITY_ENDPOINTS.BOOKMARK(postId),
         undefined,
-        { showErrorToast: true }
+        { silent: true }
       );
       return communityMapper.toBookmarkModel(res.data?.data);
     }
@@ -276,7 +277,7 @@ export const communityApi = {
     if (!USE_FIXTURES) {
       const res = await api.delete<CommunityBookmarkResponseDto>(
         COMMUNITY_ENDPOINTS.BOOKMARK(postId),
-        { showErrorToast: true }
+        { silent: true }
       );
       return communityMapper.toBookmarkModel(res.data?.data);
     }

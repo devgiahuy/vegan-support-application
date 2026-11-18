@@ -24,7 +24,8 @@ export const mealPlanApi = {
     const res = await api.post<MealPlanResponseDto>(
       MEAL_PLANS_ENDPOINTS.GENERATE,
       mealPlanMapper.toGenerateDto(input),
-      { showErrorToast: true }
+      // Hook tự toast theo mã lỗi; tránh toast trùng từ interceptor.
+      { silent: true }
     );
     return mealPlanMapper.toDetailModel(res.data?.data);
   },
@@ -60,7 +61,8 @@ export const mealPlanApi = {
     const res = await api.patch<MealPlanResponseDto>(
       MEAL_PLANS_ENDPOINTS.SWAP(planId, itemId),
       mealPlanMapper.toSwapDto(expectedVersion, idempotencyKey),
-      { showErrorToast: true }
+      // Hook tự toast theo mã lỗi; tránh toast trùng từ interceptor.
+      { silent: true }
     );
     return mealPlanMapper.toDetailModel(res.data?.data);
   },
@@ -87,7 +89,8 @@ export const mealPlanApi = {
   ): Promise<{ id: string; deleted: boolean }> => {
     const res = await api.delete<DeleteMealPlanResponseDto>(MEAL_PLANS_ENDPOINTS.DELETE(id), {
       params: { expectedVersion },
-      showErrorToast: true,
+      // Hook tự toast theo mã lỗi; tránh toast trùng từ interceptor.
+      silent: true,
     });
     return mealPlanMapper.toDeleteModel(res.data?.data);
   },

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/api-error';
 import { mealAnalysisApi } from '../api/meal-analysis.api';
 import type { MealPlanAnalysis } from '../types/meal-analysis.model';
 
@@ -59,8 +60,8 @@ export function useAnalyzeMealPlanMutation(planId: string, currentPlanLockVersio
         });
       }
     },
-    onError: (err) => {
-      const msg = err instanceof Error ? err.message : 'Không thể phân tích thực đơn lúc này.';
+    onError: (err: unknown) => {
+      const msg = getApiErrorMessage(err, 'Không thể phân tích thực đơn lúc này.');
       toast.error('Phân tích thất bại', {
         description: msg,
       });

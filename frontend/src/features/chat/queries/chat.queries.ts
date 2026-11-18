@@ -5,7 +5,7 @@ import { BILLING_QUERY_KEYS } from '@/features/billing/queries/billing.queries';
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { getApiErrorCode } from '@/lib/api-error';
+import { getApiErrorCode, toastApiError } from '@/lib/api-error';
 import type { PaginationResult } from '@/types/api';
 import { useAuthStore } from '@/store/useAuthStore';
 import { chatApi } from '../api/chat.api';
@@ -123,8 +123,8 @@ export function useChatFeedbackMutation() {
       queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.messages(vars.sessionId) });
       toast.success('Đã ghi nhận đánh giá của bạn.');
     },
-    onError: () => {
-      toast.error('Không thể gửi đánh giá', { description: 'Vui lòng thử lại.' });
+    onError: (err: unknown) => {
+      toastApiError(err, 'Không thể gửi đánh giá', 'Vui lòng thử lại.');
     },
   });
 }

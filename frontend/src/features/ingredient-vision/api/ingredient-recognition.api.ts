@@ -26,7 +26,8 @@ export const ingredientRecognitionApi = {
     const res = await api.post<RecognitionJobEnvelopeDto>(
       INGREDIENT_RECOGNITION_ENDPOINTS.JOBS,
       payload,
-      { showErrorToast: true }
+      // Component upload zone tự hiển thị toast lỗi (gồm cả lỗi upload & tạo job); tránh toast trùng từ interceptor.
+      { silent: true }
     );
     return ingredientRecognitionMapper.toModel(res.data.data);
   },

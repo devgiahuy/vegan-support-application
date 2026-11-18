@@ -1,5 +1,6 @@
 import { useQuery, useMutation, type UseQueryOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/api-error';
 import { shoppingApi } from '../api/shopping.api';
 import type { SelectedMealInput, ShoppingGapPreview } from '../types/shopping-gap.model';
 
@@ -44,11 +45,8 @@ export function useShoppingGapPreviewQuery(
 export function usePreviewShoppingGapsMutation() {
   return useMutation<ShoppingGapPreview, Error, SelectedMealInput[]>({
     mutationFn: (meals) => shoppingApi.previewShoppingGaps(meals),
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        'Lỗi khi tính toán danh sách đi chợ thông minh';
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, 'Lỗi khi tính toán danh sách đi chợ thông minh');
       toast.error(message);
     },
   });

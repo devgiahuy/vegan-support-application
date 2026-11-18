@@ -169,26 +169,30 @@ api.interceptors.response.use(
       // Xử lý thông báo lỗi toast tự động
       if (!silent) {
         if (customErrorMessage) {
-          toast.error(customErrorMessage);
+          toast.error(customErrorMessage, { id: customErrorMessage });
         } else if (status >= 500) {
-          toast.error('Lỗi hệ thống máy chủ. Vui lòng thử lại sau.');
+          toast.error('Lỗi hệ thống máy chủ. Vui lòng thử lại sau.', {
+            id: 'server-error-500',
+          });
         } else if (status === 403) {
-          toast.error(
+          const msg =
             nestedMessage ||
-              errorData?.message ||
-              errorData?.detail ||
-              'Bạn không có quyền thực hiện thao tác này.'
-          );
+            errorData?.message ||
+            errorData?.detail ||
+            'Bạn không có quyền thực hiện thao tác này.';
+          toast.error(msg, { id: msg });
         } else if (status === 429) {
-          toast.error('Bạn đang gửi quá nhiều yêu cầu. Vui lòng thử lại sau.');
+          toast.error('Bạn đang gửi quá nhiều yêu cầu. Vui lòng thử lại sau.', {
+            id: 'rate-limit-429',
+          });
         } else if (showErrorToast) {
-          toast.error(
+          const msg =
             nestedMessage ||
-              errorData?.message ||
-              errorData?.detail ||
-              errorData?.title ||
-              'Thao tác thất bại. Vui lòng thử lại.'
-          );
+            errorData?.message ||
+            errorData?.detail ||
+            errorData?.title ||
+            'Thao tác thất bại. Vui lòng thử lại.';
+          toast.error(msg, { id: msg });
         }
       }
     } else if (error.request) {

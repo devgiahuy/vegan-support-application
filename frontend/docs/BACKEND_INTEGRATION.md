@@ -659,7 +659,7 @@ Không sử dụng `any`, không trả DTO trực tiếp về component và khô
 | Food Data/Nutrition              | `features/food-data`, `features/recipe-nutrition`                   | `/ingredients`, recipe editor/detail                                   |
 | Meal Plans                       | `features/meal-plan`                                                | `/meal-plans`, `/meal-plans/saved`                                     |
 | Custom Meals/Programs            | `features/custom-meal`, `features/meal-program`                     | `/meals/custom`, `/meal-programs`                                      |
-| Pantry/Vision/Receipts           | `features/pantry`, `features/ingredient-vision`, `features/receipt` | `/pantry`, `/pantry/scan`, `/receipts`                                 |
+| Pantry/Vision/Receipts           | `features/pantry`, `features/ingredient-vision`, `features/receipt` | `/pantry`, `/pantry/scan/fridge`, `/pantry/scan/receipt`               |
 | Storage                          | `features/storage`                                                  | `/profile` (tab dung lượng)                                            |
 | Recommendations/Behavior         | `features/recommendation`                                           | `/` (khối gợi ý trang chủ)                                             |
 | Chat                             | `features/chat`                                                     | `/assistant`                                                           |
