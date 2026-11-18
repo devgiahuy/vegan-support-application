@@ -7,6 +7,7 @@
  * - /pantry (quản lý tủ bếp gia đình & quét tủ lạnh)
  * - /receipts/scan (quét và kiểm duyệt hóa đơn OCR)
  * - /profile (hồ sơ cá nhân và quản lý dữ liệu người dùng)
+ * - /recipes/new (trình soạn thảo tạo công thức mới dạng studio)
  */
 export const HIDDEN_FOOTER_PREFIXES: readonly string[] = [
   '/assistant',
@@ -15,6 +16,7 @@ export const HIDDEN_FOOTER_PREFIXES: readonly string[] = [
   '/pantry',
   '/receipts/scan',
   '/profile',
+  '/recipes/new',
 ];
 
 /**

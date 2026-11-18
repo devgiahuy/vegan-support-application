@@ -11,7 +11,7 @@ export function SiteFooter() {
   const pathname = usePathname();
 
   // Ẩn Footer trên các màn hình công cụ chuyên sâu / toàn màn hình:
-  // /assistant, /meal-plans, /restaurants, /pantry, /receipts/scan, /profile
+  // /assistant, /meal-plans, /restaurants, /pantry, /receipts/scan, /profile, /recipes/new
   if (isFooterHidden(pathname)) {
     return null;
   }

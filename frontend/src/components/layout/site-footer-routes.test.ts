@@ -9,6 +9,7 @@ describe('site-footer-routes', () => {
     expect(HIDDEN_FOOTER_PREFIXES).toContain('/pantry');
     expect(HIDDEN_FOOTER_PREFIXES).toContain('/receipts/scan');
     expect(HIDDEN_FOOTER_PREFIXES).toContain('/profile');
+    expect(HIDDEN_FOOTER_PREFIXES).toContain('/recipes/new');
   });
 
   it('hides footer on /pantry, /pantry/scan and /receipts/scan', () => {
@@ -36,6 +37,11 @@ describe('site-footer-routes', () => {
   it('hides footer on /profile and subpaths', () => {
     expect(isFooterHidden('/profile')).toBe(true);
     expect(isFooterHidden('/profile/settings')).toBe(true);
+  });
+
+  it('hides footer on /recipes/new and its subpaths', () => {
+    expect(isFooterHidden('/recipes/new')).toBe(true);
+    expect(isFooterHidden('/recipes/new/step-1')).toBe(true);
   });
 
   it('keeps footer visible on content routes', () => {
