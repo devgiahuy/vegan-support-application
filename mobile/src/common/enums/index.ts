@@ -55,19 +55,6 @@ export enum DietPattern {
   LACTO_OVO = 'LACTO_OVO',
 }
 
-/** Lịch thực hành (OpenAPI diet). */
-export enum PracticeSchedule {
-  PERMANENT = 'PERMANENT',
-  PERIODIC = 'PERIODIC',
-}
-
-/** Truyền thống (OpenAPI diet). */
-export enum Tradition {
-  NONE = 'NONE',
-  BUDDHIST = 'BUDDHIST',
-  CHRISTIAN = 'CHRISTIAN',
-}
-
 /** Mức độ nghiêm trọng của dị ứng (`AllergyInput.severity`). */
 export enum AllergySeverity {
   MILD = 'MILD',

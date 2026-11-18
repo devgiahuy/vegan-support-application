@@ -1,16 +1,12 @@
+import { lockDocument } from '../../database/locking.js';
 import { AppError } from '../../common/errors/app-error.js';
 import {
   ContributorApplicationStatus,
-  DietRuleSource,
-  PracticeSchedule,
-  Tradition,
-  type DietRuleDefinition,
   type HealthProfile,
   type Prisma,
   type PrismaClient,
 } from '@prisma/client';
 import type {
-  DietRuleSelectionInput,
   HealthProfileInput,
   SaveDietPreferencesInput,
   UpdateBasicProfileInput,
@@ -25,14 +21,6 @@ const profileInclude = {
   contributorProfile: true,
   healthProfile: true,
   dietPreference: true,
-  dietPreferenceRules: {
-    include: { ruleDefinition: true },
-    orderBy: { createdAt: 'asc' },
-  },
-  dietScheduleDates: {
-    where: { enabled: true },
-    orderBy: { date: 'asc' },
-  },
   allergies: {
     where: { active: true },
     orderBy: { allergenCode: 'asc' },
@@ -49,7 +37,6 @@ const profileInclude = {
 } satisfies Prisma.UserInclude;
 
 export type ProfileRecord = Prisma.UserGetPayload<{ include: typeof profileInclude }>;
-export type PreferenceRuleRecord = ProfileRecord['dietPreferenceRules'][number];
 
 interface CalculatedHealthMetrics {
   bmi: number;
@@ -62,10 +49,6 @@ export interface NormalizedIngredientExclusion {
   ingredientName: string;
   normalizedName: string;
   reason?: string;
-}
-
-function dateFromDateOnly(value: string): Date {
-  return new Date(`${value}T00:00:00.000Z`);
 }
 
 export class ProfileRepository {
@@ -105,33 +88,6 @@ export class ProfileRepository {
     });
   }
 
-  async latestRuleSetVersion(): Promise<number | null> {
-    const aggregate = await this.prisma.dietRuleDefinition.aggregate({
-      where: { active: true },
-      _max: { ruleSetVersion: true },
-    });
-    return aggregate._max.ruleSetVersion;
-  }
-
-  findRuleDefinitions(
-    selection: DietRuleSelectionInput,
-    ruleSetVersion: number,
-  ): Promise<DietRuleDefinition[]> {
-    return this.prisma.dietRuleDefinition.findMany({
-      where: {
-        active: true,
-        ruleSetVersion,
-        OR: [
-          { source: DietRuleSource.DIET_PATTERN, dietPattern: selection.dietPattern },
-          ...(selection.tradition === Tradition.NONE
-            ? []
-            : [{ source: DietRuleSource.TRADITION, tradition: selection.tradition }]),
-        ],
-      },
-      orderBy: [{ source: 'asc' }, { code: 'asc' }],
-    });
-  }
-
   findActiveIngredients(ids: string[]) {
     return this.prisma.ingredient.findMany({
       where: { id: { in: ids }, status: 'ACTIVE' },
@@ -142,47 +98,105 @@ export class ProfileRepository {
   async saveDietPreferences(
     userId: string,
     input: SaveDietPreferencesInput,
-    definitions: DietRuleDefinition[],
     exclusions: NormalizedIngredientExclusion[],
     confirmedAt: Date,
   ): Promise<void> {
     await this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: userId });
+      const current = await transaction.dietPreference.findUnique({ where: { userId } });
+      if ((current?.dietaryRevision ?? 0) !== input.expectedDietaryRevision) {
+        throw new AppError({
+          statusCode: 409,
+          code: 'DIET_PREFERENCES_CONFLICT',
+          message: 'Thiết lập ăn uống đã thay đổi. Vui lòng tải lại.',
+          fields: { currentRevision: [String(current?.dietaryRevision ?? 0)] },
+        });
+      }
+      const [oldAllergies, oldIngredientAllergies, oldExclusions] = await Promise.all([
+        transaction.userAllergy.findMany({
+          where: { userId, active: true },
+          select: { allergenCode: true },
+        }),
+        transaction.userIngredientAllergy.findMany({
+          where: { userId, active: true },
+          select: { ingredientId: true },
+        }),
+        transaction.userIngredientExclusion.findMany({
+          where: { userId, active: true },
+          select: { ingredientId: true, normalizedName: true },
+        }),
+      ]);
+      const normalized = (values: string[]) => [...new Set(values)].sort();
+      const previousKey = current
+        ? JSON.stringify({
+            options: [
+              current.allowEggs,
+              current.allowDairy,
+              current.allowHoney,
+              current.allowFivePungent,
+              current.policyVersion,
+            ],
+            allergens: normalized(oldAllergies.map((a) => a.allergenCode)),
+            ingredients: normalized(oldIngredientAllergies.map((a) => a.ingredientId)),
+            exclusions: normalized(
+              oldExclusions.map((e) => JSON.stringify([e.ingredientId, e.normalizedName])),
+            ),
+          })
+        : null;
+      const nextKey = JSON.stringify({
+        options: [
+          input.allowEggs,
+          input.allowDairy,
+          input.allowHoney,
+          input.allowFivePungent,
+          input.policyVersion,
+        ],
+        allergens: normalized(input.allergies.map((a) => a.allergenCode)),
+        ingredients: normalized(
+          (input.ingredientAllergies ?? oldIngredientAllergies).map((a) => a.ingredientId),
+        ),
+        exclusions: normalized(
+          exclusions.map((e) => JSON.stringify([e.ingredientId ?? null, e.normalizedName])),
+        ),
+      });
+      const constraintsChanged = previousKey !== nextKey;
+      const data = {
+        allowEggs: input.allowEggs,
+        allowDairy: input.allowDairy,
+        allowHoney: input.allowHoney,
+        allowFivePungent: input.allowFivePungent,
+        policyVersion: input.policyVersion,
+        dietaryRevision: (current?.dietaryRevision ?? 0) + (constraintsChanged ? 1 : 0),
+        confirmedAt,
+      };
       await transaction.dietPreference.upsert({
         where: { userId },
-        update: {
-          dietPattern: input.dietPattern,
-          practiceSchedule: input.practiceSchedule,
-          tradition: input.tradition,
-          ruleSetVersion: input.ruleSetVersion,
-          confirmedAt,
-        },
-        create: {
-          userId,
-          dietPattern: input.dietPattern,
-          practiceSchedule: input.practiceSchedule,
-          tradition: input.tradition,
-          ruleSetVersion: input.ruleSetVersion,
-          confirmedAt,
-        },
+        update: data,
+        create: { userId, ...data },
       });
-
-      await transaction.dietPreferenceRule.deleteMany({ where: { userId } });
-      const selectedById = new Map(
-        input.rules.map((selection) => [selection.ruleDefinitionId, selection.enabled]),
-      );
-      await transaction.dietPreferenceRule.createMany({
-        data: definitions.map((definition) => ({
-          userId,
-          ruleDefinitionId: definition.id,
-          enabled: selectedById.get(definition.id) ?? definition.defaultEnabled,
-          source: definition.source,
-        })),
-      });
-
-      await transaction.dietScheduleDate.deleteMany({ where: { userId } });
-      if (input.practiceSchedule === PracticeSchedule.PERIODIC && input.scheduleDates?.length) {
-        await transaction.dietScheduleDate.createMany({
-          data: input.scheduleDates.map((date) => ({ userId, date: dateFromDateOnly(date) })),
+      if (constraintsChanged) {
+        const plans = await transaction.mealPlan.findMany({
+          where: { userId, deletedAt: null },
+          select: { id: true },
+        });
+        await transaction.mealAnalysis.updateMany({
+          where: { mealPlanId: { in: plans.map((plan) => plan.id) }, status: 'CURRENT' },
+          data: { status: 'STALE' },
+        });
+        const programs = await transaction.mealProgram.findMany({
+          where: { userId },
+          select: { id: true },
+        });
+        await transaction.mealProgramAnalysis.updateMany({
+          where: {
+            mealProgramId: { in: programs.map((program) => program.id) },
+            status: 'CURRENT',
+          },
+          data: { status: 'STALE' },
+        });
+        await transaction.mealProgramWeek.updateMany({
+          where: { mealProgramId: { in: programs.map((program) => program.id) } },
+          data: { projectionStatus: 'STALE' },
         });
       }
 
@@ -221,15 +235,6 @@ export class ProfileRepository {
           data: exclusions.map((exclusion) => ({ userId, ...exclusion })),
         });
       }
-    });
-  }
-
-  async replaceDietSchedule(userId: string, dates: string[]): Promise<void> {
-    await this.prisma.$transaction(async (transaction) => {
-      await transaction.dietScheduleDate.deleteMany({ where: { userId } });
-      await transaction.dietScheduleDate.createMany({
-        data: dates.map((date) => ({ userId, date: dateFromDateOnly(date) })),
-      });
     });
   }
 }

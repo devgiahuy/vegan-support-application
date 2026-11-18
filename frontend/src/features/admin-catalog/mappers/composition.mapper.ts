@@ -30,6 +30,10 @@ export class CompositionMapper extends BaseMapper<CompositionDto, IngredientComp
       rawKind === 'SIMPLE' || rawKind === 'COMPOUND' ? rawKind : 'UNSPECIFIED';
     const evidence = pickField<Record<string, unknown> | null>(dto, ['evidence'], null);
     return {
+      dietaryGroups: safeArray<unknown>(pickField(dto, ['dietaryGroups'], []))
+        .map((value) => safeString(value))
+        .filter(Boolean),
+      dietaryClassificationVersion: safeNumber(pickField(dto, ['dietaryClassificationVersion'], 0)),
       ingredientId: safeString(pickField(dto, ['ingredientId'], '')),
       status,
       kind,
@@ -80,6 +84,7 @@ export class CompositionMapper extends BaseMapper<CompositionDto, IngredientComp
   toRequest(draft: CompositionDraft, version: number): SaveCompositionRequestDto {
     return {
       expectedVersion: version,
+      dietaryGroups: [...new Set(draft.dietaryGroups)],
       status: draft.status,
       kind: draft.kind,
       componentIds: [...new Set(draft.componentIds)],

@@ -1,4 +1,7 @@
 export interface CompositionDto {
+  dietaryGroups?: (string | null)[] | null;
+  dietaryEvidence?: Record<string, unknown> | null;
+  dietaryClassificationVersion?: number;
   ingredientId?: string;
   status?: string;
   kind?: string;
@@ -31,6 +34,7 @@ export interface CompositionSourcesResponseDto {
   data?: CompositionSourceDto[];
 }
 export interface SaveCompositionRequestDto {
+  dietaryGroups: string[];
   expectedVersion: number;
   status: 'UNKNOWN' | 'PARTIAL' | 'COMPLETE';
   kind: 'UNSPECIFIED' | 'SIMPLE' | 'COMPOUND';

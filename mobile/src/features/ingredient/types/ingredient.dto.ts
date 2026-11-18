@@ -13,6 +13,8 @@ export interface IngredientAliasDto {
 }
 
 export interface IngredientDto {
+  dietaryGroups?: string[];
+  dietaryClassificationVersion?: number;
   id?: string;
   canonicalName?: string;
   canonical_name?: string;
@@ -46,7 +48,6 @@ export interface IngredientResolveResponseDto {
     match?: string;
     candidates?: (IngredientDto & {
       dietCompatibilities?: { dietPattern?: string; compatible?: boolean }[] | null;
-      traditionWarnings?: { tradition?: string; warningCode?: string; label?: string }[] | null;
     })[] | null;
   } | null;
 }

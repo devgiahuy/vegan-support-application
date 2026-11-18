@@ -20,6 +20,9 @@ export interface TraditionWarning {
 }
 
 export interface Ingredient {
+  dietaryGroups: string[];
+  dietaryClassificationVersion: number;
+  dietaryReviewed: boolean;
   compositionStatus: 'UNKNOWN' | 'PARTIAL' | 'COMPLETE';
   compositionStatusLabel: string;
   id: string;

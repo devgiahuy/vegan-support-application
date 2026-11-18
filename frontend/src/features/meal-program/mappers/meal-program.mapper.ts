@@ -1,3 +1,4 @@
+import { dietImpactMapper } from '@/features/diet-preferences/mappers/diet-impact.mapper';
 import {
   BaseMapper,
   pickField,
@@ -39,6 +40,7 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
   public toModel(dto: MealProgramDto | null | undefined): MealProgram {
     if (!dto) {
       return {
+        compatibility: dietImpactMapper.compatibility(undefined),
         id: '',
         userId: '',
         title: '',
@@ -80,6 +82,22 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
     const rawAnalysis = dto.analysis ?? dto.cumulative_analysis ?? dto.cumulativeAnalysis;
 
     return {
+      compatibility: dietImpactMapper.compatibility(dto.compatibility),
+      sourceProgramId: safeString(dto.sourceProgramId) || null,
+      effectiveFrom: safeString(dto.effectiveFrom) || null,
+      replacedByProgramId: safeString(dto.replacedByProgramId) || null,
+      selectedPlanIds: [
+        ...new Set(
+          (dto.weeks ?? []).flatMap((week) =>
+            (week.alternatives ?? [])
+              .filter(
+                (alternative) =>
+                  alternative.selected || alternative.rank === week.selectedAlternativeRank
+              )
+              .flatMap((alternative) => (alternative.mealPlanId ? [alternative.mealPlanId] : []))
+          )
+        ),
+      ],
       id: safeString(pickField(dto, ['id'], ''), ''),
       userId: safeString(pickField(dto, ['user_id', 'userId'], ''), ''),
       title: safeString(pickField(dto, ['title'], ''), ''),
@@ -149,6 +167,10 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
     }
 
     return {
+      compatibility: dietImpactMapper.compatibility(dto.compatibility),
+      sourceProgramId: safeString(dto.sourceProgramId) || null,
+      effectiveFrom: safeString(dto.effectiveFrom) || null,
+      replacedByProgramId: safeString(dto.replacedByProgramId) || null,
       id: safeString(pickField(dto, ['id'], ''), ''),
       userId: safeString(pickField(dto, ['user_id', 'userId'], ''), ''),
       title: safeString(pickField(dto, ['title'], ''), ''),
@@ -281,13 +303,11 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
       isDownstreamInvalidated,
       failureCode: safeString(pickField(dto.failure, ['code'], '')),
       failureMessage:
-        dto.failure?.code === 'DIET_SCHEDULE_REQUIRED'
-          ? 'Tuần này chưa có ngày chay kỳ. Hãy bổ sung và lưu lịch chay, sau đó tạo lại thực đơn tuần.'
-          : dto.failure?.code === 'HEALTH_PROFILE_INCOMPLETE'
-            ? 'Hãy bổ sung hồ sơ sức khỏe trước khi tạo thực đơn.'
-            : dto.failure
-              ? 'Không tạo được thực đơn tuần. Vui lòng kiểm tra hồ sơ và thử lại.'
-              : '',
+        dto.failure?.code === 'HEALTH_PROFILE_INCOMPLETE'
+          ? 'Hãy bổ sung hồ sơ sức khỏe trước khi tạo thực đơn.'
+          : dto.failure
+            ? 'Không tạo được thực đơn tuần. Vui lòng kiểm tra hồ sơ và thử lại.'
+            : '',
       snapshot: this.mapSnapshot(rawSnapshot, effectiveStartDate),
     };
   }

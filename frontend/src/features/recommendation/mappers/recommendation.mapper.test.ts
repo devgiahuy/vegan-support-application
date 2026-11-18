@@ -35,7 +35,7 @@ const homeEnvelope: RecommendationResponseDto = {
       dietPattern: 'VEGAN',
       allergyCount: 1,
       ingredientExclusionCount: 1,
-      traditions: [],
+      foodGroups: [],
       forDate: '2026-09-17',
     },
   },

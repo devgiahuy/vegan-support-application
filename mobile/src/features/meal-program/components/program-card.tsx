@@ -5,6 +5,7 @@ import { ArrowRight, Award, CalendarRange, Target, TriangleAlert } from 'lucide-
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
 import type { MealProgram } from '../types/meal-program.model';
+import { DietaryCompatibilityBanner } from '@/features/diet-preferences/components/dietary-compatibility-banner';
 
 export function programStatusStyle(status: MealProgram['status']): { badge: string; text: string } {
   if (status === 'CONFIRMED') return { badge: 'bg-emerald-500/10', text: 'text-emerald-600' };
@@ -33,6 +34,7 @@ export function ProgramCard({ program }: { program: MealProgram }) {
         </View>
 
         <View className="gap-3 p-4">
+          <DietaryCompatibilityBanner compatibility={program.compatibility} compact />
           <View className="gap-1">
             <Text numberOfLines={2} className="text-lg font-semibold text-foreground">
               {program.title}

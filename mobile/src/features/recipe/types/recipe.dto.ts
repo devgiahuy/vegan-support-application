@@ -25,12 +25,6 @@ export interface RecipeStepDto {
   affectedIngredientPositions?: number[];
 }
 
-export interface TraditionWarningDto {
-  tradition?: string;
-  warningCode?: string;
-  label?: string;
-}
-
 export interface DietCompatibilityDto {
   dietPattern?: string;
   compatible?: boolean;
@@ -57,7 +51,7 @@ export interface RecipeDetailDto extends BasePostDto {
     authorNutrition?: NutritionFactDto | null;
     mealPlannerEligible?: boolean;
     allergenCodes?: string[];
-    traditionWarnings?: TraditionWarningDto[];
+    dietaryGroups?: string[];
     dietCompatibilities?: DietCompatibilityDto[];
     ingredients?: RecipeIngredientDto[];
     steps?: (RecipeStepDto | null)[];
@@ -73,7 +67,8 @@ export interface AppliedConstraintsDto {
   dietPattern: string | null;
   allergyCount: number;
   ingredientExclusionCount: number;
-  traditions: string[];
+  foodGroups: string[];
+  dietaryRevision: number | null;
   forDate: string;
 }
 

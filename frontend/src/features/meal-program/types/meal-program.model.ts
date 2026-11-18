@@ -1,3 +1,4 @@
+import type { DietaryCompatibility } from '@/features/diet-preferences/types/diet-impact.model';
 export type MealProgramStatus =
   'DRAFT' | 'PARTIAL' | 'GENERATING' | 'CONFIRMED' | 'COMPLETED' | 'ARCHIVED' | 'FAILED';
 export type ProgramWeekStatus = 'UPCOMING' | 'ACTIVE' | 'COMPLETED';
@@ -101,6 +102,11 @@ export interface CumulativeAnalysis {
 }
 
 export interface MealProgramListItem {
+  sourceProgramId?: string | null;
+  effectiveFrom?: string | null;
+  replacedByProgramId?: string | null;
+  compatibility?: DietaryCompatibility;
+  selectedPlanIds?: string[];
   id: string;
   userId: string;
   title: string;
@@ -125,6 +131,11 @@ export interface MealProgramListItem {
 }
 
 export interface MealProgram {
+  sourceProgramId?: string | null;
+  effectiveFrom?: string | null;
+  replacedByProgramId?: string | null;
+  compatibility?: DietaryCompatibility;
+  selectedPlanIds?: string[];
   id: string;
   userId: string;
   title: string;

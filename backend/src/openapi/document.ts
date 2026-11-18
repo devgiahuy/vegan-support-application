@@ -1,3 +1,4 @@
+import { registerDietaryImpactOpenApi } from '../modules/dietary-impact/dietary-impact.openapi.js';
 import { registerBillingOpenApi } from '../modules/billing/billing.openapi.js';
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import { errorResponseSchema } from '../common/schemas/api-envelope.schemas.js';
@@ -61,6 +62,7 @@ registry.registerPath({
 
 registerAuthOpenApi(registry, registeredErrorResponse);
 registerProfileOpenApi(registry, registeredErrorResponse);
+registerDietaryImpactOpenApi(registry, registeredErrorResponse);
 registerCatalogOpenApi(registry, registeredErrorResponse);
 registerCompositionOpenApi(registry, registeredErrorResponse);
 registerContentOpenApi(registry, registeredErrorResponse);

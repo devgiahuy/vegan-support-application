@@ -47,6 +47,7 @@ export function MealSlotCard({
   onSwap,
   onPick,
   onShopping,
+  dietaryWarning,
 }: {
   slot: MealSlot;
   disabled: boolean;
@@ -54,6 +55,7 @@ export function MealSlotCard({
   onPick: (slot: MealSlot) => void;
   /** Mở nguyên liệu cần mua của riêng bữa này (chỉ hiện khi ô đã có món). */
   onShopping?: (slot: MealSlot) => void;
+  dietaryWarning?: string;
 }) {
   const colors = useIconColors();
   const hasMacros = slot.protein > 0 || slot.carbs > 0 || slot.fat > 0 || slot.fiber > 0;
@@ -78,6 +80,13 @@ export function MealSlotCard({
         </View>
         {slot.filled ? <Text className="text-xs font-semibold text-foreground">{slot.formattedCalories}</Text> : null}
       </View>
+
+      {dietaryWarning ? (
+        <View accessibilityRole="alert" className="rounded-lg border border-amber-400/40 bg-amber-500/10 p-2.5">
+          <Text className="text-xs font-semibold text-foreground">Cần xem lại theo hồ sơ hiện tại</Text>
+          <Text className="mt-1 text-xs leading-5 text-muted-foreground">{dietaryWarning}</Text>
+        </View>
+      ) : null}
 
       {slot.filled ? (
         <View className="flex-row items-start gap-2.5">

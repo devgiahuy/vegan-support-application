@@ -18,7 +18,10 @@ import {
 } from '../../common/nutrition/meal-macros.js';
 import type { AppConfig } from '../../config/env.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
-import { buildAuthenticatedSearchConstraints } from '../content/search-constraints.js';
+import {
+  buildAuthenticatedSearchConstraints,
+  dateOnlyInSearchTimezone,
+} from '../content/search-constraints.js';
 import { describeIngredientSafetyReasons } from '../catalog/ingredient-safety.js';
 import {
   type AnalysisPlanRecord,
@@ -351,6 +354,7 @@ export class MealAnalysisService {
       this.selectedItem(item, servings, conversions, incomplete),
     );
     const hardViolations = selectedRows.flatMap(({ item }) => {
+      if (dateOnly(item.date) < dateOnlyInSearchTimezone(new Date())) return [];
       const constraints = buildAuthenticatedSearchConstraints(
         profile,
         undefined,
@@ -459,15 +463,22 @@ export class MealAnalysisService {
     };
     const profileSnapshot: Prisma.InputJsonObject = {
       healthUpdatedAt: profile.healthProfile?.updatedAt.toISOString() ?? null,
-      dietUpdatedAt: profile.dietPreference?.updatedAt.toISOString() ?? null,
-      dietPattern: profile.dietPreference?.dietPattern ?? null,
-      tradition: profile.dietPreference?.tradition ?? null,
+      dietaryRevision: profile.dietPreference?.dietaryRevision ?? null,
+      dietarySelection: profile.dietPreference
+        ? {
+            allowEggs: profile.dietPreference.allowEggs,
+            allowDairy: profile.dietPreference.allowDairy,
+            allowHoney: profile.dietPreference.allowHoney,
+            allowFivePungent: profile.dietPreference.allowFivePungent,
+            dietaryRevision: profile.dietPreference.dietaryRevision,
+            policyVersion: profile.dietPreference.policyVersion,
+          }
+        : null,
       allergyCodes: profile.allergies.map((entry) => entry.allergenCode).sort(),
       ingredientAllergyIds: profile.ingredientAllergies.map((entry) => entry.ingredientId).sort(),
       exclusionIds: profile.ingredientExclusions
         .flatMap((entry) => (entry.ingredientId ? [entry.ingredientId] : []))
         .sort(),
-      enabledRuleIds: profile.dietPreferenceRules.map((entry) => entry.ruleDefinitionId).sort(),
     };
     const ruleVersions = [
       ...rules.references.map(
@@ -484,6 +495,7 @@ export class MealAnalysisService {
       ),
     ].sort();
     const fingerprint = sha256({
+      effectiveFrom: dateOnlyInSearchTimezone(new Date()),
       algorithm: MEAL_ANALYSIS_ALGORITHM_VERSION,
       plan: { id: plan.id, lockVersion: plan.lockVersion, updatedAt: plan.updatedAt.toISOString() },
       requestSnapshot,

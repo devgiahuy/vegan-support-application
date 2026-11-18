@@ -146,7 +146,7 @@ export default function RecipeDetailScreen() {
   const baseServings = recipe.servings || 2;
   const servingCount = (servings ?? recipe.servings) || 2;
   const servingRatio = servingCount / baseServings;
-  const hasCompatibilityInfo = recipe.traditionWarnings.length > 0 || incompatibilities.length > 0;
+  const hasCompatibilityInfo = recipe.dietaryGroups.length > 0 || incompatibilities.length > 0;
 
   return (
     <SiteScreen>
@@ -380,13 +380,10 @@ export default function RecipeDetailScreen() {
           <View className="gap-3 rounded-2xl border border-border p-4">
             <View className="flex-row items-center gap-1.5">
               <ShieldCheck size={15} color={colors.primary} />
-              <Text className="text-sm font-bold text-foreground">Tương thích chế độ ăn</Text>
+              <Text className="text-sm font-bold text-foreground">Thông tin nhóm thực phẩm</Text>
             </View>
-            {recipe.traditionWarnings.map((w) => (
-              <Text key={`${w.tradition}-${w.warningCode}`} className="text-xs leading-relaxed text-muted-foreground">
-                <Text className="font-semibold text-foreground">{w.tradition}: </Text>
-                {w.label || w.warningCode}
-              </Text>
+            {recipe.dietaryGroupLabels.map((label) => (
+              <Text key={label} className="text-xs leading-relaxed text-muted-foreground">{label}</Text>
             ))}
             {incompatibilities.map((c) => (
               <Text key={c.dietPattern} className="text-xs leading-relaxed text-muted-foreground">

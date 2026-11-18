@@ -1,6 +1,6 @@
 import { searchMongoPublished } from './content-search.mongo.js';
 import { lockDocument } from '../../database/locking.js';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, DietaryFoodGroup } from '@prisma/client';
 import {
   CatalogStatus,
   FoodDataReviewStatus,
@@ -61,18 +61,6 @@ const publishedPostInclude = {
 
 const searchProfileSelect = {
   dietPreference: true,
-  dietScheduleDates: {
-    where: { enabled: true },
-    select: { date: true },
-  },
-  dietPreferenceRules: {
-    where: { enabled: true },
-    select: {
-      ruleDefinition: {
-        select: { active: true, hardConstraint: true, tradition: true },
-      },
-    },
-  },
   allergies: {
     where: { active: true },
     select: { allergenCode: true },
@@ -125,6 +113,7 @@ export interface RecipeSnapshot {
   authorNutrition: Prisma.InputJsonObject;
   mealPlannerEligible: boolean;
   allergenCodes: string[];
+  dietaryGroups?: string[];
   traditionWarnings: Array<{ tradition: string; warningCode: string; label: string }>;
   ingredients: ResolvedRecipeIngredient[];
   steps: Array<{
@@ -156,6 +145,7 @@ export interface ContentSearchCriteria extends Omit<PostListQuery, 'q'> {
 }
 
 export interface SearchConstraints {
+  blockedFoodGroups?: DietaryFoodGroup[];
   dietPattern?: DietPattern;
   allergenCodes: string[];
   allergicIngredientIds?: string[];
@@ -918,6 +908,7 @@ export class ContentRepository {
                   authorNutrition: recipe.authorNutrition,
                   mealPlannerEligible: recipe.mealPlannerEligible,
                   allergenCodes: recipe.allergenCodes,
+                  dietaryGroups: recipe.dietaryGroups ?? [],
                   traditionWarnings: recipe.traditionWarnings,
                 },
               },

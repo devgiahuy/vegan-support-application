@@ -9,7 +9,6 @@ import {
   PostStatus,
   PostType,
   RecipeDifficulty,
-  Tradition,
 } from '@prisma/client';
 import { z } from '../../common/validation/zod.js';
 import { mediaUrlSchema } from '../../common/validation/zod.js';
@@ -361,14 +360,13 @@ const recipeCompatibilitySchema = z
     reasonCodes: z.array(z.string()),
   })
   .strict();
-const traditionWarningSchema = z
-  .object({ tradition: z.enum(Tradition), warningCode: z.string(), label: z.string() })
-  .strict();
 export const recipeIneligibilityReasonCodes = [
   'ALLERGY',
   'ALLERGEN_SELECTION_UNRESOLVED',
   'DIET_PATTERN',
   'INGREDIENT_COMPOSITION_UNCERTAIN',
+  'INGREDIENT_DIETARY_UNCERTAIN',
+  'FOOD_GROUP_EXCLUSION',
   'INGREDIENT_EXCLUSION',
   'TRADITION_RULE',
   'UNRESOLVED_INGREDIENT',
@@ -434,7 +432,7 @@ const recipeOutputSchema = z
       .describe(
         'GET detail only: matches against the authenticated viewer’s active saved allergies. Empty for guests or no known match; not a safety clearance.',
       ),
-    traditionWarnings: z.array(traditionWarningSchema),
+    dietaryGroups: z.array(z.string()),
     dietCompatibilities: z.array(recipeCompatibilitySchema),
     ingredients: z.array(recipeIngredientSchema),
     steps: z.array(recipeStepSchema),
@@ -500,7 +498,8 @@ const paginationMetaSchema = z
         dietPattern: z.enum(DietPattern).nullable(),
         allergyCount: z.number().int().nonnegative(),
         ingredientExclusionCount: z.number().int().nonnegative(),
-        traditions: z.array(z.enum(Tradition)),
+        foodGroups: z.array(z.string()),
+        dietaryRevision: z.number().int().positive().nullable(),
         forDate: dateOnlySchema,
       })
       .strict(),

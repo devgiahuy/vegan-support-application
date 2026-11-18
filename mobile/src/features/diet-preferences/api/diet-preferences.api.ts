@@ -1,89 +1,53 @@
 import api from '@/lib/axios';
 import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
-import { DietPattern, PracticeSchedule, Tradition } from '@/common/enums';
 import { dietPreferencesMapper } from '../mappers/diet-preferences.mapper';
-import { toDietSummary } from '@/features/profile/mappers/profile.mapper';
-import type {
-  DietPreferenceResponseDto,
-  DietRulePreviewResponseDto,
-  DietScheduleResponseDto,
-  SaveDietPreferencesRequestDto,
-} from '../types/diet-preferences.dto';
-import type {
-  DietRulePreview,
-  DraftAllergy,
-  DraftIngredientAllergy,
-  DraftIngredientExclusion,
-} from '../types/diet-preferences.model';
-import type { DietPreferenceSummary } from '@/features/profile/types/profile.model';
+import { dietImpactMapper } from '../mappers/diet-impact.mapper';
+import { mealProgramMapper } from '@/features/meal-program/mappers/meal-program.mapper';
+import type { MealProgramResponseDto } from '@/features/meal-program/types/meal-program.dto';
+import type { MealProgram } from '@/features/meal-program/types/meal-program.model';
+import type { DietPreferenceResponseDto, DietRulePreviewResponseDto } from '../types/diet-preferences.dto';
+import type { DietaryImpactResponseDto, DietaryRepairPreviewRequestDto, DietaryRepairApplyRequestDto, DietaryProgramRevisionRequestDto, DietaryRepairPreviewResponseDto, DietaryRepairApplyResponseDto } from '../types/diet-impact.dto';
+import type { DietRulePreview, SaveDietPreferencesInput, SavedDietPreferences } from '../types/diet-preferences.model';
+import type { FoodAllowanceSelection } from '../types/food-allowances.model';
+import type { DietaryImpact, DietaryRepairPreview, DietaryRepairResult } from '../types/diet-impact.model';
 
-export interface DietSelection {
-  dietPattern: DietPattern;
-  practiceSchedule: PracticeSchedule;
-  tradition: Tradition;
-}
-
-export interface SaveDietPreferencesInput extends DietSelection {
-  ruleSetVersion: number;
-  ruleSelections: { ruleDefinitionId: string; enabled: boolean }[];
-  scheduleDates?: string[];
-  allergies: DraftAllergy[];
-  /** undefined = không gửi (BE giữ nguyên); mảng = thay thế toàn bộ. */
-  ingredientAllergies?: DraftIngredientAllergy[];
-  ingredientExclusions: DraftIngredientExclusion[];
-}
+export type DietSelection = FoodAllowanceSelection;
+export type { SaveDietPreferencesInput } from '../types/diet-preferences.model';
+const LONG_REQUEST = { timeout: 180000, silent: true } as const;
 
 export const dietPreferencesApi = {
-  /** `POST /diet-rules/preview` — xem trước rule set áp dụng cho 1 lựa chọn, chưa lưu. */
   previewRules: async (selection: DietSelection): Promise<DietRulePreview> => {
-    const res = await api.post<DietRulePreviewResponseDto>(API_ENDPOINTS.DIET_RULES.PREVIEW, selection);
+    const payload = { allowEggs: selection.allowEggs, allowDairy: selection.allowDairy, allowHoney: selection.allowHoney, allowFivePungent: selection.allowFivePungent };
+    const res = await api.post<DietRulePreviewResponseDto>(API_ENDPOINTS.DIET_RULES.PREVIEW, payload, { silent: true });
+    if (!res.data.data) throw new Error('Không tải được chính sách ăn uống. Vui lòng thử lại.');
     return dietPreferencesMapper.toPreviewModel(res.data);
   },
-
-  /** `PUT /users/me/diet-preferences` — lưu chế độ ăn + rule set + dị ứng + loại trừ. */
-  saveDietPreferences: async (input: SaveDietPreferencesInput): Promise<DietPreferenceSummary | null> => {
-    const payload: SaveDietPreferencesRequestDto = {
-      dietPattern: input.dietPattern,
-      practiceSchedule: input.practiceSchedule,
-      tradition: input.tradition,
-      ruleSetVersion: input.ruleSetVersion,
-      rules: input.ruleSelections,
-      scheduleDates: input.scheduleDates,
-      allergies: input.allergies.map((a) => ({
-        allergenCode: a.allergenCode,
-        label: a.label || undefined,
-        severity: a.severity,
-      })),
-      ...(input.ingredientAllergies
-        ? {
-            ingredientAllergies: input.ingredientAllergies.map((a) => ({
-              ingredientId: a.ingredientId,
-              severity: a.severity,
-            })),
-          }
-        : {}),
-      ingredientExclusions: input.ingredientExclusions.map((e) => ({
-        ingredientName: e.ingredientName,
-        ...(e.ingredientId ? { ingredientId: e.ingredientId } : {}),
-        // Schema BE yêu cầu reason min(1) nếu có — bỏ khi rỗng.
-        ...(e.reason?.trim() ? { reason: e.reason.trim() } : {}),
-      })),
-    };
-    const res = await api.put<DietPreferenceResponseDto>(API_ENDPOINTS.USERS.DIET_PREFERENCES, payload);
-    return toDietSummary(res.data?.data as Record<string, unknown> | null);
+  previewImpact: async (input: SaveDietPreferencesInput): Promise<DietaryImpact> => {
+    const res = await api.post<DietaryImpactResponseDto>(
+      API_ENDPOINTS.USERS.DIET_IMPACT, dietPreferencesMapper.toSaveDto(input), LONG_REQUEST,
+    );
+    if (!res.data.data || !Array.isArray(res.data.data.plans)) throw new Error('Không kiểm tra được ảnh hưởng tới thực đơn. Vui lòng thử lại.');
+    return dietImpactMapper.toModel(res.data.data);
   },
-
-  /**
-   * `PUT /users/me/diet-schedule` — sửa riêng ngày chay kỳ, không phải chạy lại cả
-   * wizard. Chỉ áp dụng khi đã lưu chế độ ăn và `practiceSchedule === PERIODIC`; cho
-   * phép gửi mảng rỗng để xoá hết ngày đã chọn.
-   */
-  saveDietSchedule: async (dates: string[]): Promise<{ practiceSchedule: string; timezone: string; dates: string[] }> => {
-    const res = await api.put<DietScheduleResponseDto>(API_ENDPOINTS.USERS.DIET_SCHEDULE, { dates });
-    return {
-      practiceSchedule: res.data?.data?.practiceSchedule ?? '',
-      timezone: res.data?.data?.timezone ?? 'Asia/Ho_Chi_Minh',
-      dates: res.data?.data?.dates ?? [],
-    };
+  saveDietPreferences: async (input: SaveDietPreferencesInput): Promise<SavedDietPreferences> => {
+    const res = await api.put<DietPreferenceResponseDto>(
+      API_ENDPOINTS.USERS.DIET_PREFERENCES, dietPreferencesMapper.toSaveDto(input), LONG_REQUEST,
+    );
+    return dietPreferencesMapper.toSavedModel(res.data);
+  },
+  previewRepair: async (input: DietaryRepairPreviewRequestDto): Promise<DietaryRepairPreview> => {
+    const res = await api.post<DietaryRepairPreviewResponseDto>(API_ENDPOINTS.MEAL_PLANS.REPAIR_PREVIEW, input, LONG_REQUEST);
+    if (!res.data.data?.proposalId) throw new Error('Không tạo được phương án thay món. Thực đơn vẫn được giữ nguyên.');
+    return dietImpactMapper.toRepairPreview(res.data.data);
+  },
+  applyRepair: async (input: DietaryRepairApplyRequestDto): Promise<DietaryRepairResult> => {
+    const res = await api.post<DietaryRepairApplyResponseDto>(API_ENDPOINTS.MEAL_PLANS.REPAIR_APPLY, input, LONG_REQUEST);
+    if (!res.data.data || !Array.isArray(res.data.data.results)) throw new Error('Chưa xác định được kết quả thay món. Hãy tải lại thực đơn trước khi thử lại.');
+    return dietImpactMapper.toRepairResult(res.data.data);
+  },
+  createProgramRevision: async (programId: string, input: DietaryProgramRevisionRequestDto): Promise<MealProgram> => {
+    const res = await api.post<MealProgramResponseDto>(API_ENDPOINTS.MEAL_PROGRAMS.DIET_REVISION(programId), input, LONG_REQUEST);
+    if (!res.data.data?.id) throw new Error('Chưa xác định được bản điều chỉnh. Hãy tải lại danh sách lộ trình.');
+    return mealProgramMapper.toResponseModel(res.data);
   },
 };

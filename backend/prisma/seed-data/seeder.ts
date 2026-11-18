@@ -823,18 +823,16 @@ export async function seedComprehensiveData(
       await prisma.dietPreference.upsert({
         where: { userId: user.id },
         update: {
-          dietPattern: uDef.dietPreference.dietPattern,
-          practiceSchedule: uDef.dietPreference.practiceSchedule,
-          tradition: uDef.dietPreference.tradition,
-          ruleSetVersion: 1,
+          ...uDef.dietPreference,
+          policyVersion: 1,
+          dietaryRevision: 1,
           confirmedAt: new Date(),
         },
         create: {
           userId: user.id,
-          dietPattern: uDef.dietPreference.dietPattern,
-          practiceSchedule: uDef.dietPreference.practiceSchedule,
-          tradition: uDef.dietPreference.tradition,
-          ruleSetVersion: 1,
+          ...uDef.dietPreference,
+          policyVersion: 1,
+          dietaryRevision: 1,
           confirmedAt: new Date(),
         },
       });

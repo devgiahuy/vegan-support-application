@@ -4,6 +4,7 @@ import { ArrowRight, Flame } from 'lucide-react-native';
 
 import { useIconColors } from '@/lib/theme-colors';
 import type { MealPlan } from '../types/meal-plan.model';
+import { DietaryCompatibilityBanner } from '@/features/diet-preferences/components/dietary-compatibility-banner';
 
 /** Card tóm tắt một phiên bản thực đơn — đồng bộ `PlanCard` của web. */
 export function PlanCard({ plan }: { plan: MealPlan }) {
@@ -22,6 +23,7 @@ export function PlanCard({ plan }: { plan: MealPlan }) {
           Bản {plan.version} — {plan.filledSlots}/{plan.totalSlots} bữa đã lấp
           {plan.warnings.length > 0 ? ` — ${plan.warnings.length} lưu ý` : ''}
         </Text>
+        <DietaryCompatibilityBanner compatibility={plan.compatibility} compact />
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-1.5">
             <Flame size={14} color={colors.cta} />

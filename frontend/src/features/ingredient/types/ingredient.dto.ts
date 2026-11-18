@@ -25,6 +25,9 @@ export interface TraditionWarningDto {
 }
 
 export interface IngredientDto {
+  dietaryGroups?: (string | null)[] | null;
+  dietaryEvidence?: Record<string, unknown> | null;
+  dietaryClassificationVersion?: number;
   compositionStatus?: 'UNKNOWN' | 'PARTIAL' | 'COMPLETE';
   compositionKind?: 'UNSPECIFIED' | 'SIMPLE' | 'COMPOUND';
   compositionVersion?: number;

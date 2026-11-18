@@ -20,21 +20,17 @@ import {
   ShieldCheck,
   BadgeCheck,
   CalendarDays,
-  FileDown,
   ChevronLeft,
   ChevronRight,
   HardDrive,
   Target,
   Video as VideoIcon,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { WhyRecommendedDialog } from '@/components/shared/why-recommended-dialog';
 import { calGoalTargets } from '@/features/health/lib/bmi';
@@ -52,20 +48,16 @@ import { useDetailedProfileQuery } from '@/features/profile/queries/profile.quer
 import { BasicProfileForm } from '@/features/profile/components/basic-profile-form';
 import { HealthProfileForm } from '@/features/profile/components/health-profile-form';
 import { HealthSummary } from '@/features/profile/components/health-summary';
-import { DietWizard } from '@/features/diet-preferences/components/diet-wizard';
-import { CurrentDietCard } from '@/features/diet-preferences/components/current-diet-card';
+import { DietProfileSection } from '@/features/diet-preferences/components/diet-profile-section';
 import { ConsentSwitch } from '@/features/recommendation/components/consent-switch';
 import { BookmarksList } from '@/features/community/components/bookmarks-list';
 import { ApplicationForm } from '@/features/contributor/components/application-form';
 import { MyApplications } from '@/features/contributor/components/my-applications';
 import { DeleteHistoryButton } from '@/features/safety/components/delete-history-button';
 import { useMyApplicationsQuery } from '@/features/contributor/queries/contributor.queries';
-import { ScheduleEditor } from '@/features/diet-preferences/components/schedule-editor';
 
 type Tab = 'info' | 'health' | 'diet' | 'posts' | 'storage' | 'privacy' | 'contributor';
 const EMPTY_MY_POSTS: MyPostModel[] = [];
-
-const DIET_MODES = ['Thuần chay (Vegan)', 'Chay bán phần', 'Ăn chay rằm/mùng 1'];
 
 /** Tab Đóng góp: form nộp đơn + lịch sử đơn (1 query dùng chung cho cả 2). */
 function ContributorTab() {
@@ -109,9 +101,7 @@ export default function ProfilePage() {
       : 'health';
   });
   const shouldReduceMotion = useReducedMotion();
-  const [healthSyncEnabled, setHealthSyncEnabled] = React.useState(true);
   const [isWhyDialogOpen, setIsWhyDialogOpen] = React.useState(false);
-  const [isEditingDiet, setIsEditingDiet] = React.useState(false);
 
   const {
     data: detailedProfile,
@@ -260,8 +250,7 @@ export default function ProfilePage() {
                 </Badge>
                 {detailedProfile.diet && (
                   <Badge variant="secondary" className="rounded-full">
-                    {detailedProfile.diet.dietPatternLabel} ·{' '}
-                    {detailedProfile.diet.practiceScheduleLabel}
+                    {'Thiết lập thực phẩm'} · {'Áp dụng mỗi ngày'}
                   </Badge>
                 )}
               </div>
@@ -543,33 +532,12 @@ export default function ProfilePage() {
                   onRetry={() => void refetchProfile()}
                 />
               )}
-              {!isProfileLoading && !isProfileError && detailedProfile?.diet && !isEditingDiet && (
-                <CurrentDietCard
-                  summary={detailedProfile.diet}
-                  onChangeDiet={() => setIsEditingDiet(true)}
+              {!isProfileLoading && !isProfileError && detailedProfile && (
+                <DietProfileSection
+                  key={detailedProfile.user.id}
+                  preference={detailedProfile.diet}
                 />
               )}
-              {!isProfileLoading &&
-                !isProfileError &&
-                (!detailedProfile?.diet || isEditingDiet) && (
-                  <DietWizard
-                    initial={detailedProfile?.diet}
-                    initialSelection={
-                      detailedProfile?.diet
-                        ? {
-                            dietPattern: detailedProfile.diet.dietPattern,
-                            practiceSchedule: detailedProfile.diet.practiceSchedule,
-                            tradition: detailedProfile.diet.tradition,
-                          }
-                        : null
-                    }
-                    onCancel={detailedProfile?.diet ? () => setIsEditingDiet(false) : undefined}
-                    onSaved={() => setIsEditingDiet(false)}
-                    scheduleSlot={(preference) => (
-                      <ScheduleEditor initialDates={preference.schedule?.dates ?? []} />
-                    )}
-                  />
-                )}
             </div>
           )}
 

@@ -1,17 +1,7 @@
-import {
-  ActivityLevel,
-  AllergySeverity,
-  DietPattern,
-  DietRuleSource,
-  HealthDataSource,
-  HealthSex,
-  PracticeSchedule,
-  Tradition,
-} from '@prisma/client';
+import { dietaryImpactSchema } from '../dietary-impact/dietary-impact.schemas.js';
+import { ActivityLevel, AllergySeverity, HealthDataSource, HealthSex } from '@prisma/client';
 import { z, mediaUrlSchema } from '../../common/validation/zod.js';
 import { userResponseSchema } from '../auth/auth.schemas.js';
-
-const TIMEZONE = 'Asia/Ho_Chi_Minh' as const;
 
 function isValidDateOnly(value: string): boolean {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -29,11 +19,6 @@ export const dateOnlySchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày phải có định dạng YYYY-MM-DD')
   .refine(isValidDateOnly, 'Ngày không hợp lệ');
-
-const uniqueDateListSchema = z
-  .array(dateOnlySchema)
-  .max(366)
-  .refine((dates) => new Set(dates).size === dates.length, 'Danh sách ngày không được trùng lặp');
 
 export const updateBasicProfileRequestSchema = z
   .object({
@@ -69,43 +54,34 @@ export const healthProfileResponseSchema = z
   .object({ success: z.literal(true), data: healthProfileSchema, meta: z.null() })
   .strict();
 
+export const DIETARY_POLICY_VERSION = 1;
 export const dietRuleSelectionSchema = z
   .object({
-    dietPattern: z.enum(DietPattern),
-    practiceSchedule: z.enum(PracticeSchedule),
-    tradition: z.enum(Tradition),
+    allowEggs: z.boolean(),
+    allowDairy: z.boolean(),
+    allowHoney: z.boolean(),
+    allowFivePungent: z.boolean(),
   })
   .strict();
-
 export const dietRulePreviewSchema = z
   .object({
-    id: z.string().uuid(),
     code: z.string(),
     label: z.string(),
-    description: z.string(),
-    defaultEnabled: z.boolean(),
-    hardConstraint: z.boolean(),
-    source: z.enum(DietRuleSource),
-    version: z.number().int().positive(),
+    allowed: z.boolean(),
   })
   .strict();
-
 export const dietRulePreviewResponseSchema = z
   .object({
     success: z.literal(true),
     data: z
       .object({
-        ruleSetVersion: z.number().int().positive(),
+        policyVersion: z.number().int().positive(),
         selection: dietRuleSelectionSchema,
-        rules: z.array(dietRulePreviewSchema),
+        constraints: z.array(dietRulePreviewSchema),
       })
       .strict(),
     meta: z.null(),
   })
-  .strict();
-
-const selectedDietRuleSchema = z
-  .object({ ruleDefinitionId: z.string().uuid(), enabled: z.boolean() })
   .strict();
 
 const allergyInputSchema = z
@@ -137,15 +113,8 @@ const ingredientExclusionInputSchema = z
 
 export const saveDietPreferencesRequestSchema = dietRuleSelectionSchema
   .extend({
-    ruleSetVersion: z.number().int().positive(),
-    rules: z
-      .array(selectedDietRuleSchema)
-      .min(1)
-      .refine(
-        (rules) => new Set(rules.map((rule) => rule.ruleDefinitionId)).size === rules.length,
-        'Rule ID không được trùng lặp',
-      ),
-    scheduleDates: uniqueDateListSchema.optional(),
+    policyVersion: z.number().int().positive(),
+    expectedDietaryRevision: z.number().int().nonnegative(),
     allergies: z
       .array(allergyInputSchema)
       .max(50)
@@ -174,8 +143,6 @@ export const saveDietPreferencesRequestSchema = dietRuleSelectionSchema
   })
   .strict();
 
-export const updateDietScheduleRequestSchema = z.object({ dates: uniqueDateListSchema }).strict();
-
 export const allergySchema = z
   .object({
     id: z.string().uuid(),
@@ -197,34 +164,23 @@ export const ingredientExclusionSchema = z
   })
   .strict();
 
-const savedDietRuleSchema = dietRulePreviewSchema.extend({ enabled: z.boolean() }).strict();
-
 const effectiveConstraintSchema = z
   .object({
     priority: z.number().int().min(1).max(4),
-    source: z.enum(['ALLERGY', 'INGREDIENT_EXCLUSION', 'DIET_PATTERN']),
+    source: z.enum(['ALLERGY', 'INGREDIENT_EXCLUSION', 'FOOD_GROUP']),
     code: z.string(),
     label: z.string(),
     hardConstraint: z.literal(true),
   })
   .strict();
-
-const scheduledTraditionSchema = z
-  .object({
-    practiceSchedule: z.enum(PracticeSchedule),
-    timezone: z.literal(TIMEZONE),
-    dates: z.array(dateOnlySchema),
-    rules: z.array(savedDietRuleSchema),
-  })
-  .strict();
-
 export const dietPreferenceSchema = dietRuleSelectionSchema
   .extend({
-    ruleSetVersion: z.number().int().positive(),
+    impact: dietaryImpactSchema.optional(),
+    impactUnavailable: z.boolean().optional(),
+    policyVersion: z.number().int().positive(),
+    dietaryRevision: z.number().int().positive(),
     confirmedAt: z.string().datetime(),
     requiresRuleReview: z.boolean(),
-    rules: z.array(savedDietRuleSchema),
-    schedule: z.object({ timezone: z.literal(TIMEZONE), dates: z.array(dateOnlySchema) }).strict(),
     allergies: z.array(allergySchema),
     ingredientAllergies: z.array(
       z
@@ -237,31 +193,12 @@ export const dietPreferenceSchema = dietRuleSelectionSchema
         .strict(),
     ),
     ingredientExclusions: z.array(ingredientExclusionSchema),
-    effectiveConstraints: z
-      .object({
-        always: z.array(effectiveConstraintSchema),
-        scheduledTradition: scheduledTraditionSchema,
-      })
-      .strict(),
+    effectiveConstraints: z.object({ always: z.array(effectiveConstraintSchema) }).strict(),
   })
   .strict();
 
 export const dietPreferenceResponseSchema = z
   .object({ success: z.literal(true), data: dietPreferenceSchema, meta: z.null() })
-  .strict();
-
-export const dietScheduleResponseSchema = z
-  .object({
-    success: z.literal(true),
-    data: z
-      .object({
-        practiceSchedule: z.enum(PracticeSchedule),
-        timezone: z.literal(TIMEZONE),
-        dates: z.array(dateOnlySchema),
-      })
-      .strict(),
-    meta: z.null(),
-  })
   .strict();
 
 export const profileSchema = userResponseSchema
@@ -279,7 +216,6 @@ export type UpdateBasicProfileInput = z.infer<typeof updateBasicProfileRequestSc
 export type HealthProfileInput = z.infer<typeof healthProfileRequestSchema>;
 export type DietRuleSelectionInput = z.infer<typeof dietRuleSelectionSchema>;
 export type SaveDietPreferencesInput = z.infer<typeof saveDietPreferencesRequestSchema>;
-export type UpdateDietScheduleInput = z.infer<typeof updateDietScheduleRequestSchema>;
 export type HealthProfileOutput = z.infer<typeof healthProfileSchema>;
 export type DietRulePreviewOutput = z.infer<typeof dietRulePreviewSchema>;
 export type DietPreferenceOutput = z.infer<typeof dietPreferenceSchema>;

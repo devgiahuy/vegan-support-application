@@ -29,6 +29,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { getApiErrorCode, getApiErrorMessage } from '@/lib/api-error';
 import { useIngredientsQuery } from '@/features/ingredient/queries/ingredient.queries';
 import { useAllergenCatalogQuery } from '@/features/diet-preferences/queries/allergen.queries';
+import { DietaryGroupFields } from './dietary-group-fields';
 import {
   useCompositionQuery,
   useCompositionSourcesQuery,
@@ -65,7 +66,7 @@ export function CompositionEditor({
   return (
     <>
       <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
-        Cấu tạo & dị ứng
+        Cấu tạo & phân loại
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
@@ -120,6 +121,7 @@ function CompositionForm({
   const [status, setStatus] = React.useState(data.status);
   const [kind, setKind] = React.useState(data.kind);
   const [components, setComponents] = React.useState(data.components);
+  const [dietaryGroups, setDietaryGroups] = React.useState(data.dietaryGroups);
   const [search, setSearch] = React.useState('');
   const [sourceId, setSourceId] = React.useState(data.evidence.sourceId);
   const [sourceVersion, setSourceVersion] = React.useState(data.evidence.sourceVersion);
@@ -172,6 +174,7 @@ function CompositionForm({
           status,
           kind,
           componentIds: components.map((item) => item.id),
+          dietaryGroups,
           sourceId,
           sourceVersion,
           sourceRecordId,
@@ -219,6 +222,11 @@ function CompositionForm({
         </AlertDescription>
       </Alert>
       <FieldGroup>
+        <DietaryGroupFields
+          value={dietaryGroups}
+          onChange={setDietaryGroups}
+          disabled={mutation.isPending}
+        />
         <Field>
           <FieldLabel htmlFor="composition-status">Mức đầy đủ dữ liệu</FieldLabel>
           <Select value={status} onValueChange={(value) => setStatus(value as CompositionStatus)}>

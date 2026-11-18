@@ -1,3 +1,4 @@
+import { toDietaryCompatibility } from '@/features/diet-preferences/mappers/diet-impact.mapper';
 import { BaseMapper, pickField, safeArray, safeNumber, safeString } from '@/lib/mapper';
 import type {
   CreateMealProgramRequestDto,
@@ -126,6 +127,10 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
       status,
       statusLabel: STATUS_LABELS[status],
       isConfirmed: status === 'CONFIRMED',
+      compatibility: toDietaryCompatibility(dto?.compatibility),
+      sourceProgramId: safeString(dto?.sourceProgramId) || null,
+      effectiveFrom: safeString(dto?.effectiveFrom) || null,
+      replacedByProgramId: safeString(dto?.replacedByProgramId) || null,
       version: safeNumber(pickField(dto, ['version'], 1), 1),
       readyWeeks: safeNumber(pickField(dto, ['readyWeeks'], 0), 0),
       failedWeeks: safeNumber(pickField(dto, ['failedWeeks'], 0), 0),

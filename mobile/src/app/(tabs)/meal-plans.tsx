@@ -24,7 +24,7 @@ import { PlanCard } from '@/features/meal-plan/components/plan-card';
 import { useGenerateMealPlanMutation, useMealPlansQuery } from '@/features/meal-plan/queries/meal-plan.queries';
 import { createIdempotencyKey, getMondayDateString, shiftWeek } from '@/features/meal-plan/utils/idempotency';
 import { getMealPlanErrorMessage } from '@/features/meal-plan/utils/meal-plan-errors';
-import { getApiErrorCode, getApiErrorFields } from '@/lib/api-error';
+import { getApiErrorCode } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -69,7 +69,6 @@ export default function MealPlansScreen() {
   const [goal, setGoal] = React.useState(MealPlanGoal.MAINTAIN);
   const [supersedesId, setSupersedesId] = React.useState<string | null>(null);
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [scheduleDates, setScheduleDates] = React.useState<string[] | null>(null);
 
   const { data, error, isLoading, isError, refetch } = useMealPlansQuery(
     { page: 1, limit: RECENT_PLAN_LIMIT },
@@ -80,7 +79,6 @@ export default function MealPlansScreen() {
 
   const generatePlan = async () => {
     setFormError(null);
-    setScheduleDates(null);
     try {
       const plan = await generateMutation.mutateAsync({
         weekStart,
@@ -90,11 +88,6 @@ export default function MealPlansScreen() {
       });
       router.push({ pathname: '/meal-plans/[id]', params: { id: plan.id } } as unknown as Href);
     } catch (mutationError) {
-      if (getApiErrorCode(mutationError) === 'DIET_SCHEDULE_REQUIRED') {
-        const dates = getApiErrorFields(mutationError)?.['availableDates'];
-        setScheduleDates(Array.isArray(dates) ? dates.filter((d): d is string => typeof d === 'string') : []);
-        return;
-      }
       setFormError(getMealPlanErrorMessage(mutationError));
     }
   };
@@ -131,23 +124,6 @@ export default function MealPlansScreen() {
             </View>
           ) : null}
 
-          {scheduleDates !== null ? (
-            <View className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3">
-              <View className="flex-row items-center gap-2">
-                <AlertCircle size={15} color="#b45309" />
-                <Text className="flex-1 text-sm font-semibold text-amber-800">Bạn đang theo chế độ chay kỳ</Text>
-              </View>
-              <Text className="mt-1 text-xs leading-relaxed text-amber-800">
-                Hãy chọn ít nhất một ngày chay trong tuần này rồi tạo lại thực đơn.
-                {scheduleDates.length > 0 ? ` Ngày khả dụng: ${scheduleDates.join(', ')}.` : ''}
-              </Text>
-              <Link href={'/diet-schedule' as Href} asChild>
-                <Pressable>
-                  <Text className="mt-1.5 text-sm font-semibold text-primary underline">Chọn ngày chay</Text>
-                </Pressable>
-              </Link>
-            </View>
-          ) : null}
 
           <View className="mt-4 flex-row items-center justify-between">
             <Text className="text-sm font-semibold text-foreground">Tuần bắt đầu (Thứ hai)</Text>

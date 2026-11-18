@@ -6,6 +6,7 @@ import { CalendarRange, CheckCircle2, Lock, Pencil } from 'lucide-react-native';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { ErrorState, LoadingState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { DietaryCompatibilityBanner } from '@/features/diet-preferences/components/dietary-compatibility-banner';
 import { programStatusStyle } from '@/features/meal-program/components/program-card';
 import { ProgramAnalysisPanel } from '@/features/meal-program/components/program-analysis-panel';
 import { ProgramTimeline } from '@/features/meal-program/components/program-timeline';
@@ -188,6 +189,17 @@ export default function MealProgramDetailScreen() {
   return (
     <SiteScreen onRefresh={() => refetch()}>
       <View className="gap-4 px-5 pt-4">
+        <DietaryCompatibilityBanner compatibility={program.compatibility}
+          repairHref={`/diet-repair?planIds=${encodeURIComponent(program.weeks.flatMap((week) => week.alternatives.filter((alternative) => alternative.selected).map((alternative) => alternative.mealPlanId)).join(','))}&revision=${program.compatibility?.dietaryRevision ?? 0}` as Href} />
+        {program.sourceProgramId ? (
+          <View className="gap-2 rounded-xl border border-primary/30 bg-primary/5 p-4">
+            <Text className="text-sm text-foreground">Đây là bản điều chỉnh của một lộ trình đã lưu. Hãy xem lại các tuần và xác nhận khi hoàn tất.</Text>
+            <Link href={`/meal-programs/${program.sourceProgramId}` as Href}><Text className="text-sm font-semibold text-primary">Xem lộ trình nguồn</Text></Link>
+          </View>
+        ) : null}
+        {program.replacedByProgramId ? (
+          <Link href={`/meal-programs/${program.replacedByProgramId}` as Href}><Text className="text-sm font-semibold text-primary">Xem bản điều chỉnh thay thế</Text></Link>
+        ) : null}
         <View className="gap-3 rounded-2xl border border-border bg-card p-4">
           <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1">
@@ -213,7 +225,7 @@ export default function MealProgramDetailScreen() {
             <View className="flex-row items-center gap-2 rounded-xl bg-emerald-500/10 p-3">
               <Lock size={14} color="#059669" />
               <Text className="flex-1 text-xs text-emerald-700">
-                Lộ trình đã xác nhận và khóa nội dung. Muốn thay đổi, hãy tạo lộ trình mới.
+                Lộ trình đã xác nhận và khóa nội dung. Khi hồ sơ ăn uống thay đổi, bạn có thể tạo bản điều chỉnh từ cảnh báo phía trên.
               </Text>
             </View>
           ) : (
@@ -230,7 +242,7 @@ export default function MealProgramDetailScreen() {
                   label="Xác nhận lộ trình"
                   className="h-10 flex-1"
                   loading={busy}
-                  disabled={!allWeeksChosen}
+                  disabled={!allWeeksChosen || program.compatibility?.status === 'NEEDS_REVIEW'}
                   icon={<CheckCircle2 size={15} color={colors.primaryForeground} />}
                   onPress={confirmProgram}
                 />

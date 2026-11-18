@@ -1,8 +1,8 @@
 # Software Requirements Specification — Vegan Support Application
 
-**Version:** 1.9
+**Version:** 1.10
 
-**Updated:** 2026-11-16
+**Updated:** 2026-11-18
 
 **Status:** Approved product baseline
 
@@ -69,17 +69,11 @@ Approval audit data retains the relevant organization/reference claim, a review-
 
 ## 4. Dietary model
 
-Each user profile may define:
+User-approved 2026-11-18: profiles define four independent, explicitly confirmed allowances: `allowEggs`, `allowDairy`, `allowHoney`, `allowFivePungent`. Enabled means allowed, disabled means excluded, every day. Remove profile diet-pattern, religious-tradition and practice-calendar setup. The product's five-pungent group is the reviewed canonical set hành, hẹ, tỏi, kiệu, hưng cừ. Meat/fish/seafood and prohibited animal-derived ingredients remain excluded. Allergies and explicit ingredient exclusions take priority; backend hard filtering precedes ranking. Health goals, body metrics, calorie targets and ranking preferences remain separate. Content dietary labels and explicit search filters retain their separate meaning.
 
-- `dietPattern`
-- `tradition`
-- `practiceSchedule`
-- allergies and explicit ingredient exclusions
-- health goal, body metrics, calorie target, and preferences
+Before saving dietary changes, preview effects on current/future weekly plans and selected program alternatives. Offer both replacement suggestions with preview/explicit apply and keeping existing content with persistent per-meal warnings. Keeping content does not declare it compatible or bypass confirmation. Saving the profile is independent of subsequent repair failure/cancellation. Repair only affected meals from today's date in Asia/Ho_Chi_Minh onward; preserve compatible meals and historical dates. Confirmed programs use separate draft revisions. Backend reads/mutations/confirmation evaluate current profile/catalog revisions across clients.
 
-MVP traditions are Buddhist and Christian. Other traditions may be added without redesigning the profile schema or rule engine.
-
-When a user selects a diet pattern or tradition, the backend provides a default rule set. The user confirms it and may enable or disable individual rules. Allergy rules, explicit exclusions, the selected diet pattern, and enabled tradition rules are hard constraints enforced by the backend. Recommendations must never reintroduce an item removed by these constraints.
+This development/course project has no real users: directly replace schema/seed/contracts without legacy-data preservation or old client compatibility. Runtime handling of plans created before a later profile edit in the new system remains required. See `docs/DIRECT_FOOD_PREFERENCES_PLAN.md` and `docs/DIET_PROFILE_MEAL_PLAN_IMPACT.md` for the approved scope and detailed acceptance.
 
 Restaurant directory discovery and place details are an approved exception (2026-10-25): they do not automatically apply the personal dietary profile. Restaurant search applies only filters explicitly selected for that request; provider labels do not establish dietary or allergy compatibility.
 

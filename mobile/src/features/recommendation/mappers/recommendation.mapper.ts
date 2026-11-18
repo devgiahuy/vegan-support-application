@@ -1,3 +1,4 @@
+import { dietaryGroupLabel } from '@/common/constants/dietary-groups';
 import { resolveMediaUrl } from '@/lib/env';
 import { BaseMapper, pickField, safeArray, safeBoolean, safeNumber, safeString } from '@/lib/mapper';
 import type { CreateBehaviorEventRequestDto, PersonalizationResponseDto, RecommendationDto, RecommendationResponseDto, UpdatePersonalizationRequestDto } from '../types/recommendation.dto';
@@ -38,6 +39,8 @@ function summarizeConstraints(
   const parts: string[] = [];
   const diet = safeString(constraints.dietPattern, '').toUpperCase();
   if (diet) parts.push(DIET_PATTERN_LABELS[diet] ?? diet);
+  const groups = safeArray<string>(constraints.foodGroups);
+  if (groups.length > 0) parts.push(`kiêng ${groups.map(dietaryGroupLabel).join(', ')}`);
   const allergies = safeNumber(constraints.allergyCount, 0);
   if (allergies > 0) parts.push(`${allergies} dị ứng`);
   const exclusions = safeNumber(constraints.ingredientExclusionCount, 0);

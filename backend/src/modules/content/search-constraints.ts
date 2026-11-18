@@ -1,4 +1,4 @@
-import { PracticeSchedule, type DietPattern } from '@prisma/client';
+import { DietaryFoodGroup, type DietPattern } from '@prisma/client';
 import type { AppliedSearchConstraintsOutput } from './content.schemas.js';
 import type { SearchConstraints, SearchProfileRecord } from './content.repository.js';
 
@@ -28,6 +28,9 @@ export function buildGuestSearchConstraints(
   return {
     constraints: {
       ...(requestedDietPattern ? { dietPattern: requestedDietPattern } : {}),
+      ...(requestedDietPattern
+        ? { blockedFoodGroups: explicitPatternGroups(requestedDietPattern) }
+        : {}),
       allergenCodes: [],
       excludedIngredientIds: [],
       excludedNormalizedNames: [],
@@ -39,67 +42,103 @@ export function buildGuestSearchConstraints(
       dietPattern: requestedDietPattern ?? null,
       allergyCount: 0,
       ingredientExclusionCount: 0,
-      traditions: [],
+      foodGroups: requestedDietPattern ? explicitPatternGroups(requestedDietPattern) : [],
+      dietaryRevision: null,
       forDate,
     },
   };
 }
 
+export interface DietarySelection {
+  allowEggs: boolean;
+  allowDairy: boolean;
+  allowHoney: boolean;
+  allowFivePungent: boolean;
+}
+export interface DietaryRestrictions {
+  allergenCodes: string[];
+  allergicIngredientIds: string[];
+  excludedIngredientIds: string[];
+  excludedNormalizedNames: string[];
+}
+export function buildDietaryConstraints(
+  selection: DietarySelection,
+  restrictions: DietaryRestrictions,
+): SearchConstraints {
+  const blockedFoodGroups: DietaryFoodGroup[] = [
+    DietaryFoodGroup.MEAT,
+    DietaryFoodGroup.FISH_SEAFOOD,
+    DietaryFoodGroup.OTHER_ANIMAL,
+  ];
+  if (!selection.allowEggs) blockedFoodGroups.push(DietaryFoodGroup.EGG);
+  if (!selection.allowDairy) blockedFoodGroups.push(DietaryFoodGroup.DAIRY);
+  if (!selection.allowHoney) blockedFoodGroups.push(DietaryFoodGroup.HONEY);
+  if (!selection.allowFivePungent) blockedFoodGroups.push(DietaryFoodGroup.FIVE_PUNGENT);
+  return { ...restrictions, blockedFoodGroups, traditions: [], requireResolvedIngredients: true };
+}
+
+function explicitPatternGroups(pattern: DietPattern): DietaryFoodGroup[] {
+  return (
+    buildDietaryConstraints(
+      {
+        allowEggs: pattern !== 'VEGAN',
+        allowDairy: pattern !== 'VEGAN',
+        allowHoney: pattern !== 'VEGAN',
+        allowFivePungent: true,
+      },
+      {
+        allergenCodes: [],
+        allergicIngredientIds: [],
+        excludedIngredientIds: [],
+        excludedNormalizedNames: [],
+      },
+    ).blockedFoodGroups ?? []
+  );
+}
 export function buildAuthenticatedSearchConstraints(
   profile: SearchProfileRecord | null,
   requestedDietPattern: DietPattern | undefined,
   forDate: string,
 ): SearchConstraintContext {
   const preference = profile?.dietPreference;
-  const scheduleApplies =
-    preference?.practiceSchedule === PracticeSchedule.PERMANENT ||
-    (preference?.practiceSchedule === PracticeSchedule.PERIODIC &&
-      profile?.dietScheduleDates.some(
-        (scheduleDate) => scheduleDate.date.toISOString().slice(0, 10) === forDate,
-      ));
-  const traditions = scheduleApplies
-    ? [
-        ...new Set(
-          profile?.dietPreferenceRules.flatMap(({ ruleDefinition }) =>
-            ruleDefinition.active && ruleDefinition.hardConstraint && ruleDefinition.tradition
-              ? [ruleDefinition.tradition]
-              : [],
-          ) ?? [],
+  const restrictions = {
+    allergenCodes: profile?.allergies.map((a) => a.allergenCode) ?? [],
+    allergicIngredientIds: profile?.ingredientAllergies?.map((a) => a.ingredientId) ?? [],
+    excludedIngredientIds:
+      profile?.ingredientExclusions.flatMap((e) => (e.ingredientId ? [e.ingredientId] : [])) ?? [],
+    excludedNormalizedNames: profile?.ingredientExclusions.map((e) => e.normalizedName) ?? [],
+  };
+  const constraints: SearchConstraints = preference
+    ? buildDietaryConstraints(preference, restrictions)
+    : {
+        ...restrictions,
+        traditions: [],
+        requireResolvedIngredients: Boolean(
+          requestedDietPattern ||
+          restrictions.allergenCodes.length ||
+          restrictions.allergicIngredientIds.length ||
+          restrictions.excludedIngredientIds.length ||
+          restrictions.excludedNormalizedNames.length,
         ),
-      ]
-    : [];
-  const allergenCodes = profile?.allergies.map((allergy) => allergy.allergenCode) ?? [];
-  const allergicIngredientIds =
-    profile?.ingredientAllergies?.map((entry) => entry.ingredientId) ?? [];
-  const exclusions = profile?.ingredientExclusions ?? [];
-  const excludedIngredientIds = exclusions.flatMap((exclusion) =>
-    exclusion.ingredientId ? [exclusion.ingredientId] : [],
-  );
-  const excludedNormalizedNames = exclusions.map((exclusion) => exclusion.normalizedName);
-  const dietPattern = preference?.dietPattern ?? requestedDietPattern;
-  const requireResolvedIngredients = Boolean(
-    dietPattern ||
-    allergenCodes.length ||
-    allergicIngredientIds.length ||
-    exclusions.length ||
-    traditions.length,
-  );
+      };
+  if (requestedDietPattern) {
+    constraints.dietPattern = requestedDietPattern;
+    constraints.blockedFoodGroups = [
+      ...new Set([
+        ...(constraints.blockedFoodGroups ?? []),
+        ...explicitPatternGroups(requestedDietPattern),
+      ]),
+    ];
+  }
   return {
-    constraints: {
-      ...(dietPattern ? { dietPattern } : {}),
-      allergenCodes,
-      allergicIngredientIds,
-      excludedIngredientIds,
-      excludedNormalizedNames,
-      traditions,
-      requireResolvedIngredients,
-    },
+    constraints,
     summary: {
       authenticated: true,
-      dietPattern: dietPattern ?? null,
-      allergyCount: allergenCodes.length + allergicIngredientIds.length,
-      ingredientExclusionCount: exclusions.length,
-      traditions,
+      dietPattern: requestedDietPattern ?? null,
+      allergyCount: restrictions.allergenCodes.length + restrictions.allergicIngredientIds.length,
+      ingredientExclusionCount: profile?.ingredientExclusions.length ?? 0,
+      foodGroups: constraints.blockedFoodGroups ?? [],
+      dietaryRevision: preference?.dietaryRevision ?? null,
       forDate,
     },
   };

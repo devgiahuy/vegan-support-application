@@ -64,6 +64,7 @@ export interface RecipeDetailDto extends BasePostDto {
     allergenCodes?: string[];
     /** Viewer-specific matches; unrelated recipe allergens must never become warnings. */
     allergyWarnings?: (RecipeAllergyWarningDto | null)[] | null;
+    dietaryGroups?: string[];
     traditionWarnings?: TraditionWarningDto[];
     dietCompatibilities?: DietCompatibilityDto[];
     ingredients?: RecipeIngredientDto[];
@@ -87,7 +88,8 @@ export interface AppliedConstraintsDto {
   dietPattern: string | null;
   allergyCount: number;
   ingredientExclusionCount: number;
-  traditions: string[];
+  foodGroups: string[];
+  dietaryRevision?: number | null;
   forDate: string;
 }
 

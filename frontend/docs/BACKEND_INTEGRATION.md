@@ -1,12 +1,37 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.79
+**Version:** 4.81
 
-**Cập nhật:** 16/11/2026
+**Cập nhật:** 19/11/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
 **Contract target:** `/api/v1`
+
+## Dietary preferences replacement — 2026-11-19 (4.81, READY)
+
+**READY — web/mobile consumers migrated.** Backend Mongo provisioning/seed/lint/typecheck/build/OpenAPI gates pass. This approved dev-only breaking contract replaces profile dietPattern/tradition/practiceSchedule/rule IDs/calendar with four required booleans allowEggs/allowDairy/allowHoney/allowFivePungent (true=allowed daily), policyVersion=1 and expectedDietaryRevision. GET/save returns dietaryRevision, confirmedAt, allergies/ingredientAllergies/exclusions and effectiveConstraints.always. Semantic no-op saves retain dietaryRevision. No legacy payload/client compatibility; diet-schedule is REMOVED. Independent content/search/directory labels remain separate. This section supersedes historical dietary notes below.
+
+| Method | Path | Status | FE integrated | Consumer action |
+| --- | --- | --- | --- | --- |
+| GET | `/users/me` | READY | Yes, web/mobile 2026-11-19 | Map four daily allowances and dietary revision; remove profile pattern/tradition/schedule. |
+| POST | `/diet-rules/preview` | READY | Yes, web/mobile 2026-11-19 | Returns policyVersion, selection and constraints[{code,label,allowed}], no rule ID toggles. |
+| PUT | `/users/me/diet-preferences` | READY | Yes, web/mobile 2026-11-19 | Full save with expectedDietaryRevision; optional impact + impactUnavailable. |
+| POST | `/users/me/diet-preferences/impact-preview` | READY | Yes, web/mobile 2026-11-19 | Full save draft, read-only; affected plans/items/reasons/program refs and deduplicated counts. |
+| POST | `/meal-plans/diet-repair/preview` | READY | Yes, web/mobile 2026-11-19 | planIds (1–20), expectedDietaryRevision → proposalId/expiresAt and before/after replacement/nutrition/shopping. |
+| POST | `/meal-plans/diet-repair/apply` | READY | Yes, web/mobile 2026-11-19 | proposalId/idempotencyKey → individual UPDATED/UNCHANGED/FAILED/PROGRAM_REVISION_REQUIRED outcomes. |
+| POST | `/meal-programs/{id}/diet-revision` | READY | Yes, web/mobile 2026-11-19 | expectedVersion/idempotencyKey → linked DRAFT and copied selected future plans. |
+| PUT | `/users/me/diet-schedule` | REMOVED | Removed, web/mobile 2026-11-19 | Remove editor/route/consumer; no redirect or calendar setup. |
+
+Plan/program list/detail adds compatibility{status:COMPATIBLE|NEEDS_REVIEW|HISTORICAL,dietaryRevision,assessedFrom,affectedMealCount,items}. Keep preserves content, never clears violations; backend rechecks confirmation. Repair changes affected meals from today's local date only; missing candidates preserve that entire plan. Proposals expire after 15 minutes; revision/idempotency guards reject stale changes. Profile remains saved on repair failure/cancellation. Post-save assessment failure sets impactUnavailable: show saved-but-unassessed and retry, not save failed/no-impact. Confirmed program content stays immutable, with sourceProgramId/effectiveFrom/replacedByProgramId for DRAFT adjustments.
+
+Admin composition review now requires explicit dietaryGroups[] with reviewed source evidence; ingredient output adds dietaryGroups/dietaryEvidence/dietaryClassificationVersion. Groups: EGG/DAIRY/HONEY/FIVE_PUNGENT/MEAT/FISH_SEAFOOD/OTHER_ANIMAL. Canonical pungent members: hành/hẹ/tỏi/kiệu/hưng cừ. Uncertainty INGREDIENT_DIETARY_UNCERTAIN is distinct from FOOD_GROUP_EXCLUSION; no auto-classification from allergens or names. See generated docs/api for exact schemas; keep DTO/Model/Mapper/query and owning endpoint constants. Invalidate profile/plans/programs/projections/analysis/plan-shopping after saves/applies. Pantry/purchases are unchanged.
+
+Error catalog additions (409): DIET_PREFERENCES_CONFLICT (fields.currentRevision), DIET_REPAIR_CONFLICT, DIET_REPAIR_EXPIRED, IDEMPOTENCY_CONFLICT, MEAL_PROGRAM_VERSION_CONFLICT, MEAL_PROGRAM_REVISION_NOT_REQUIRED, MEAL_PROGRAM_HISTORICAL. Standard auth/ownership/validation and existing allergen/ingredient errors apply. No backend unit/integration test infrastructure added. Backend and consumer gates, isolated Mongo live API and authenticated browser flow pass. Mobile typecheck/lint/166 tests/iOS export pass; authenticated native iOS/Android UI and web↔native E2E were not run because the native UI driver/Simulator.app GUI and Android tooling are unavailable. This is a backend contract READY record, not a native release sign-off. Full evidence: ../../docs/DIETARY_PREFERENCES_VERIFICATION.md.
+
+Device Hub follow-up 2026-11-19: native iPhone16/iOS26.1 login and profile/four-toggle rendering now pass through the live ngrok backend after reloading the correctly configured Expo bundle. Default local dev Mongo was archived/recreated/reseeded under the approved disposable-data scope; the earlier isolated-QA/defaultDB notes describe that earlier run. Temporary QA account removed; services remain running. This does not validate full native repair/keep or Android. Auth request/response/authorization contracts remain unchanged; mobile login network/timeout copy is clearer. See verification report follow-up.
+
+Changelog 2026-11-19 (4.81): complete four-toggle consumer migration, durable warnings, per-plan repair outcomes and explicit batches up to 20; preserve confirmed snapshots with linked revisions and transaction-time profile/plan/catalog validation. 4.80 CHANGING is superseded for these endpoints only.
 
 Changelog 2026-11-16 (4.78 — mobile): native mobile đã tích hợp phía consumer cho các thay đổi 4.61/4.62/4.71/4.74–4.77 (không đổi backend contract). Form công thức có 6 ô dinh dưỡng mỗi khẩu phần (`recipe.nutrition`, chỉ gửi ô đã nhập; bắt buộc đủ cho CONTRIBUTOR/ADMIN, Member để trống được), điền sẵn khi sửa từ `recipe.authorNutrition` (không dùng `nutrition` đã công bố), hiển thị kết quả submit theo `revision.status`, và hiển thị lý do khi lưu nháp được nhưng submit lỗi (`RECIPE_NUTRITION_REQUIRED` kèm `fields.missingMetrics`). `PATCH /meal-plans/{id}/items/{itemId}/manual-add` xử lý `MEAL_PLAN_INGREDIENTS_UNVERIFIED` (nêu tên nguyên liệu, không gọi là vi phạm). `POST /recipe-drafts/generate` hiển thị `suggestedTiming` khi khác giá trị đã nhập. Restaurants: nhà hàng rỗng kèm `externalDataUnavailable=true` hiện "Chưa tải được kết quả tìm quán" thay vì khuyên nới bán kính; mobile vẫn dùng phân trang, không gửi `all=true`. Panel duyệt dinh dưỡng (`GET/PATCH /admin/content-review/{id}/nutrition`, dùng bởi Contributor) hiển thị `author`, `deviationPercent` và cảnh báo `deviationWarning` (>30%, không chặn duyệt). Mobile không có màn dành riêng cho Admin; không có thay đổi nào ở phía Admin. `POST /posts/{id}/submit` vẫn `CHANGING` cho tới khi kiểm chứng thủ công trên thiết bị với backend đã chạy `npm run prisma:push`.
 
@@ -700,11 +725,11 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 | POST   | `/auth/login`                | `READY` | 2026-09-27      | Yes (2026-09-27) | Session uses unified Contributor role/profile; approval basis is display-only                                                          |
 | POST   | `/auth/refresh`              | `READY` | 2026-09-15      | Yes (2026-09-15) | Đọc refresh cookie, rotation mỗi lần dùng; reuse revoke toàn token family; FE: Next proxy `/api/auth/refresh-token` + refresh-queue    |
 | POST   | `/auth/logout`               | `READY` | 2026-09-15      | Yes (2026-09-15) | Idempotent; body `{ allDevices?: boolean }`; revoke phiên hiện tại hoặc toàn bộ phiên của user; FE: Next proxy + xóa 4 cookie          |
-| GET    | `/users/me`                  | `READY` | 2026-09-27      | Yes (2026-09-27) | Pending application uses `claimedApprovalBasis`; active profile uses display-only `approvalBasis`/label                                |
+| GET | `/users/me` | `READY` | 2026-11-19 | Yes, web/mobile 2026-11-19 | Four allowances, dietaryRevision and canonical allergies/exclusions; Contributor approval basis remains display-only. |
 | PATCH  | `/users/me`                  | `READY` | 2026-09-15      | Yes (2026-09-15) | Cập nhật `displayName`/HTTP(S) `avatarUrl`; cần ít nhất một field                                                                      |
 | PUT    | `/users/me/health-profile`   | `READY` | 2026-09-15      | Yes (2026-09-15) | Upsert manual inputs; backend tính BMI, Mifflin–St Jeor BMR và activity-factor TDEE                                                    |
-| POST   | `/diet-rules/preview`        | `READY` | 2026-09-15      | Yes (2026-09-15) | Auth required; trả rule set v1, source/default/hard flag; tradition rule là configurable                                               |
-| PUT    | `/users/me/diet-preferences` | `READY` | 2026-09-15      | Yes (2026-09-15) | Exclusion nhận optional canonical `ingredientId`; free-text vẫn hỗ trợ; allergy/exclusion luôn hard                                    |
+| POST | `/diet-rules/preview` | `READY` | 2026-11-19 | Yes, web/mobile 2026-11-19 | Authenticated four-toggle policy preview; no tradition/rule/schedule selector. |
+| PUT | `/users/me/diet-preferences` | `READY` | 2026-11-19 | Yes, web/mobile 2026-11-19 | expectedDietaryRevision, four allowances, allergies/exclusions; saved impact or explicit impactUnavailable. |
 | DELETE | `/users/me/behavior-history` | `READY` | 2026-09-17      | Yes (2026-09-17) | Reset personalization history; FE: `features/safety`                                                                                   |
 
 ### 6.3 Content và Community
@@ -1048,20 +1073,20 @@ User form chỉ cho claim `ORGANIZATION_AFFILIATION` hoặc `PLATFORM_TRACK_RECO
 
 Frontend migration bắt buộc: sync OpenAPI; xóa `ContributorType` và mọi subtype label/branch; đổi register/application/admin review DTO + Zod form + mapper/tests; đổi filter `requestedType` thành `claimedApprovalBasis`; đổi author/admin summaries sang `contributorApprovalBasis`; xử lý `CONTRIBUTOR_APPROVAL_BASIS_INVALID`, invitation/revoke conflicts và `STALE_ACCESS_TOKEN` sau approve/revoke.
 
-### 7.2 Diet rule confirmation
+### 7.2 Four food allowances and plan impact
 
 ```text
-User chọn pattern/schedule/tradition
-→ POST /diet-rules/preview
-→ render từng rule với toggle
-→ user xác nhận
-→ PUT /users/me/diet-preferences
-→ nếu PERIODIC: PUT /users/me/diet-schedule
+User chọn bốn tùy chọn thực phẩm và dị ứng/kiêng
+→ POST /users/me/diet-preferences/impact-preview
+→ user chọn thay món hoặc giữ cảnh báo (nếu có ảnh hưởng)
+→ PUT /users/me/diet-preferences với expectedDietaryRevision
+→ nếu thay: POST /meal-plans/diet-repair/preview → user xem và áp dụng
+→ POST /meal-plans/diet-repair/apply
 ```
 
-Frontend gửi rule ID + enabled state, không gửi tự chế ingredient restriction thay cho rule ID. Allergies và explicit exclusions được quản lý riêng.
+Frontend gửi bốn boolean, policyVersion và revision, không còn rule IDs/tradition/practiceSchedule/scheduleDates. Dị ứng/kiêng luôn ưu tiên. Giữ nội dung không xóa cảnh báo; kết quả repair từng plan không được gộp thành thành công khi có plan chưa xử lý.
 
-Khi backend trả `DIET_RULE_RECONFIRMATION_REQUIRED`, UI đưa user về màn review rules; không tự bật rule mới.
+Khi version/policy conflict, tải lại và yêu cầu xem lại; không tự chấp nhận đề xuất cũ. Profile đã lưu không rollback khi repair thất bại. impactUnavailable phải được trình bày là đã lưu nhưng chưa kiểm tra được thực đơn.
 
 ### 7.3 Upload Cloudinary
 
@@ -1119,7 +1144,7 @@ error
 - `behavioral-v1` dùng lookback 30 ngày và decay half-life 14 ngày. Trọng số ổn định:
   ingredient overlap `+5`, bookmark similar `+4`, rating >= 4 similar `+3`, chat topic `+2`, repeated
   view `+2`, recent search `+1`, recent accepted meal `-4`, rejected/swapped similar `-3`.
-- Allergy, explicit ingredient exclusion, diet pattern và enabled tradition được filter trước scoring.
+- Allergy, explicit ingredient exclusion và các food-group constraints hiện tại được filter trước scoring.
   Candidate pool lấy tối đa 200 Recipe published mới nhất sau hard-filter. Consent off/no events dùng
   cold start rating/popularity. Tie-break lần lượt rating average, rating count, vote count, bookmark
   count, published time và UUID.
@@ -1133,12 +1158,11 @@ error
   overwrite plan cũ. `MAINTAIN/LOSE/GAIN` lần lượt dùng TDEE × `1/0.9/1.1` từ backend config.
 - Plan cố định Monday–Sunday, 7 ngày × 3 bữa với split sáng/trưa/tối `25/40/35`. Candidate phải là published Recipe,
   `mealPlannerEligible` và toàn bộ ingredient đã canonical hóa; thiếu calories/macros làm giảm độ tin cậy chứ không tự loại món. Backend áp allergy,
-  explicit exclusion, diet pattern và enabled tradition theo từng ngày trước mọi scoring.
+  explicit exclusion và các food-group constraints áp mọi ngày trước mọi scoring.
 - Calorie tolerance bắt đầu ±15%, sau đó ±20%. Nếu vẫn không có món trong tolerance, backend chọn món
   hard-compatible gần estimated protein/fiber/fat/carbohydrate targets nhất và trả `NUTRITION_TARGET_OUTSIDE_TOLERANCE`;
   repetition là scoring preference. Chỉ khi không có candidate hard-compatible mới trả `UNFILLED` cùng `unresolved.code/reason`.
-- `PERIODIC` phải có ít nhất một ngày được chọn trong tuần generate; `DIET_SCHEDULE_REQUIRED` trả
-  `fields.availableDates`. Behavioral score và ingredient coverage chỉ xếp hạng candidate đã an toàn.
+- Không còn dietary calendar coverage blocker. Behavioral score và ingredient coverage chỉ xếp hạng candidate đã qua hard constraints; không gọi absence of warning là chứng nhận an toàn.
 - Swap dùng `expectedVersion` và `idempotencyKey`; ưu tiên ±100 kcal so với món cũ, sau đó mới dùng
   ±20% target có warning. Khi `MEAL_PLAN_VERSION_CONFLICT`, refetch detail trước khi retry.
 - Shopping list cộng mass `kg→g`; count hiển thị `cái` và không được coi là gram nếu không có reviewed conversion.
@@ -1263,13 +1287,13 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `USER_STATUS_CONFLICT`                        | Refresh user; transition status không hợp lệ                                                               |
 | `COMMENT_NOT_MODERATABLE`                     | Comment đã bị author xóa và không thể restore                                                              |
 | `COMMENT_STATUS_CONFLICT`                     | Refresh comment; item đã ở trạng thái yêu cầu                                                              |
-| `DIET_RULE_RECONFIRMATION_REQUIRED`           | Mở review rule flow                                                                                        |
-| `DIET_SCHEDULE_REQUIRED`                      | Yêu cầu chọn ngày periodic                                                                                 |
-| `DIET_RULES_UNAVAILABLE`                      | Không cho lưu preference; hiển thị trạng thái cấu hình chưa sẵn sàng                                       |
-| `INVALID_DIET_RULE_SELECTION`                 | Sync lại preview và yêu cầu user xác nhận toàn bộ rule                                                     |
-| `DIET_RULE_REQUIRED`                          | Giữ bật hard constraint của diet pattern                                                                   |
-| `DIET_PREFERENCES_REQUIRED`                   | Điều hướng user lưu diet preference trước khi chỉnh lịch                                                   |
-| `DIET_SCHEDULE_NOT_APPLICABLE`                | Không gửi ngày khi practice schedule là `PERMANENT`                                                        |
+| `DIET_RULE_RECONFIRMATION_REQUIRED` | REMOVED in 4.80; no active profile tradition/rule/calendar flow. |
+| `DIET_SCHEDULE_REQUIRED` | REMOVED in 4.80; no active profile tradition/rule/calendar flow. |
+| `DIET_RULES_UNAVAILABLE` | REMOVED in 4.80; no active profile tradition/rule/calendar flow. |
+| `INVALID_DIET_RULE_SELECTION` | REMOVED in 4.80; no active profile tradition/rule/calendar flow. |
+| `DIET_RULE_REQUIRED` | REMOVED in 4.80; no active profile tradition/rule/calendar flow. |
+| `DIET_PREFERENCES_REQUIRED` | Lưu bốn tùy chọn ăn uống trước khi sử dụng chức năng yêu cầu profile. |
+| `DIET_SCHEDULE_NOT_APPLICABLE` | REMOVED in 4.80; no active profile tradition/rule/calendar flow. |
 | `INVALID_INGREDIENT_EXCLUSIONS`               | Yêu cầu loại mục rỗng/trùng khỏi danh sách exclusion                                                       |
 | `INVALID_CATALOG_NAME`                        | Báo tên không thể chuẩn hóa thành slug/canonical key hợp lệ                                                |
 | `INVALID_CATEGORY_PARENT`                     | Yêu cầu chọn parent category active                                                                        |

@@ -48,7 +48,7 @@ export const API_ENDPOINTS = {
     ME: "/users/me",
     HEALTH_PROFILE: "/users/me/health-profile",
     DIET_PREFERENCES: "/users/me/diet-preferences",
-    DIET_SCHEDULE: "/users/me/diet-schedule",
+    DIET_IMPACT: "/users/me/diet-preferences/impact-preview",
   },
   ALLERGENS: {
     LIST: "/allergens",
@@ -85,6 +85,8 @@ export const API_ENDPOINTS = {
     MY_BOOKMARKS: "/users/me/bookmarks",
   },
   MEAL_PLANS: {
+    REPAIR_PREVIEW: "/meal-plans/diet-repair/preview",
+    REPAIR_APPLY: "/meal-plans/diet-repair/apply",
     GENERATE: "/meal-plans/generate",
     LIST: "/meal-plans",
     DETAIL: (id: string) => `/meal-plans/${id}`,
@@ -105,6 +107,7 @@ export const API_ENDPOINTS = {
     PHOTO_ORDER: (id: string) => `/custom-meals/${id}/photos/order`,
   },
   MEAL_PROGRAMS: {
+    DIET_REVISION: (id: string) => `/meal-programs/${id}/diet-revision`,
     LIST: "/meal-programs",
     DETAIL: (id: string) => `/meal-programs/${id}`,
   },

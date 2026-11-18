@@ -1,3 +1,4 @@
+import type { DietaryCompatibilityDto } from '@/features/diet-preferences/types/diet-impact.dto';
 /** DTO lộ trình nhiều tuần — khớp OpenAPI backend (`MealProgramResponse`, body `PATCH /meal-programs/:id`). */
 export type MealProgramGoalDto = 'MAINTAIN' | 'LOSE' | 'GAIN';
 export type MealProgramStatusDto = 'GENERATING' | 'DRAFT' | 'PARTIAL' | 'FAILED' | 'CONFIRMED';
@@ -69,6 +70,10 @@ export interface MealProgramAnalysisDto {
 }
 
 export interface MealProgramDto {
+  compatibility?: DietaryCompatibilityDto;
+  sourceProgramId?: string | null;
+  effectiveFrom?: string | null;
+  replacedByProgramId?: string | null;
   id?: string;
   title?: string;
   goal?: string;

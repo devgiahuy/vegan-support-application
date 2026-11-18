@@ -26,9 +26,12 @@ const FULL_RESPONSE = {
       updatedAt: '2026-09-10T08:00:00.000Z',
     },
     dietPreference: {
-      dietPattern: 'VEGAN',
-      practiceSchedule: 'PERIODIC',
-      tradition: 'BUDDHIST',
+      allowEggs: true,
+      allowDairy: false,
+      allowHoney: true,
+      allowFivePungent: false,
+      policyVersion: 1,
+      dietaryRevision: 3,
       requiresRuleReview: false,
       confirmedAt: '2026-09-12T08:00:00.000Z',
     },
@@ -45,12 +48,12 @@ describe('ProfileMapper.toModel', () => {
     expect(p.user.role).toBe(UserRole.MEMBER);
     expect(p.health?.bmi).toBe(22.49);
     expect(p.health?.bmiCategory).toBe('Bình thường');
-    expect(p.diet?.dietPatternLabel).toBe('Thuần chay');
-    expect(p.diet?.practiceScheduleLabel).toBe('Chay kỳ');
+    expect(p.diet?.allowEggs).toBe(true);
+    expect(p.diet?.allowDairy).toBe(false);
     expect(p.memberSince).toBe('10/01/2026');
   });
 
-  it('map ngày chay kỳ trong tóm tắt diet, lọc ngày sai', () => {
+  it('không suy lựa chọn mới từ dữ liệu không có bốn tùy chọn', () => {
     const p = profileMapper.toModel(
       {
         success: true,
@@ -61,18 +64,15 @@ describe('ProfileMapper.toModel', () => {
           role: 'MEMBER',
           status: 'ACTIVE',
           dietPreference: {
-            dietPattern: 'VEGAN',
-            practiceSchedule: 'PERIODIC',
-            tradition: 'NONE',
-            schedule: { timezone: 'Asia/Ho_Chi_Minh', dates: ['2026-09-15', 'nope', null] },
+            allowEggs: true,
           },
         },
         meta: null,
       }.data
     );
 
-    expect(p.diet?.scheduleDates).toEqual(['2026-09-15']);
-    expect(p.diet?.scheduleTimezone).toBe('Asia/Ho_Chi_Minh');
+    expect(p.diet?.selectionValid).toBe(false);
+    expect(p.diet?.allowFivePungent).toBe(false);
   });
 
   it('map đầy đủ dị ứng và nguyên liệu kiêng trong dietPreference', () => {
@@ -86,9 +86,12 @@ describe('ProfileMapper.toModel', () => {
           role: 'MEMBER',
           status: 'ACTIVE',
           dietPreference: {
-            dietPattern: 'VEGAN',
-            practiceSchedule: 'PERMANENT',
-            tradition: 'NONE',
+            allowEggs: false,
+            allowDairy: false,
+            allowHoney: true,
+            allowFivePungent: true,
+            policyVersion: 1,
+            dietaryRevision: 2,
             allergies: [{ allergenCode: 'PEANUT', label: 'Đậu phộng', severity: 'MODERATE' }],
             ingredientExclusions: [{ ingredientName: 'mắm tôm', reason: 'Không thích mùi' }],
           },

@@ -244,7 +244,13 @@ export class ChatRepository {
       select: {
         personalizationPreference: { select: { enabled: true, consentVersion: true } },
         dietPreference: {
-          select: { dietPattern: true, practiceSchedule: true, tradition: true },
+          select: {
+            allowEggs: true,
+            allowDairy: true,
+            allowHoney: true,
+            allowFivePungent: true,
+            dietaryRevision: true,
+          },
         },
         allergies: {
           where: { active: true },

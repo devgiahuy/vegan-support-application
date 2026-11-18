@@ -18,9 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MealPlanGoal } from '@/common/enums';
-import { getApiErrorCode, getApiErrorFields } from '@/lib/api-error';
+import { getApiErrorCode } from '@/lib/api-error';
 import { useGenerateMealPlanMutation } from '../queries/meal-plan.queries';
 import {
   currentWeekMonday,
@@ -42,7 +41,6 @@ const GOAL_OPTIONS: Array<{ value: MealPlanGoal; label: string; hint: string }> 
  */
 export function GenerateForm({ recentPlans }: { recentPlans: MealPlan[] }) {
   const generateMutation = useGenerateMealPlanMutation();
-  const [scheduleRequired, setScheduleRequired] = React.useState<string[] | null>(null);
   const [formError, setFormError] = React.useState<string | null>(null);
 
   const form = useForm<GenerateMealPlanFormValues>({
@@ -59,7 +57,6 @@ export function GenerateForm({ recentPlans }: { recentPlans: MealPlan[] }) {
 
   const onSubmit = async (values: GenerateMealPlanFormValues) => {
     setFormError(null);
-    setScheduleRequired(null);
     try {
       await generateMutation.mutateAsync({
         weekStart: values.weekStart,
@@ -70,14 +67,6 @@ export function GenerateForm({ recentPlans }: { recentPlans: MealPlan[] }) {
           : {}),
       });
     } catch (error) {
-      if (getApiErrorCode(error) === 'DIET_SCHEDULE_REQUIRED') {
-        const fields = getApiErrorFields(error);
-        const dates = fields?.['availableDates'];
-        setScheduleRequired(
-          Array.isArray(dates) ? dates.filter((d): d is string => typeof d === 'string') : []
-        );
-        return;
-      }
       if (getApiErrorCode(error) === 'HEALTH_PROFILE_INCOMPLETE') {
         setFormError(
           'Bạn chưa có hồ sơ sức khỏe. Hãy cập nhật ở trang cá nhân trước khi tạo thực đơn.'
@@ -107,23 +96,6 @@ export function GenerateForm({ recentPlans }: { recentPlans: MealPlan[] }) {
             </Link>
           </span>
         </div>
-      )}
-
-      {scheduleRequired !== null && (
-        <Alert>
-          <AlertCircle className="size-4" />
-          <AlertTitle>Bạn đang theo chế độ chay kỳ</AlertTitle>
-          <AlertDescription>
-            Vui lòng chọn ít nhất một ngày chay trong tuần ở{' '}
-            <Link href="/profile" className="font-medium text-primary underline">
-              hồ sơ chế độ ăn
-            </Link>{' '}
-            rồi tạo lại thực đơn.
-            {scheduleRequired.length > 0 && (
-              <span className="mt-1 block">Ngày khả dụng: {scheduleRequired.join(', ')}.</span>
-            )}
-          </AlertDescription>
-        </Alert>
       )}
 
       <div className="flex flex-col gap-1.5">

@@ -2,11 +2,11 @@
 # Diet Rules
 
 ## POST `/api/v1/diet-rules/preview`
-Xem trước bộ quy tắc diet/tradition hiện hành
+Xem trước bốn tùy chọn thực phẩm áp dụng mọi ngày
 - operationId: `previewDietRules`
 - Params: —
 - Request: `DietRulePreviewRequest` (required)
-- Responses: `200` → DietRulePreviewResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `423` → ErrorResponse, `503` → ErrorResponse
+- Responses: `200` → DietRulePreviewResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `423` → ErrorResponse
 
 ---
 ### Schemas dùng trong nhóm
@@ -16,32 +16,23 @@ Xem trước bộ quy tắc diet/tradition hiện hành
 {
   "type": "object",
   "required": [
-    "dietPattern",
-    "practiceSchedule",
-    "tradition"
+    "allowEggs",
+    "allowDairy",
+    "allowHoney",
+    "allowFivePungent"
   ],
   "properties": {
-    "dietPattern": {
-      "type": "string",
-      "enum": [
-        "VEGAN",
-        "LACTO_OVO"
-      ]
+    "allowEggs": {
+      "type": "boolean"
     },
-    "practiceSchedule": {
-      "type": "string",
-      "enum": [
-        "PERMANENT",
-        "PERIODIC"
-      ]
+    "allowDairy": {
+      "type": "boolean"
     },
-    "tradition": {
-      "type": "string",
-      "enum": [
-        "NONE",
-        "BUDDHIST",
-        "CHRISTIAN"
-      ]
+    "allowHoney": {
+      "type": "boolean"
+    },
+    "allowFivePungent": {
+      "type": "boolean"
     }
   },
   "additionalProperties": false
@@ -67,38 +58,43 @@ Xem trước bộ quy tắc diet/tradition hiện hành
     "data": {
       "type": "object",
       "required": [
-        "ruleSetVersion",
+        "policyVersion",
         "selection",
-        "rules"
+        "constraints"
       ],
       "properties": {
-        "ruleSetVersion": {
+        "policyVersion": {
           "type": "integer"
         },
         "selection": {
           "type": "object",
           "required": [
-            "dietPattern",
-            "practiceSchedule",
-            "tradition"
+            "allowEggs",
+            "allowDairy",
+            "allowHoney",
+            "allowFivePungent"
           ],
           "properties": {
-            "dietPattern": {
-              "type": "string",
+            "allowEggs": {
+              "type": "boolean",
               "_truncated": true
             },
-            "practiceSchedule": {
-              "type": "string",
+            "allowDairy": {
+              "type": "boolean",
               "_truncated": true
             },
-            "tradition": {
-              "type": "string",
+            "allowHoney": {
+              "type": "boolean",
+              "_truncated": true
+            },
+            "allowFivePungent": {
+              "type": "boolean",
               "_truncated": true
             }
           },
           "additionalProperties": false
         },
-        "rules": {
+        "constraints": {
           "type": "array",
           "items": {
             "type": "object",

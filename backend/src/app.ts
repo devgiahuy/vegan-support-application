@@ -1,3 +1,9 @@
+import { DietaryImpactService } from './modules/dietary-impact/dietary-impact.service.js';
+import { DietaryProgramRevisionService } from './modules/dietary-impact/dietary-program-revision.service.js';
+import {
+  DietaryImpactController,
+  createDietaryImpactRouter,
+} from './modules/dietary-impact/dietary-impact.controller.js';
 import cors from 'cors';
 import { createCompositionRouter } from './modules/catalog/composition.router.js';
 import { BillingService } from './modules/billing/billing.service.js';
@@ -193,7 +199,7 @@ export function createApp({
   const authController = new AuthController(authService, config);
   const authentication = new AuthenticationMiddleware(tokenService, authRepository);
   const profileService = new ProfileService(new ProfileRepository(database.client));
-  const usersController = new UsersController(profileService);
+
   const dietController = new DietController(profileService);
   const catalogController = new CatalogController(
     new CatalogService(new CatalogRepository(database.client)),
@@ -231,9 +237,23 @@ export function createApp({
     config,
     mealAnalysisService,
   );
-  const mealPlanController = new MealPlanController(mealPlanService);
-  const mealProgramController = new MealProgramController(
-    new MealProgramService(new MealProgramRepository(database.client), mealPlanService, config),
+  const mealProgramService = new MealProgramService(
+    new MealProgramRepository(database.client),
+    mealPlanService,
+    config,
+  );
+  const dietaryImpact = new DietaryImpactService(
+    database.client,
+    profileService,
+    contentRepository,
+    recommendationService,
+  );
+  const usersController = new UsersController(profileService, dietaryImpact);
+  const mealPlanController = new MealPlanController(mealPlanService, dietaryImpact);
+  const mealProgramController = new MealProgramController(mealProgramService, dietaryImpact);
+  const dietaryImpactController = new DietaryImpactController(
+    dietaryImpact,
+    new DietaryProgramRevisionService(database.client, mealProgramService),
   );
   const entitlements = new EntitlementService(database.client, config);
   const billing = new BillingService(database.client, entitlements, config);
@@ -402,6 +422,7 @@ export function createApp({
     '/api/v1/recommendations',
     createRecommendationRouter(recommendationController, authentication),
   );
+  app.use('/api/v1', createDietaryImpactRouter(dietaryImpactController, authentication));
   app.use('/api/v1/meal-plans', createMealPlanRouter(mealPlanController, authentication));
   app.use('/api/v1/meal-plans', createMealAnalysisRouter(mealAnalysisController, authentication));
   app.use('/api/v1/meal-programs', createMealProgramRouter(mealProgramController, authentication));

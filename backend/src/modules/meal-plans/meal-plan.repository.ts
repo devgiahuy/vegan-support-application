@@ -10,7 +10,7 @@ import {
   type PrismaClient,
 } from '@prisma/client';
 
-const mealPlanInclude = {
+export const mealPlanInclude = {
   items: {
     include: {
       recipe: { select: { id: true, slug: true } },

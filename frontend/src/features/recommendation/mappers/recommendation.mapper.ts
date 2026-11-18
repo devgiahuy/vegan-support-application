@@ -7,6 +7,7 @@ import {
   safeNumber,
   safeString,
 } from '@/lib/mapper';
+import { dietaryGroupLabel } from '@/features/ingredient/constants/dietary-groups';
 import type {
   CreateBehaviorEventRequestDto,
   PersonalizationDto,
@@ -111,6 +112,8 @@ export class RecommendationMapper extends BaseMapper<RecommendationItemDto, Reco
         pickField(constraints, ['dietPattern', 'diet_pattern'], '')
       ).toUpperCase();
       if (diet) parts.push(DIET_PATTERN_LABELS[diet] ?? diet);
+      const foodGroups = safeArray<string>(constraints.foodGroups).filter(Boolean);
+      if (foodGroups.length) parts.push(`Kiêng ${foodGroups.map(dietaryGroupLabel).join(', ')}`);
       const allergies = safeNumber(pickField(constraints, ['allergyCount', 'allergy_count'], 0));
       if (allergies > 0) parts.push(`${allergies} dị ứng`);
       const exclusions = safeNumber(

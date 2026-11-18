@@ -1,3 +1,4 @@
+import { toDietaryCompatibility } from '@/features/diet-preferences/mappers/diet-impact.mapper';
 import { resolveMediaUrl } from '@/lib/env';
 import { MealPlanGoal, MealType, NutritionDataQuality } from '@/common/enums';
 import { BaseMapper, pickField, safeArray, safeBoolean, safeDate, safeEnum, safeNumber, safeString } from '@/lib/mapper';
@@ -146,6 +147,7 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
       version,
       lockVersion: safeNumber(pickField(dto, ['lockVersion', 'lock_version'], version)),
       supersedesMealPlanId: supersedes.length > 0 ? supersedes : null,
+      compatibility: toDietaryCompatibility(dto?.compatibility),
       filledSlots: safeNumber(pickField(dto, ['filledSlots', 'filled_slots'], 0)),
       totalSlots: safeNumber(pickField(dto, ['totalSlots', 'total_slots'], 21)),
       items: this.toSlotList(pickField(dto, ['items'], null) as (MealSlotDto | null)[] | null),

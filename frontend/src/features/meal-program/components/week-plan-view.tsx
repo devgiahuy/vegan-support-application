@@ -19,11 +19,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatNutrient } from '../utils/nutrition.utils';
 import type { MealItemSummary, ProgramWeek } from '../types/meal-program.model';
+import { DietaryMealBadge } from '@/features/diet-preferences/components/dietary-meal-badge';
+import type { DietaryImpactItem } from '@/features/diet-preferences/types/diet-impact.model';
 
 interface WeekPlanViewProps {
   week: ProgramWeek;
   isDraft: boolean;
   onOpenRegenerateModal?: (weekNumber: number) => void;
+  dietaryWarnings?: DietaryImpactItem[];
 }
 
 function MealThumbnail({ src, alt }: { src?: string; alt: string }) {
@@ -53,6 +56,7 @@ export const WeekPlanView: React.FC<WeekPlanViewProps> = ({
   week,
   isDraft,
   onOpenRegenerateModal,
+  dietaryWarnings = [],
 }) => {
   const snapshot = week.snapshot;
 
@@ -65,11 +69,6 @@ export const WeekPlanView: React.FC<WeekPlanViewProps> = ({
         </p>
         {week.failureMessage && (
           <p className="text-sm text-muted-foreground">{week.failureMessage}</p>
-        )}
-        {week.failureCode === 'DIET_SCHEDULE_REQUIRED' && (
-          <Button asChild variant="link">
-            <Link href="/profile?tab=diet">Bổ sung lịch chay kỳ</Link>
-          </Button>
         )}
         {isDraft && onOpenRegenerateModal && (
           <Button
@@ -271,6 +270,9 @@ export const WeekPlanView: React.FC<WeekPlanViewProps> = ({
                                 title={meal.name}
                               >
                                 {meal.name}
+                                <DietaryMealBadge
+                                  item={dietaryWarnings.find((item) => item.itemId === meal.id)}
+                                />
                               </p>
                               {hasMacros ? (
                                 <p className="text-xs text-muted-foreground">

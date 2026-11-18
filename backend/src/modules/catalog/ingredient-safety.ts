@@ -21,6 +21,8 @@ const safetyReasonLabels: Record<string, string> = {
   INGREDIENT_EXCLUSION: 'có nguyên liệu bạn đã chọn kiêng',
   DIET_PATTERN: 'chưa đáp ứng chế độ ăn đã chọn',
   TRADITION_RULE: 'không phù hợp quy tắc truyền thống đang áp dụng',
+  FOOD_GROUP_EXCLUSION: 'có nhóm thực phẩm bạn đã chọn kiêng',
+  INGREDIENT_DIETARY_UNCERTAIN: 'phân loại thực phẩm chưa được rà soát đầy đủ',
   SOURCE_UNAVAILABLE: 'món ăn nguồn không còn khả dụng',
 };
 
@@ -52,6 +54,9 @@ export class IngredientSafetyCatalog {
             id: item.id,
             status: item.status,
             normalizedName: item.normalizedName,
+            dietaryGroups: item.dietaryGroups,
+            dietaryEvidence: item.dietaryEvidence,
+            dietaryClassificationVersion: item.dietaryClassificationVersion,
             compositionStatus: item.compositionStatus,
             compositionKind: item.compositionKind,
             compositionEvidence: item.compositionEvidence,
@@ -124,6 +129,7 @@ export class IngredientSafetyCatalog {
     const reasons = new Set<string>();
     const requiresCompleteness = Boolean(
       constraints.requireResolvedIngredients ||
+      constraints.blockedFoodGroups?.length ||
       constraints.dietPattern ||
       constraints.traditions.length ||
       constraints.allergenCodes.length ||
@@ -148,6 +154,27 @@ export class IngredientSafetyCatalog {
       if (!closure.nodes.length || closure.nodes.some((item) => item.status !== 'ACTIVE'))
         reasons.add('UNRESOLVED_INGREDIENT');
       for (const item of closure.nodes) {
+        if (constraints.blockedFoodGroups?.length) {
+          const evidence = jsonObject(item.dietaryEvidence);
+          const reviewed =
+            typeof evidence.sourceId === 'string' &&
+            this.activeSources.has(evidence.sourceId) &&
+            typeof evidence.sourceVersion === 'string' &&
+            !!evidence.sourceVersion &&
+            typeof evidence.sourceRecordId === 'string' &&
+            !!evidence.sourceRecordId &&
+            typeof evidence.scope === 'string' &&
+            !!evidence.scope &&
+            typeof evidence.reviewedById === 'string' &&
+            !!evidence.reviewedById &&
+            typeof evidence.reviewedAt === 'string' &&
+            Number.isFinite(Date.parse(evidence.reviewedAt)) &&
+            item.dietaryClassificationVersion > 0;
+          if (!reviewed) reasons.add('INGREDIENT_DIETARY_UNCERTAIN');
+          if (item.dietaryGroups.some((group) => constraints.blockedFoodGroups?.includes(group)))
+            reasons.add('FOOD_GROUP_EXCLUSION');
+        }
+
         if (constraints.allergicIngredientIds?.includes(item.id)) reasons.add('ALLERGY');
         if (item.allergens.some((entry) => constraints.allergenCodes.includes(entry.allergenCode)))
           reasons.add('ALLERGY');

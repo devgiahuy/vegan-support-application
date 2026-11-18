@@ -126,8 +126,12 @@ export class MealProgramService {
   }
 
   async get(userId: string, id: string) {
-    const program = await this.repository.findOwned(userId, id);
+    let program = await this.repository.findOwned(userId, id);
     if (!program) throw this.notFound();
+    if (program.status !== MealProgramStatus.CONFIRMED) {
+      await this.refreshSelectedSnapshots(userId, program);
+      program = await this.requireOwned(userId, id);
+    }
     return this.detail(program);
   }
 
@@ -490,6 +494,9 @@ export class MealProgramService {
   private summary(program: MealProgramRecord) {
     return {
       id: program.id,
+      sourceProgramId: program.sourceProgramId,
+      effectiveFrom: program.effectiveFrom ? dateOnly(program.effectiveFrom) : null,
+      replacedByProgramId: program.replacedByProgramId,
       title: program.title,
       goal: program.goal,
       startDate: dateOnly(program.startDate),

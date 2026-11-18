@@ -5,7 +5,6 @@ import {
   healthProfileRequestSchema,
   saveDietPreferencesRequestSchema,
   updateBasicProfileRequestSchema,
-  updateDietScheduleRequestSchema,
 } from '../profile/profile.schemas.js';
 import type { UsersController } from './users.controller.js';
 
@@ -32,12 +31,6 @@ export function createUsersRouter(
     authentication.authenticate,
     validateBody(saveDietPreferencesRequestSchema),
     controller.saveDietPreferences,
-  );
-  router.put(
-    '/me/diet-schedule',
-    authentication.authenticate,
-    validateBody(updateDietScheduleRequestSchema),
-    controller.updateDietSchedule,
   );
   return router;
 }

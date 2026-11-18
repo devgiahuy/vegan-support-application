@@ -23,18 +23,11 @@ Lưu dữ liệu sức khỏe thủ công và tính BMI/BMR/TDEE
 - Responses: `200` → HealthProfileResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `423` → ErrorResponse
 
 ## PUT `/api/v1/users/me/diet-preferences`
-Xác nhận diet preferences, rules và hard constraints cá nhân
+Lưu bốn tùy chọn thực phẩm và hạn chế cá nhân
 - operationId: `saveDietPreferences`
 - Params: —
 - Request: `SaveDietPreferencesRequest` (required)
-- Responses: `200` → DietPreferenceResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse, `503` → ErrorResponse
-
-## PUT `/api/v1/users/me/diet-schedule`
-Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
-- operationId: `updateDietSchedule`
-- Params: —
-- Request: `UpdateDietScheduleRequest` (required)
-- Responses: `200` → DietScheduleResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
+- Responses: `200` → DietPreferenceResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ---
 ### Schemas dùng trong nhóm
@@ -58,43 +51,72 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
     "data": {
       "type": "object",
       "required": [
-        "dietPattern",
-        "practiceSchedule",
-        "tradition",
-        "ruleSetVersion",
+        "allowEggs",
+        "allowDairy",
+        "allowHoney",
+        "allowFivePungent",
+        "policyVersion",
+        "dietaryRevision",
         "confirmedAt",
         "requiresRuleReview",
-        "rules",
-        "schedule",
         "allergies",
         "ingredientAllergies",
         "ingredientExclusions",
         "effectiveConstraints"
       ],
       "properties": {
-        "dietPattern": {
-          "type": "string",
-          "enum": [
-            "VEGAN",
-            "LACTO_OVO"
-          ]
+        "allowEggs": {
+          "type": "boolean"
         },
-        "practiceSchedule": {
-          "type": "string",
-          "enum": [
-            "PERMANENT",
-            "PERIODIC"
-          ]
+        "allowDairy": {
+          "type": "boolean"
         },
-        "tradition": {
-          "type": "string",
-          "enum": [
-            "NONE",
-            "BUDDHIST",
-            "CHRISTIAN"
-          ]
+        "allowHoney": {
+          "type": "boolean"
         },
-        "ruleSetVersion": {
+        "allowFivePungent": {
+          "type": "boolean"
+        },
+        "impact": {
+          "type": "object",
+          "required": [
+            "dietaryRevision",
+            "assessedFrom",
+            "affectedPlanCount",
+            "affectedMealCount",
+            "plans"
+          ],
+          "properties": {
+            "dietaryRevision": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "assessedFrom": {
+              "type": "string",
+              "_truncated": true
+            },
+            "affectedPlanCount": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "affectedMealCount": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "plans": {
+              "type": "array",
+              "_truncated": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "impactUnavailable": {
+          "type": "boolean"
+        },
+        "policyVersion": {
+          "type": "integer"
+        },
+        "dietaryRevision": {
           "type": "integer"
         },
         "confirmedAt": {
@@ -103,31 +125,6 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
         },
         "requiresRuleReview": {
           "type": "boolean"
-        },
-        "rules": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "_truncated": true
-          }
-        },
-        "schedule": {
-          "type": "object",
-          "required": [
-            "timezone",
-            "dates"
-          ],
-          "properties": {
-            "timezone": {
-              "type": "string",
-              "_truncated": true
-            },
-            "dates": {
-              "type": "array",
-              "_truncated": true
-            }
-          },
-          "additionalProperties": false
         },
         "allergies": {
           "type": "array",
@@ -153,16 +150,11 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
         "effectiveConstraints": {
           "type": "object",
           "required": [
-            "always",
-            "scheduledTradition"
+            "always"
           ],
           "properties": {
             "always": {
               "type": "array",
-              "_truncated": true
-            },
-            "scheduledTradition": {
-              "type": "object",
               "_truncated": true
             }
           },
@@ -175,63 +167,8 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
       "type": "null"
     }
   },
-  "additionalProperties": false
-}
-```
-
-#### DietScheduleResponse
-```json
-{
-  "type": "object",
-  "required": [
-    "success",
-    "data",
-    "meta"
-  ],
-  "properties": {
-    "success": {
-      "type": "boolean",
-      "enum": [
-        true
-      ]
-    },
-    "data": {
-      "type": "object",
-      "required": [
-        "practiceSchedule",
-        "timezone",
-        "dates"
-      ],
-      "properties": {
-        "practiceSchedule": {
-          "type": "string",
-          "enum": [
-            "PERMANENT",
-            "PERIODIC"
-          ]
-        },
-        "timezone": {
-          "type": "string",
-          "enum": [
-            "Asia/Ho_Chi_Minh"
-          ]
-        },
-        "dates": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "_truncated": true
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    "meta": {
-      "type": "null"
-    }
-  },
-  "additionalProperties": false
-}
+  "additional
+  …(truncated — xem api-catalog.json)
 ```
 
 #### ErrorResponse
@@ -554,64 +491,31 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
 {
   "type": "object",
   "required": [
-    "dietPattern",
-    "practiceSchedule",
-    "tradition",
-    "ruleSetVersion",
-    "rules"
+    "allowEggs",
+    "allowDairy",
+    "allowHoney",
+    "allowFivePungent",
+    "policyVersion",
+    "expectedDietaryRevision"
   ],
   "properties": {
-    "dietPattern": {
-      "type": "string",
-      "enum": [
-        "VEGAN",
-        "LACTO_OVO"
-      ]
+    "allowEggs": {
+      "type": "boolean"
     },
-    "practiceSchedule": {
-      "type": "string",
-      "enum": [
-        "PERMANENT",
-        "PERIODIC"
-      ]
+    "allowDairy": {
+      "type": "boolean"
     },
-    "tradition": {
-      "type": "string",
-      "enum": [
-        "NONE",
-        "BUDDHIST",
-        "CHRISTIAN"
-      ]
+    "allowHoney": {
+      "type": "boolean"
     },
-    "ruleSetVersion": {
+    "allowFivePungent": {
+      "type": "boolean"
+    },
+    "policyVersion": {
       "type": "integer"
     },
-    "rules": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": [
-          "ruleDefinitionId",
-          "enabled"
-        ],
-        "properties": {
-          "ruleDefinitionId": {
-            "type": "string",
-            "_truncated": true
-          },
-          "enabled": {
-            "type": "boolean",
-            "_truncated": true
-          }
-        },
-        "additionalProperties": false
-      }
-    },
-    "scheduleDates": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+    "expectedDietaryRevision": {
+      "type": "integer"
     },
     "allergies": {
       "type": "array",
@@ -696,25 +600,6 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
     },
     "avatarUrl": {
       "type": "string"
-    }
-  },
-  "additionalProperties": false
-}
-```
-
-#### UpdateDietScheduleRequest
-```json
-{
-  "type": "object",
-  "required": [
-    "dates"
-  ],
-  "properties": {
-    "dates": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
     }
   },
   "additionalProperties": false

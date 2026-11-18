@@ -1,5 +1,36 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-19] — Khôi phục đăng nhập mobile trên Device Hub qua ngrok
+
+- Backend/MongoDB đã dừng; mobile thiếu .env và bundle cũ không gửi request tới ngrok mới. Khởi động dev services, cấu hình HTTPS backend /api/v1 trong mobile/.env ignored, chạy Metro tunnel/clear và mở URL Expo mới trong Device Hub.
+- Login200 nhưng users/me500 ở default database do schema cũ. Sao lưu local vegan_support tại /tmp/vegan-support-before-food-preferences-20261119.archive.gz (600), dựng lại112 collections và seed theo quyền bỏ dữ liệu dev cũ đã có. Không thêm legacy adapter; mật khẩu demo dùng cấu hình seed hiện có, không ghi secret vào docs.
+- Public-ngrok Member/organization Contributor login+profile200, đủ4 allowances. Native Device Hub iPhone16/iOS26.1 đăng nhập QA thành công, mở four-switch form và authenticated profile. Signout/dọn QA account và khôi phục form expert@example.com. Services giữ chạy để người dùng thử tiếp. Đây là kiểm chứng iOS login/profile; full dietary impact/repair/Android chưa chạy.
+- Login form phân biệt timeout/lỗi mạng với sai credentials. Mobile typecheck/lint/166tests và diffcheck pass; không đổi backend auth contract/package manifests. Mobile docs và verification report ghi follow-up, supersede giới hạn native/defaultDB của lần QA trước trong đúng phạm vi.
+
+## [2026-11-19] — Hoàn tất bốn tùy chọn và tác động đổi profile
+
+- **Đã triển khai:** four daily allowances trên backend/web/mobile; bỏ profile pattern/tradition/calendar; reviewed neutral dietary groups/catalog/seed; full DTO/Model/Mapper/API/query/cache integration; onboarding lưu thật. Lưu profile xem trước tác động và cho thay hoặc giữ có cảnh báo, per-plan repair preview/apply, nhóm tối đa20 không cắt IDs, conflict/idempotency/partial-failure handling, chương trình confirmed tạo linked DRAFT.
+- **Toàn vẹn:** current backend compatibility trên list/detail và từng bữa; profile save độc lập repair failure/cancel; auto-repair chỉ món ảnh hưởng từ hôm nay, không sửa pantry/purchases. User/catalog transaction locks, re-read plan fingerprints, guards cho stale/confirmed snapshots và lineage bảo toàn lịch sử.
+- **Backend QA:** isolated Mongo7 replica set provision112 collections/validators/indexes và seed; lint/typecheck/build/OpenAPI/existing meal-plan+analysis acceptance pass. Live16 combinations, allergy/exclusion/nested/unknown precedence, keep/selective repair/readonly preview/idempotency/stale/catalog/expiry/no-candidates/historical/deleted-custom và confirmed revision/source preservation pass. Temporary snapshot guard checks pass; fixture removed. Default database không bị reset/migrate.
+- **Web QA:** final119 files/922 tests, typecheck/scopedlint0warnings pass. Production build47pages pass trước component/helper batch-onlyfix. Final Swagger sync198 endpoints/43groups/164schemas. Browser authenticated realAPI qua bốn toggles → dialog2actions → giữ → warning sau navigation → repairpreview/apply chỉ plan được chọn. Narrow document341/dialog309px không overflow. Evidence: ../../docs/diet-impact-desktop-qa.jpg.
+- **Mobile QA:** typecheck/lint/166tests/iOS export pass, native guest/login gate rendered without runtime errors. Authenticated iOS/Android E2E và web↔native UI chưa chạy vì thiếu full Simulator.app GUI/native driver và Android tooling. Không suy bundle hoặc mobile-web thành native E2E.
+- **Handoff:** docs/DIETARY_PREFERENCES_VERIFICATION.md tổng hợp evidence/setup; integration4.81 chỉ đánh READY contract dietary đã migrate, không đổi status các phase/chức năng khác. No new backend test infrastructure, commit, deployment hoặc defaultDB reset. Whitespace check pass; unrelated diagrams/.DS_Store giữ nguyên.
+
+## [2026-11-18] — Cập nhật kế hoạch: dev clean break và tác động đổi profile lên thực đơn
+
+- **Yêu cầu bổ sung:** Đây là project môn học/dev không có người dùng thật; không hỗ trợ data/mobile/client/schema phiên bản cũ. Khi đổi dietary profile ảnh hưởng thực đơn, cho cả hai lựa chọn tự động thay các món không phù hợp hoặc giữ thực đơn kèm cảnh báo để xử lý sau.
+- **Đã làm:** Cập nhật `../../docs/DIRECT_FOOD_PREFERENCES_PLAN.md` v1.1 và thêm `../../docs/DIET_PROFILE_MEAL_PLAN_IMPACT.md`. Đồng bộ bảy artifact Spec Kit local và 32 task: bỏ mapping/preservation/compatibility window/redirect legacy; bổ sung impact preview trước lưu, profile save + revision, keep-with-warnings, replacement preview/apply, current/future scope, confirmed-program revision, errors/no-candidates/cancel/version races/idempotency và cache parity.
+- **Phân tích source:** MealPlan.get đã tái phân tích khi stale; MealProgram.get/list đang đọc snapshots, program CONFIRMED immutable. Không có consumed state nên không suy bữa hôm nay đã ăn. Kế hoạch yêu cầu server current-revision validation, không chỉ client invalidation. Đề xuất bản điều chỉnh DRAFT cho confirmed program để giữ immutable rule.
+- **Scope:** Nội dung này thay phần bảo toàn dữ liệu/cũ trong bản kế hoạch ban đầu phía dưới; history log vẫn giữ để theo dõi quyết định. Không reset/reseed database hoặc sửa product code ở task planning.
+- **Kiểm chứng:** Rà nhất quán tài liệu/tasks/links và whitespace/diff. Không chạy backend/web/mobile build/test/API/browser/native vì chỉ sửa kế hoạch; mọi acceptance vẫn PLANNED.
+
+## [2026-11-18] — Phân tích và lập kế hoạch thay mô hình thiết lập ăn uống
+
+- **Yêu cầu:** Bỏ lựa chọn tôn giáo; qua trao đổi đã chốt bỏ luôn kiểu ăn và setup lịch, thay bốn toggle độc lập Ăn trứng / Ăn sữa / Ăn mật ong / Ăn ngũ vị tân, áp mọi ngày. Ngũ vị tân: hành/hẹ/tỏi/kiệu/hưng cừ. Scope backend/web/mobile và kiểm chứng thực tế ở giai đoạn triển khai.
+- **Đã làm:** Đọc canonical requirements và source profile/catalog/search/meal-plans/analysis/chat/web/mobile; dùng quy trình Spec Kit cùng nghiên cứu mobile chỉ đọc. Ghi `../../docs/DIRECT_FOOD_PREFERENCES_PLAN.md` (PLANNED), bảy artifact local tại `specs/035-direct-food-preferences/` và 29 task implementation chưa làm. Scope bao gồm Mongo migration bảo toàn, reviewed food classification, contract/OpenAPI, 16 tổ hợp, lịch cũ, consumer parity, native QA và compatibility client cũ.
+- **Phát hiện:** Web/mobile ép hardConstraint thành luôn bật; hai diet enums không đủ cho lựa chọn độc lập; dietary schedule coupling cần bỏ; onboarding web báo lưu bằng setTimeout; mobile hydrate/invalidation chưa đủ; danh mục ngũ vị tân seed/onboarding khác nhau. Đây là phân tích source, chưa xác minh runtime.
+- **Kiểm chứng:** Spec Kit setup-plan/setup-tasks chạy được bằng PowerShell; rà tính nhất quán và `git diff --check`. Không chạy lint/typecheck/build/test/API/database/browser/native vì chỉ lập kế hoạch, không đổi product code hay persistence. Giữ nguyên status READY của capability đang chạy; chưa tuyên bố contract mới đã sẵn sàng.
+
 ## [2026-11-16] — Rebase nhánh sửa cảnh báo dị ứng lên main và chuẩn bị PR
 
 - **Yêu cầu:** Rebase trên main, push và tạo PR vào main cho phần sửa cảnh báo theo hồ sơ.

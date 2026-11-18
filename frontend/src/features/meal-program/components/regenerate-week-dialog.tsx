@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import { toast } from 'sonner';
 import { RefreshCw, AlertTriangle, Loader2 } from 'lucide-react';
 import {
@@ -33,13 +32,11 @@ export const RegenerateWeekDialog: React.FC<RegenerateWeekDialogProps> = ({
   onOpenChange,
 }) => {
   const regenerateMutation = useRegenerateProgramWeekMutation(programId);
-  const [errorCode, setErrorCode] = React.useState('');
   const [errorMessage, setErrorMessage] = React.useState('');
 
   if (weekNumber === null) return null;
 
   const handleRegenerate = async () => {
-    setErrorCode('');
     setErrorMessage('');
     try {
       await regenerateMutation.mutateAsync({
@@ -54,13 +51,10 @@ export const RegenerateWeekDialog: React.FC<RegenerateWeekDialogProps> = ({
       onOpenChange(false);
     } catch (err: unknown) {
       const code = getApiErrorCode(err);
-      setErrorCode(code ?? '');
       setErrorMessage(
-        code === 'DIET_SCHEDULE_REQUIRED'
-          ? `Tuần ${weekNumber} chưa có ngày chay kỳ. Hãy bổ sung và lưu ngày chay trong tuần này, rồi thử tạo lại.`
-          : code === 'MEAL_PROGRAM_VERSION_CONFLICT'
-            ? 'Lộ trình đã thay đổi. Hãy tải lại trang để lấy phiên bản mới rồi thử lại.'
-            : getApiErrorMessage(err, 'Không tạo được thực đơn tuần. Vui lòng thử lại.')
+        code === 'MEAL_PROGRAM_VERSION_CONFLICT'
+          ? 'Lộ trình đã thay đổi. Hãy tải lại trang để lấy phiên bản mới rồi thử lại.'
+          : getApiErrorMessage(err, 'Không tạo được thực đơn tuần. Vui lòng thử lại.')
       );
     }
   };
@@ -89,14 +83,7 @@ export const RegenerateWeekDialog: React.FC<RegenerateWeekDialogProps> = ({
 
         {errorMessage && (
           <Alert variant="destructive">
-            <AlertDescription>
-              {errorMessage}
-              {errorCode === 'DIET_SCHEDULE_REQUIRED' && (
-                <Button asChild variant="link">
-                  <Link href="/profile?tab=diet">Bổ sung lịch chay kỳ</Link>
-                </Button>
-              )}
-            </AlertDescription>
+            <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         )}
         <DialogFooter className="gap-2 sm:gap-0 pt-2">
