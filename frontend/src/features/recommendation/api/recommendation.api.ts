@@ -50,7 +50,8 @@ export const recommendationApi = {
     const res = await api.put<PersonalizationResponseDto>(
       RECOMMENDATIONS_ENDPOINTS.CONSENT,
       recommendationMapper.toConsentDto(enabled, consentVersion),
-      { showErrorToast: true }
+      // Hook tự toast lỗi qua onError; tránh toast trùng từ interceptor.
+      { silent: true }
     );
     return recommendationMapper.toConsentModel(res.data?.data);
   },

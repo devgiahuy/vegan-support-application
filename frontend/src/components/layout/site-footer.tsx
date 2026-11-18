@@ -11,7 +11,7 @@ export function SiteFooter() {
   const pathname = usePathname();
 
   // Ẩn Footer trên các màn hình công cụ chuyên sâu / toàn màn hình:
-  // /assistant, /meal-plans, /restaurants, /pantry, /receipts/scan, /profile, /recipes/new
+  // /assistant, /meal-plans, /restaurants, /pantry, /profile, /recipes/new
   if (isFooterHidden(pathname)) {
     return null;
   }
@@ -134,7 +134,10 @@ export function SiteFooter() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/receipts/scan" className="transition-colors hover:text-emerald-300">
+                  <Link
+                    href="/pantry/scan/receipt"
+                    className="transition-colors hover:text-emerald-300"
+                  >
                     Quét hóa đơn mua sắm
                   </Link>
                 </li>

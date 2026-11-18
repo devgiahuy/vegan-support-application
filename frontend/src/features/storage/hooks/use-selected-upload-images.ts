@@ -21,6 +21,35 @@ interface SelectedUploadImagesOptions {
   isUploading: boolean;
 }
 
+export interface InvalidUploadFile {
+  name: string;
+  error: string;
+}
+
+/**
+ * Gom thông báo lỗi xác thực nhiều file thành đúng 1 toast để tránh hiển thị hàng loạt
+ * khi người dùng chọn cùng lúc nhiều tệp không hợp lệ.
+ */
+export function formatInvalidUploadFilesMessage(
+  invalidFiles: InvalidUploadFile[]
+): { title: string; description?: string } | null {
+  if (invalidFiles.length === 0) return null;
+  if (invalidFiles.length === 1) {
+    const [single] = invalidFiles;
+    return { title: `${single.name}: ${single.error}` };
+  }
+
+  const preview = invalidFiles.slice(0, 2).map((item) => `${item.name}: ${item.error}`);
+  const remaining = invalidFiles.length - preview.length;
+  const description =
+    remaining > 0 ? [...preview, `... và ${remaining} tệp khác.`].join('\n') : preview.join('\n');
+
+  return {
+    title: `Không thể thêm ${invalidFiles.length} ảnh không hợp lệ.`,
+    description,
+  };
+}
+
 export function useSelectedUploadImages({
   kind,
   maxImages,
@@ -54,10 +83,14 @@ export function useSelectedUploadImages({
     }
 
     const newItems: SelectedUploadImage[] = [];
+    const invalidFiles: InvalidUploadFile[] = [];
     for (const file of fileArray) {
       const validation = validateUploadFile(file, kind);
       if (!validation.valid) {
-        toast.error(`${file.name}: ${validation.error || 'Tệp không hợp lệ'}`);
+        invalidFiles.push({
+          name: file.name,
+          error: validation.error || 'Tệp không hợp lệ',
+        });
         continue;
       }
 
@@ -71,6 +104,14 @@ export function useSelectedUploadImages({
         progress: 0,
         status: 'idle',
       });
+    }
+
+    const invalidMessage = formatInvalidUploadFilesMessage(invalidFiles);
+    if (invalidMessage) {
+      toast.error(
+        invalidMessage.title,
+        invalidMessage.description ? { description: invalidMessage.description } : undefined
+      );
     }
 
     if (newItems.length > 0) {

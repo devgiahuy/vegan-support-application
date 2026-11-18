@@ -13,7 +13,7 @@ const messages: Record<string, string> = {
   BILLING_PAYMENT_MISMATCH: 'Giao dịch không khớp đơn hàng. Chưa cấp quyền lợi.',
   BILLING_RECONCILE_COOLDOWN: 'Đợi ít nhất 30 giây giữa hai lần kiểm tra với payOS.',
   ENTITLEMENT_QUOTA_EXCEEDED: 'Bạn đã hết lượt. Mua thêm gói để tiếp tục.',
-  PANTRY_CAPACITY_EXCEEDED: 'Tủ đồ ăn đã đầy. Xóa, gộp item hoặc mua thêm ô rồi xác nhận lại.',
+  PANTRY_CAPACITY_EXCEEDED: 'Tủ đồ ăn đã đầy. Xóa, gộp item hoặc mua thêm ô trước khi thêm.',
   SCAN_RETRY_LIMIT_EXCEEDED: 'Đã hết số lần thử lại. Tạo tác vụ mới sẽ dùng một lượt khác.',
 };
 export function billingErrorMessage(error: unknown): string {

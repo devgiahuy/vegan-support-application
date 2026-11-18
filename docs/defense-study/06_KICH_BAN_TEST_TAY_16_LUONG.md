@@ -102,7 +102,7 @@ Các ngày 26/10 và 02/11 bên dưới là ví dụ lịch sử. Khi chạy m�
 ### L10 — Upload media và quota
 
 - **Dữ liệu:** `fridge-1.jpg` và file giả `.jpg`; tài khoản A.
-- **Chạy:** mở trang tạo recipe hoặc `/pantry/scan`, ghi `GET /storage/me` (used/reserved/limit). Upload ảnh hợp lệ và quan sát 3 bước `POST /uploads/reservations` → Cloudinary → `POST .../commit`; reload storage usage. Tạo một reservation rồi **hủy trước upload** nếu UI/Swagger hỗ trợ. Dùng file sai MIME và file vượt ngưỡng cấu hình để kiểm tra từ chối.
+- **Chạy:** mở trang tạo recipe hoặc `/pantry/scan/fridge`, ghi `GET /storage/me` (used/reserved/limit). Upload ảnh hợp lệ và quan sát 3 bước `POST /uploads/reservations` → Cloudinary → `POST .../commit`; reload storage usage. Tạo một reservation rồi **hủy trước upload** nếu UI/Swagger hỗ trợ. Dùng file sai MIME và file vượt ngưỡng cấu hình để kiểm tra từ chối.
 - **Đạt:** asset committed có owner và used bytes tăng; reservation hủy/expire giải phóng reserved bytes; file sai MIME/quota trả lỗi, không có asset mới. Một ảnh đã được scan job tham chiếu có thể bị chặn xóa. Cần Cloudinary credential hoạt động; thiếu thì ghi `BLOCKED` cho upload thật, vẫn kiểm tra metadata/quota read.
 - **Ca lỗi:** cố commit hai lần cùng key hoặc commit sai bytes/provider; ghi `UPLOAD_*`/`STORAGE_*` code từ response. Không upload lại liên tục khi request timeout trước khi kiểm tra reservation/asset.
 
@@ -117,7 +117,7 @@ Các ngày 26/10 và 02/11 bên dưới là ví dụ lịch sử. Khi chạy m�
 
 - **Điều kiện:** `VISION_ENABLED` bật, provider fake để test state machine hoặc OpenAI + Cloudinary HTTPS hợp lệ để kiểm tra ảnh thật. Docker Compose mặc định **tắt** vision; mobile còn guard development. Nếu thiếu điều kiện, đánh `BLOCKED`, không gọi là lỗi nghiệp vụ.
 - **Dữ liệu:** `fridge-1.jpg`, `fridge-2.jpg`, cùng một file lặp, 7 ảnh để thử giới hạn.
-- **Chạy:** từ `/pantry/scan`, upload/commit ảnh theo L10 → tạo job với ảnh 1, ghi Pantry trước và job ID/version. Đợi terminal `READY`/`PARTIAL_FAILED`/`FAILED`; kiểm tra candidate và evidence, sửa tên/quantity hoặc reject một candidate. Thêm ảnh 2 vào **job chưa confirm** nếu UI có nút, nếu không thì operation `POST /ingredient-recognition/jobs/{id}/images` qua Swagger; reload. Cuối cùng chọn candidate hợp lệ và **confirm**; kiểm tra Pantry diff và số item sau reload.
+- **Chạy:** từ `/pantry/scan/fridge`, upload/commit ảnh theo L10 → tạo job với ảnh 1, ghi Pantry trước và job ID/version. Đợi terminal `READY`/`PARTIAL_FAILED`/`FAILED`; kiểm tra candidate và evidence, sửa tên/quantity hoặc reject một candidate. Thêm ảnh 2 vào **job chưa confirm** nếu UI có nút, nếu không thì operation `POST /ingredient-recognition/jobs/{id}/images` qua Swagger; reload. Cuối cùng chọn candidate hợp lệ và **confirm**; kiểm tra Pantry diff và số item sau reload.
 - **Đạt:** tạo/xem/retry/thêm ảnh/sửa **chưa** đổi Pantry; confirm một lần mới đổi. Ảnh trùng ETag không nhân đôi; edit/reject đã làm không bị ảnh mới ghi đè; quá 6 ảnh bị chặn. Job partial failure vẫn có thể xem phần thành công; retry chỉ ảnh lỗi.
 - **Ca lỗi:** thử confirm lại, thêm ảnh sau confirm, dùng version cũ hoặc job của B; ghi state/version/owner error. Provider fail không được mô tả là “AI đã nhận dạng chính xác”.
 
@@ -125,9 +125,9 @@ Các ngày 26/10 và 02/11 bên dưới là ví dụ lịch sử. Khi chạy m�
 
 - **Điều kiện:** receipt provider bật và upload thật như L12; Compose mặc định **tắt** receipt. Không cần provider để test shopping preview.
 - **Dữ liệu:** `receipt-1.jpg`, `receipt-2.jpg` là cùng hóa đơn; A có Pantry P1 sau L11; chọn recipe `sup-bi-do-kem-dua` và servings 2.
-- **Chạy hóa đơn:** `/receipts/scan` upload/commit ảnh 1 → tạo job → ghi Pantry trước. Xem `notices[]`/`excludedItems[]` cho `Nước rửa chén`; nếu AI loại nhầm một thực phẩm, sửa decision thành `KEEP` rồi review lại. Sửa một line/quantity/giá, reject một line sai, thêm ảnh 2 vào job chưa confirm qua UI hoặc Swagger, xem line đã gộp. Confirm phần đã chọn → so Pantry sau reload. Với provider fake, dùng kết quả fixture làm bài test state/confirm, **không** coi là OCR ảnh thật.
+- **Chạy hóa đơn:** `/pantry/scan/receipt` upload/commit ảnh 1 → tạo job → ghi Pantry trước. Xem `notices[]`/`excludedItems[]` cho `Nước rửa chén`; nếu AI loại nhầm một thực phẩm, sửa decision thành `KEEP` rồi review lại. Sửa một line/quantity/giá, reject một line sai, thêm ảnh 2 vào job chưa confirm qua UI hoặc Swagger, xem line đã gộp. Confirm phần đã chọn → so Pantry sau reload. Với provider fake, dùng kết quả fixture làm bài test state/confirm, **không** coi là OCR ảnh thật.
 - **Đạt:** chưa confirm Pantry không đổi; hàng phi thực phẩm bị loại khỏi candidates nhưng owner có thể khôi phục khi AI sai; dòng giống nhau giữa hai ảnh của **cùng hóa đơn** không cộng đôi; dòng lặp thật trong **cùng** ảnh có thể vẫn là hai dòng; confirm chỉ cộng line được chọn. Một job/hóa đơn lặp lại chính xác không tăng Pantry lần nữa; nếu hai lần mua chỉ trùng một phần, backend yêu cầu `identityDecisionRequired` và quyết định `SAME_RECEIPT` hoặc `SEPARATE_RECEIPTS` trước confirm. Cùng tên sản phẩm ở hai ngày mua khác nhau vẫn có thể là hai lần mua thật. Quá 4 ảnh, version cũ, owner khác hoặc add sau confirm phải bị chặn.
-- **Chạy shopping:** ở `/receipts` hoặc meal plan shopping, chọn recipe + servings, gọi `POST /shopping-lists/preview` nếu cần; ghi `required`, `available`, `missing`, `unresolvedItems`. Tăng Pantry một nguyên liệu rồi preview lại.
+- **Chạy shopping:** ở `/pantry/scan/receipt` hoặc meal plan shopping, chọn recipe + servings, gọi `POST /shopping-lists/preview` nếu cần; ghi `required`, `available`, `missing`, `unresolvedItems`. Tăng Pantry một nguyên liệu rồi preview lại.
 - **Đạt shopping:** missing giảm tương ứng với tồn kho **confirmed và quy đổi được**; unresolved tách riêng, không giả định hóa đơn cũ vẫn còn trong kho.
 
 ### L14 — Chat AI, lưu/chia sẻ artifact và thẩm định

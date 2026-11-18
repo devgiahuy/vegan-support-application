@@ -38,4 +38,15 @@ describe('meal analysis response mapping', () => {
     vi.spyOn(api, 'get').mockResolvedValueOnce({ data: { success: true, data: null } });
     await expect(mealAnalysisApi.getCurrentAnalysis('p1')).rejects.toThrow('không đúng định dạng');
   });
+
+  it('passes silent: true on analyzeMealPlan so mutation hook owns error toast', async () => {
+    const postSpy = vi
+      .spyOn(api, 'post')
+      .mockResolvedValueOnce({ data: { data: { id: 'analysis-9', planLockVersion: 3 } } });
+
+    const result = await mealAnalysisApi.analyzeMealPlan('p1', { expectedPlanVersion: 3 });
+
+    expect(result.id).toBe('analysis-9');
+    expect(postSpy.mock.calls[0]?.[2]).toEqual({ silent: true });
+  });
 });

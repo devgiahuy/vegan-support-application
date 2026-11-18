@@ -1,5 +1,14 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Đồng bộ route scan tủ lạnh và hóa đơn dưới /pantry — Updated 2026-11-18
+
+Gom hai luồng quét ảnh về cùng khu vực Tủ bếp để điều hướng nhất quán:
+- **Route mới:** `/pantry/scan/fridge` (quét tủ lạnh) và `/pantry/scan/receipt` (quét hóa đơn).
+- **Redirect:** `/pantry/scan` → `/pantry/scan/fridge`; `/receipts/scan` → `/pantry/scan/receipt`; `/receipts` → `/pantry/scan/receipt`; `/receipts/[id]` → `/pantry/scan/receipt?jobId=:id` (giữ query `jobId`).
+- **Xóa route cũ:** landing `/receipts` và `/receipts/[id]`; giữ nguyên feature `features/receipt` cho scan mới.
+- **Cập nhật entry point:** PantryHeader, Receipts list, Receipt detail, SiteFooter; ẩn footer đã bao phủ bởi prefix `/pantry`.
+- **Kiểm chứng:** xem WORK-LOG cùng ngày.
+
 ## Làm tròn các chỉ số dinh dưỡng về tối đa 2 chữ số thập phân — Updated 2026-11-16
 
 Khắc phục lỗi dấu phẩy động (floating point precision error) hiển thị chuỗi thập phân dài bất thường (như `1975.8900000000003g` ở tinh bột / carbs):

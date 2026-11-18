@@ -52,7 +52,7 @@ export function PantryHeader({
             size="sm"
             className="flex items-center gap-1.5 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
           >
-            <Link href="/receipts/scan">
+            <Link href="/pantry/scan/receipt">
               <Receipt className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               <span>Quét hóa đơn</span>
             </Link>
@@ -63,7 +63,7 @@ export function PantryHeader({
             size="sm"
             className="flex items-center gap-1.5 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
           >
-            <Link href="/pantry/scan">
+            <Link href="/pantry/scan/fridge">
               <Camera className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               <span>Quét ảnh tủ lạnh</span>
             </Link>

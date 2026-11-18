@@ -198,6 +198,6 @@ export const handleApiError = (error: unknown, fallbackMessage?: string) => {
 
   const msg = getApiErrorMessage(error, fallbackMessage);
   if (msg) {
-    toast.error(msg);
+    toast.error(msg, { id: msg });
   }
 };

@@ -297,7 +297,7 @@ export class EntitlementMapper extends BaseMapper<EntitlementDto, Entitlements> 
         fridgeMax +
         ' ảnh tủ lạnh hoặc ' +
         receiptMax +
-        ' ảnh hóa đơn; tối đa ' +
+        ' ảnh hóa đơn, tối đa ' +
         attempts +
         ' lần xử lý.',
       usageRows: [

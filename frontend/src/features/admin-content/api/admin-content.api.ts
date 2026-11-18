@@ -214,7 +214,8 @@ export const adminContentApi = {
     await api.post(
       CONTENT_REVIEW_ENDPOINTS.SUBMIT(id),
       { revisionId: input.revisionId, expectedVersion: input.expectedVersion },
-      { showErrorToast: true }
+      // Caller tự map và toast lỗi nghiệp vụ; tránh toast trùng từ interceptor.
+      { silent: true }
     );
   },
 
