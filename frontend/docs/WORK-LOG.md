@@ -1,13 +1,12 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
-<<<<<<< HEAD
 ## [2026-11-16] — Rebase nhánh sửa cảnh báo dị ứng lên main và chuẩn bị PR
 
 - **Yêu cầu:** Rebase trên main, push và tạo PR vào main cho phần sửa cảnh báo theo hồ sơ.
 - **Đã làm:** Tạo nhánh riêng `fix/recipe-profile-allergy-warnings`, commit đúng 25 file liên quan, rebase một commit lên `origin/main` (`394a8ac`, PR #63). Chỉ conflict hai tài liệu BACKEND_INTEGRATION/PROGRESS; giữ cả nội dung main và sửa dị ứng. Dùng integration 4.79 để giữ nguyên mục mobile 4.78 của main. Không đưa các diagram hoặc `.DS_Store` vào commit.
 - **Verify sau rebase:** `npx tsc --noEmit --incremental false` pass; `npm test` 112 files / 874 tests pass; `npm run build` pass. Script cô lập `/tmp/veggie-personal-allergy/verify.mjs` kiểm tra matching, viewer/profile update, router/controller response/cache headers và served OpenAPI so với file generated đều pass. Backend source/package không đổi so với commit trước rebase đã qua lint/typecheck/build. Không còn conflict markers; `git diff --check` pass.
 - **PROGRESS / giới hạn:** Không đổi % scaffold. Local MongoDB/Docker daemon vẫn không chạy, chưa có E2E trên hồ sơ thật; PR ghi rõ giới hạn này. Chuẩn bị push nhánh và mở PR thường vào main; chưa yêu cầu merge.
-=======
+
 ## [2026-11-18] — Chuẩn hóa và khắc phục toàn bộ lỗi hiển thị nhiều toast trùng lặp trên Frontend
 
 - **Yêu cầu:** Rà soát toàn bộ `frontend/src` (121 mutation hook, API module và component) để khắc phục triệt để các điểm hiển thị nhiều toast trùng lặp.
@@ -81,7 +80,6 @@
 - **Kiểm chứng:**
   - `npx vitest run src/components/layout/site-footer-routes.test.ts`: 9/9 tests pass 100%.
   - `npx tsc --noEmit --incremental false`: 0 lỗi type.
->>>>>>> b286dc923cafa743eaf5acff51622534cffb6197
 
 ## [2026-11-16] — Làm tròn các chỉ số dinh dưỡng về tối đa 2 chữ số thập phân
 
@@ -235,7 +233,6 @@
 - **Giới hạn:** SerpApi vẫn có thể partial/timeout hoặc thay đổi kết quả; filter paging cố ý báo giới hạn. Nền công cộng phụ thuộc kết nối/WebGL; cấu hình qua NEXT_PUBLIC_RESTAURANT_MAP_STYLE_URL. Chưa kiểm thử GPS permission, tài khoản đăng nhập hoặc native mobile; mobile app không được thay renderer trong task này. Không chạy full-repository frontend lint vì lỗi nền đã ghi nhận; scoped lint đạt. Chưa commit/push thay đổi.
 - **Bằng chứng:** `/tmp/vegan-restaurant-map-upgrade/desktop.png`, `/tmp/vegan-restaurant-map-upgrade/mobile.png`. App/DB tiếp tục chạy tại frontend 3000/backend 4000.
 
-
 ## [2026-11-14] — E2E tìm quán, SerpApi và sơ đồ vị trí
 
 - **Yêu cầu:** Chạy ứng dụng và kiểm tra tìm quán bằng bản đồ do người dùng báo hoạt động không ổn định. Thực hiện trên nhánh `fix/combined-nutrition-pantry-meal-plan` tại workspace chính.
@@ -252,7 +249,6 @@
 - **Gates:** Backend lint/typecheck/build/OpenAPI pass; 11 one-shot provider/service assertions pass (stub fetch, không thêm test suite/backend infrastructure); frontend typecheck, scoped ESLint, 105 files/841 tests và build 47 routes pass. OpenAPI/catalog đồng bộ; `git diff --check` pass.
 - **Giới hạn còn lại:** Có lần SerpApi trả partial do budget `MAPS_TIMEOUT_MS=5000`; các lần gọi có thể khác tổng quán khi thu thập được số trang khác nhau. Provider có thể trả kết quả gần nghĩa ngay cả với từ khóa khó; không khẳng định keyword khớp chính xác. Chưa kiểm thử Google Maps JavaScript thật, GPS/device permission, luồng tài khoản đăng nhập hoặc native mobile. Ở 375 px, header chung của app còn bị cắt ngang; chưa sửa header ngoài phạm vi tìm quán. Endpoint giữ READY; không đổi business rules, schema, auth hay % scaffold. Chưa commit/push thay đổi.
 - **Bằng chứng:** `/tmp/vegan-restaurant-e2e/api-results.json`, `desktop-map.jpg`, `mobile-map.jpg`, `final-map.jpg`. Để app/DB chạy cho người dùng kiểm tra lại.
-
 
 ## [2026-11-14] — Rebase nhánh dinh dưỡng/tủ bếp/thực đơn lên dev
 
@@ -411,6 +407,7 @@
 - **Thay đổi**: `chat-stream.ts` gửi bearer token như API client, refresh một lần khi nhận 401 với phiên đăng nhập, tiếp tục đọc event quota sau message_complete và báo lỗi khi stream kết thúc chưa hoàn tất. `chat-stream.test.ts` kiểm tra token, refresh, khách, quota và stream bị ngắt.
 - **Kiểm chứng**: Swagger được tạo từ backend và đồng bộ thành công; `npx tsc --noEmit`, lint các file sửa và `npm run build` pass; `npm test` 69 files / 735 tests pass. Backend và MongoDB local không chạy (MongoDB cổng 27018 không kết nối, Docker daemon không hoạt động), nên chưa kiểm thử trình duyệt hoặc OpenAI end-to-end. UC-07 giữ 95% → 95%.
 - **Kiểm tra lại sau khi chạy Docker**: health/database OK; guest và member seed tạo phiên, gửi SSE, nhận đủ message_start/content_delta/message_complete/quota; lịch sử member có hai tin nhắn. Cả hai nhận local fallback. Kiểm tra provider: Responses API hoạt động, Moderations API trả 503 `model_not_found` cho `omni-moderation-latest`; danh sách model khả dụng không có model moderation. Cần provider/credentials hỗ trợ moderation, không bỏ qua kiểm duyệt. Chưa kiểm tra trình duyệt và chưa xác nhận câu trả lời AI thực qua luồng chat.
+
 ## [2026-11-07] — Cho phép AI bổ sung thông tin công thức còn trống
 
 - **Mục tiêu:** Cho phép bỏ trống thông tin cơ bản để AI gợi ý, giữ dữ liệu tác giả và kiểm tra khi gửi.
@@ -596,7 +593,6 @@
   - `npx tsc --noEmit` pass 0 lỗi type.
   - `npm test` toàn bộ 68 test suite (731 tests pass).
   - `npm run build` pass thành công toàn bộ 47 routes.
-
 
 ## [2026-10-28] — Trang /pantry: Bổ sung tùy chọn tự nhập nguyên liệu chuẩn & dropdown đơn vị thông dụng
 
@@ -5300,6 +5296,7 @@
 - Đã làm: merge `origin/dev` vào `feature/mobile-table-completion`, giữ cả mục mobile follow-up và mục sửa font footer trong `frontend/docs/WORK-LOG.md`.
 - Verify: mobile `npx tsc --noEmit`, `npm run lint` và `git diff --check` đều pass sau merge.
 - PROGRESS: không đổi phần trăm tính năng; chỉ giải quyết xung đột nhật ký. Thay đổi chưa commit ở workspace chính được giữ nguyên.
+
 ## [2026-10-25] — Sửa responsive card nguyên liệu `/pantry`
 
 - Mục tiêu: khắc phục nội dung card bị dồn/chèn trên viewport hẹp như ảnh người dùng cung cấp.

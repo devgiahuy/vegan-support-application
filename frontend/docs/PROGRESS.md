@@ -1,23 +1,23 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
-<<<<<<< HEAD
 ## Rebase cảnh báo dị ứng lên main — Updated 2026-11-16
 
 Nhánh `fix/recipe-profile-allergy-warnings` được rebase lên `origin/main` (`394a8ac`), chỉ có một commit sửa dị ứng so với main. Giải quyết conflict BACKEND_INTEGRATION/PROGRESS bằng cách giữ cả cập nhật mobile/meal-program trên main và bản sửa hiện tại; integration tăng lên 4.79, không ghi đè changelog mobile 4.78. Sau rebase: frontend typecheck, 112 files / 874 tests và build đạt; các kiểm tra backend cô lập/served OpenAPI đạt, backend source không đổi so với lần đã qua lint/typecheck/build. Giữ nguyên % tính năng; diagram và `.DS_Store` không nằm trong commit. Chi tiết tại WORK-LOG.
-=======
+
 ## Đồng bộ route scan tủ lạnh và hóa đơn dưới /pantry — Updated 2026-11-18
 
 Gom hai luồng quét ảnh về cùng khu vực Tủ bếp để điều hướng nhất quán:
+
 - **Route mới:** `/pantry/scan/fridge` (quét tủ lạnh) và `/pantry/scan/receipt` (quét hóa đơn).
 - **Redirect:** `/pantry/scan` → `/pantry/scan/fridge`; `/receipts/scan` → `/pantry/scan/receipt`; `/receipts` → `/pantry/scan/receipt`; `/receipts/[id]` → `/pantry/scan/receipt?jobId=:id` (giữ query `jobId`).
 - **Xóa route cũ:** landing `/receipts` và `/receipts/[id]`; giữ nguyên feature `features/receipt` cho scan mới.
 - **Cập nhật entry point:** PantryHeader, Receipts list, Receipt detail, SiteFooter; ẩn footer đã bao phủ bởi prefix `/pantry`.
 - **Kiểm chứng:** xem WORK-LOG cùng ngày.
->>>>>>> b286dc923cafa743eaf5acff51622534cffb6197
 
 ## Làm tròn các chỉ số dinh dưỡng về tối đa 2 chữ số thập phân — Updated 2026-11-16
 
 Khắc phục lỗi dấu phẩy động (floating point precision error) hiển thị chuỗi thập phân dài bất thường (như `1975.8900000000003g` ở tinh bột / carbs):
+
 - **Utility làm tròn chuẩn:** Tạo `src/features/meal-program/utils/nutrition.utils.ts` cung cấp `roundToDecimals(value, decimals = 2)` và `formatNutrient(value, decimals = 2)` sử dụng `Number.EPSILON` để làm tròn chính xác về tối đa 2 chữ số thập phân, gọt sạch đuôi số thập phân vô tận của JS.
 - **Tầng Mapper:** Tích hợp `roundToDecimals` trong `MealProgramMapper` khi tính tổng dưỡng chất tuần (`mapSnapshot`), dưỡng chất ngày (`mapDay`, `groupSlotsIntoDays`), dưỡng chất từng món ăn (`mapMealItem`) và phân tích tích lũy (`mapCumulativeAnalysis`).
 - **Giao diện hiển thị:** Áp dụng `formatNutrient` trong `WeekPlanView` (thanh tổng quan tuần, thẻ từng ngày, từng món ăn) và `CumulativeNutritionChart`.
@@ -26,6 +26,7 @@ Khắc phục lỗi dấu phẩy động (floating point precision error) hiển
 ## Sửa lỗi layout giao diện trang /meal-plans khi có nhiều card thực đơn — Updated 2026-11-16
 
 Khắc phục triệt để lỗi kéo dãn bất thường và bất cân xứng layout trên trang kế hoạch bữa ăn (`/meal-plans`):
+
 - **Sửa lỗi kéo dãn form tạo thực đơn:** Thêm `items-start` trên grid container và `self-start lg:sticky lg:top-24` cho thẻ form "Tạo thực đơn mới", giúp form giữ chiều cao tự nhiên vừa khít nội dung thay vì bị kéo dãn tạo khoảng trắng lớn khi danh sách thực đơn bên phải có nhiều thẻ. Form đồng thời ghim êm ái khi cuộn trang.
 - **Tối ưu hiển thị danh sách thực đơn:** Nâng số lượng truy vấn hiển thị lên `limit: 6` (số chẵn, chia đều 2 cột 3 hàng), bổ sung liên kết chuyển trang "Xem toàn bộ X thực đơn đã lưu →" khi số lượng thực đơn vượt quá giới hạn hiển thị.
 - **Chuẩn hóa PlanCard:** Thiết lập `h-full flex flex-col justify-between` và `CardContent flex-1` giúp các thẻ trong cùng một hàng luôn có chiều cao đồng đều, nút "Xem chi tiết" luôn thẳng hàng ở đáy thẻ; bổ sung hiệu ứng hover và màu sắc nhận diện cảnh báo/năng lượng trực quan.
@@ -34,6 +35,7 @@ Khắc phục triệt để lỗi kéo dãn bất thường và bất cân xứn
 ## Đồng bộ giao diện thứ ngày từ /meal-plans/:id sang /meal-programs/ — Updated 2026-11-16
 
 Cập nhật giao diện trình bày các thứ ngày trong tuần của Lộ trình Dinh dưỡng Nhiều tuần (`/meal-programs/[id]`, component `WeekPlanView` và `DayMealChecklist`) theo chuẩn thiết kế trực quan, rõ ràng của trang chi tiết thực đơn tuần (`/meal-plans/[id]`, component `DayGrid`):
+
 - **Bố cục thẻ ngày (Full-width Card):** Thay thế lưới đa cột bị bó hẹp bằng danh sách dọc các thẻ ngày rộng rãi (`flex flex-col gap-4`), mỗi ngày là một `Card` độc lập.
 - **Tiêu đề thứ ngày & 4 chỉ số dinh dưỡng ngày (CardHeader):** Hiển thị rõ tiêu đề thứ ngày tiếng Việt chuẩn (`Thứ Hai, 16/11`) kèm icon lịch, phía bên phải hiển thị đầy đủ các badge chỉ số dinh dưỡng màu sắc trực quan (Calo, Đạm, Béo, Xơ, Bột).
 - **Lưới các bữa ăn trong ngày (CardContent):** Trình bày các bữa ăn (Sáng, Trưa, Tối, Phụ) dạng lưới thẻ ngang (`grid sm:grid-cols-3`), mỗi thẻ bữa ăn gồm badge loại bữa, badge nguồn (Công thức / Món cá nhân), trạng thái hoàn thành, calo, ảnh thumbnail 48x48 bo tròn với fallback icon, tên món ăn, dòng phân rã dưỡng chất đa lượng (`Đạm ...g · Bột ...g · Béo ...g · Xơ ...g · X khẩu phần`), và nút xem công thức (`/recipes/:id`).
@@ -143,6 +145,7 @@ Backend analysis v4 trả lý do theo từng món/bữa, nêu nguyên liệu d�
 ## Sửa luồng chat AI — Updated 2026-11-08
 
 UC-07 giữ 95% → 95%: yêu cầu SSE gửi access token, refresh một lần khi phiên hết hạn, nhận quota sau message_complete và báo lỗi khi stream đóng sớm. Backend/MongoDB đã kiểm thử với khách và tài khoản seed; cả hai trả fallback vì provider cấu hình không có model moderation. Chưa xác nhận câu trả lời AI thực qua toàn luồng.
+
 ## AI điền thông tin cơ bản còn thiếu — 2026-11-07
 
 AI recipe giữ 100% → 100% scaffold. Form cho qua bước cơ bản khi chưa nhập; AI điền trường trống và giữ giá trị đã nhập; gửi cuối vẫn kiểm tra trường bắt buộc. Backend và OpenAPI đã cập nhật; provider thật đã được kiểm tra. Ảnh bìa vẫn tải riêng, chưa được AI tạo. Chưa kiểm thử giao diện trình duyệt.
