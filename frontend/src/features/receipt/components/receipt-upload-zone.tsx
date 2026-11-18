@@ -27,6 +27,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/api-error';
 import {
   uploadWithReservation,
   type UploadProgressInfo,
@@ -138,10 +139,10 @@ export function ReceiptUploadZone({ onJobCreated, disabled = false }: ReceiptUpl
       setOverallProgress(100);
       onJobCreated(newJob);
     } catch (err: unknown) {
-      const errMsg =
-        err instanceof Error
-          ? err.message
-          : 'Có lỗi xảy ra trong quá trình tải ảnh hoặc tạo tác vụ bóc tách hóa đơn';
+      const errMsg = getApiErrorMessage(
+        err,
+        'Có lỗi xảy ra trong quá trình tải ảnh hoặc tạo tác vụ bóc tách hóa đơn.'
+      );
       toast.error(errMsg);
     } finally {
       setIsUploading(false);

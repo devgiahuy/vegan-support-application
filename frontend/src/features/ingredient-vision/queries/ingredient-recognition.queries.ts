@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
-import { billingErrorMessage } from '@/features/billing/lib/billing-errors';
 import { BILLING_QUERY_KEYS } from '@/features/billing/queries/billing.queries';
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ingredientRecognitionApi } from '../api/ingredient-recognition.api';
+import { shouldRefreshBillingForJobStatus } from '../lib/candidate-save';
 import type { RecognitionJob, UpdateCandidateInput } from '../types/ingredient-recognition.model';
 import { PANTRY_QUERY_KEYS } from '@/features/pantry/queries/pantry.queries';
 
@@ -40,7 +40,7 @@ export function useRecognitionJobQuery(
   const status = result.data?.status;
   const resultId = result.data?.id;
   useEffect(() => {
-    if (status && !['QUEUED', 'PROCESSING'].includes(status))
+    if (shouldRefreshBillingForJobStatus(status))
       void allowanceClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
   }, [status, resultId, allowanceClient]);
   return result;
@@ -82,14 +82,16 @@ export function useUpdateCandidateMutation() {
       jobId: string;
       candidateId: string;
       input: UpdateCandidateInput;
+      silent?: boolean;
     }) => ingredientRecognitionApi.updateCandidate(jobId, candidateId, input),
-    onSuccess: (updatedJob) => {
-      void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
+    onSuccess: (updatedJob, variables) => {
       queryClient.setQueryData(
         INGREDIENT_RECOGNITION_QUERY_KEYS.jobDetail(updatedJob.id),
         updatedJob
       );
-      toast.success('Đã cập nhật thông tin nguyên liệu');
+      if (!variables.silent) {
+        toast.success('Đã cập nhật thông tin nguyên liệu');
+      }
     },
   });
 }
@@ -112,10 +114,9 @@ export function useConfirmRecognitionJobMutation() {
     }) => ingredientRecognitionApi.confirmJob(jobId, candidates, idempotencyKey),
     onSuccess: (diff) => {
       // Cập nhật chi tiết job đã hoàn tất
-      void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
       queryClient.setQueryData(INGREDIENT_RECOGNITION_QUERY_KEYS.jobDetail(diff.job.id), diff.job);
-      // Invalidate toàn bộ cache của Tủ bếp để đồng bộ ngay lập tức
-      queryClient.invalidateQueries({ queryKey: PANTRY_QUERY_KEYS.all });
+      // Invalidate toàn bộ cache của Tủ bếp và hạn ngạch để đồng bộ ngay lập tức
+      void queryClient.invalidateQueries({ queryKey: PANTRY_QUERY_KEYS.all });
       void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
       toast.success(`Đã thêm ${diff.pantryChanges.length} nguyên liệu vào Tủ bếp gia đình!`);
     },
@@ -179,9 +180,6 @@ export function useAddFridgeImagesMutation(jobId: string) {
         queryKey: INGREDIENT_RECOGNITION_QUERY_KEYS.jobDetail(updatedJob.id),
       });
       toast.success('Đã thêm ảnh bổ sung, đang phân tích...');
-    },
-    onError: (error: unknown) => {
-      toast.error(billingErrorMessage(error));
     },
   });
 }

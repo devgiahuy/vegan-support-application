@@ -32,6 +32,12 @@ const nextConfig: NextConfig = {
   async redirects() {
     // 004-fe-english-routes: permanent VI → EN route rename (static rules first).
     return [
+      // 2026-11-18: both scan flows live under /pantry/scan; keep old URLs working.
+      // Keep /receipts/scan before /receipts/:id so it is not treated as a job id.
+      { source: '/pantry/scan', destination: '/pantry/scan/fridge', permanent: false },
+      { source: '/receipts/scan', destination: '/pantry/scan/receipt', permanent: false },
+      { source: '/receipts/:id', destination: '/pantry/scan/receipt?jobId=:id', permanent: false },
+      { source: '/receipts', destination: '/pantry/scan/receipt', permanent: false },
       { source: '/posts', destination: '/articles', permanent: true },
       { source: '/posts/:id', destination: '/articles/:id', permanent: true },
       { source: '/bai-viet/tao-moi', destination: '/articles/new', permanent: true },

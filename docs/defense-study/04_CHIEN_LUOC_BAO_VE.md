@@ -39,8 +39,8 @@ Nếu ba chức năng này **bắt buộc phải show**, đổi trọng tâm t�
 | Mốc (10–12 phút) | Thao tác trực tiếp | Điều cần chứng minh |
 |---|---|---|
 | 0:00–1:30 | Đăng nhập Member, mở `/pantry`, ghi số lượng ban đầu của 1–2 nguyên liệu và ledger. | Pantry là dữ liệu của owner; chỉnh tay có lịch sử/version. |
-| 1:30–4:00 | `/pantry/scan`: upload 1 ảnh tủ lạnh, mở job đã xử lý nếu AI còn chạy; chỉ candidate, sửa một lượng/tên, bỏ một nhận dạng sai. Ghi Pantry **chưa đổi**; bấm xác nhận và reload Pantry. | AI tạo gợi ý có uncertainty; **confirm** là ranh giới ghi kho. |
-| 4:00–7:00 | `/receipts/scan`: quét hóa đơn test có 2 thực phẩm và 1 món phi thực phẩm, đọc notice/excluded item; sửa một dòng, confirm các dòng được chọn; reload Pantry và xem diff. | Hóa đơn không tự cộng kho; sản phẩm phi thực phẩm bị loại nhưng user có quyền sửa phân loại trước confirm. |
+| 1:30–4:00 | `/pantry/scan/fridge`: upload 1 ảnh tủ lạnh, mở job đã xử lý nếu AI còn chạy; chỉ candidate, sửa một lượng/tên, bỏ một nhận dạng sai. Ghi Pantry **chưa đổi**; bấm xác nhận và reload Pantry. | AI tạo gợi ý có uncertainty; **confirm** là ranh giới ghi kho. |
+| 4:00–7:00 | `/pantry/scan/receipt`: quét hóa đơn test có 2 thực phẩm và 1 món phi thực phẩm, đọc notice/excluded item; sửa một dòng, confirm các dòng được chọn; reload Pantry và xem diff. | Hóa đơn không tự cộng kho; sản phẩm phi thực phẩm bị loại nhưng user có quyền sửa phân loại trước confirm. |
 | 7:00–9:00 | Mở shopping preview cho recipe đã chọn; so `required/available/missing` trước và sau khi xác nhận scan. | Chỉ lượng Pantry **confirmed**, quy đổi được mới giảm `missing`; `unresolvedItems` vẫn tách riêng. |
 | 9:00–10:30 | Show một tình huống lỗi đã chuẩn bị: ảnh trùng/receipt trùng, ảnh provider lỗi, hoặc version conflict; nêu cách retry/refetch. | Không cộng đôi, không ghi âm thầm; lỗi có state và cách phục hồi. |
 | 10:30–12:00 | Tóm tắt bằng sơ đồ `upload → job → review → confirm → Pantry → shopping`. | Phân biệt phần `READY` của Pantry/shopping với job scan `IN_PROGRESS`. |

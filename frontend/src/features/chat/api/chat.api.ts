@@ -78,7 +78,8 @@ export const chatApi = {
     const res = await api.post<ChatFeedbackResponseDto>(
       CHAT_ENDPOINTS.MESSAGE_FEEDBACK(messageId),
       chatMapper.toFeedbackDto(value, reason),
-      { showErrorToast: true }
+      // Hook tự toast lỗi qua onError; tránh toast trùng từ interceptor.
+      { silent: true }
     );
     return chatMapper.toFeedbackModel(res.data?.data);
   },

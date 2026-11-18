@@ -9,7 +9,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { AiArtifactType } from '@/common/enums';
 import { useAuthStore } from '@/store/useAuthStore';
 import { SaveArtifactDialog } from './save-artifact-dialog';
-import type { AiArtifact } from '../types/ai-artifact.model';
 
 export function SaveArtifactButton({
   type,
@@ -43,10 +42,6 @@ export function SaveArtifactButton({
     setSaveOpen(true);
   };
 
-  const handleSaved = (_artifact: AiArtifact) => {
-    toast.success('Đã lưu tri thức AI vào kho cá nhân thành công.');
-  };
-
   return (
     <>
       <TooltipProvider delayDuration={150}>
@@ -77,7 +72,6 @@ export function SaveArtifactButton({
         sourceId={sourceId}
         defaultTitle={defaultTitle}
         defaultSummary={defaultSummary}
-        onSuccessSaved={handleSaved}
       />
     </>
   );

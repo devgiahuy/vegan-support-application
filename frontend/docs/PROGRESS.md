@@ -1,8 +1,19 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+<<<<<<< HEAD
 ## Rebase cảnh báo dị ứng lên main — Updated 2026-11-16
 
 Nhánh `fix/recipe-profile-allergy-warnings` được rebase lên `origin/main` (`394a8ac`), chỉ có một commit sửa dị ứng so với main. Giải quyết conflict BACKEND_INTEGRATION/PROGRESS bằng cách giữ cả cập nhật mobile/meal-program trên main và bản sửa hiện tại; integration tăng lên 4.79, không ghi đè changelog mobile 4.78. Sau rebase: frontend typecheck, 112 files / 874 tests và build đạt; các kiểm tra backend cô lập/served OpenAPI đạt, backend source không đổi so với lần đã qua lint/typecheck/build. Giữ nguyên % tính năng; diagram và `.DS_Store` không nằm trong commit. Chi tiết tại WORK-LOG.
+=======
+## Đồng bộ route scan tủ lạnh và hóa đơn dưới /pantry — Updated 2026-11-18
+
+Gom hai luồng quét ảnh về cùng khu vực Tủ bếp để điều hướng nhất quán:
+- **Route mới:** `/pantry/scan/fridge` (quét tủ lạnh) và `/pantry/scan/receipt` (quét hóa đơn).
+- **Redirect:** `/pantry/scan` → `/pantry/scan/fridge`; `/receipts/scan` → `/pantry/scan/receipt`; `/receipts` → `/pantry/scan/receipt`; `/receipts/[id]` → `/pantry/scan/receipt?jobId=:id` (giữ query `jobId`).
+- **Xóa route cũ:** landing `/receipts` và `/receipts/[id]`; giữ nguyên feature `features/receipt` cho scan mới.
+- **Cập nhật entry point:** PantryHeader, Receipts list, Receipt detail, SiteFooter; ẩn footer đã bao phủ bởi prefix `/pantry`.
+- **Kiểm chứng:** xem WORK-LOG cùng ngày.
+>>>>>>> b286dc923cafa743eaf5acff51622534cffb6197
 
 ## Làm tròn các chỉ số dinh dưỡng về tối đa 2 chữ số thập phân — Updated 2026-11-16
 

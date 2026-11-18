@@ -20,13 +20,21 @@ describe('recommendation API response mapping', () => {
     });
   });
 
-  it('maps the personalization consent response', async () => {
+  it('maps the personalization consent response and passes silent: true on setConsent', async () => {
     vi.spyOn(api, 'get').mockResolvedValueOnce({
       data: { data: { enabled: true, consentVersion: 'v1' } },
+    });
+    const putSpy = vi.spyOn(api, 'put').mockResolvedValueOnce({
+      data: { data: { enabled: false, consentVersion: 'v1' } },
     });
     await expect(recommendationApi.getConsent()).resolves.toMatchObject({
       enabled: true,
       consentVersion: 'v1',
     });
+    await expect(recommendationApi.setConsent(false, 'v1')).resolves.toMatchObject({
+      enabled: false,
+      consentVersion: 'v1',
+    });
+    expect(putSpy.mock.calls[0]?.[2]).toEqual({ silent: true });
   });
 });
