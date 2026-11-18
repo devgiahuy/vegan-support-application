@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.23
+**Version:** 4.24
 
-**Updated:** 2026-11-14
+**Updated:** 2026-11-16
 
 **Status:** Approved implementation baseline
 
@@ -223,6 +223,7 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 5. MVP supports Buddhist and Christian traditions; the model remains extensible.
 6. Restaurant directory discovery/details follow BL-16's explicit-search exception and do not inherit these personal profile constraints.
 7. Recipe discovery may show profile-removed recipes only in an explicit, separately labelled "not suitable" view (`GET /posts?eligibility=INELIGIBLE`, user-approved 2026-10-26). Each item carries its reason codes and offending ingredients; the view never feeds ranking, recommendations or meal planning, and detail pages stay viewable as before.
+8. User-approved 2026-11-16: recipe detail allergy banners show only positive matches to the current viewer's active saved allergy groups or ingredient IDs. Backend compares recipe snapshot allergen codes and current transitive ingredient components, without fuzzy/shared-food-group inference. Guests, no allergy profile and no known match produce no banner; absence never certifies safety. Explicit exclusions, diet and tradition do not become allergy warnings. Detail warnings are read-time private output, not stored in the public revision; client caches vary by viewer and refresh after profile edits. Existing fail-closed discovery/planning rules are unchanged.
 
 ### BL-03 — Practice schedule
 
@@ -609,6 +610,8 @@ A phase is complete only when:
 | Phase 2 ideas are forgotten or accidentally claimed READY | Dedicated roadmap plus explicit status taxonomy |
 
 ## 13. Change record
+
+- **4.24 — 2026-11-16:** User requests allergy warnings on recipe detail only for positive matches to the viewer's active saved allergy profile. Backend derives private group/ingredient matches from snapshot/current transitive catalog data; web hides the banner for guests/no match and isolates/invalidate detail caches per viewer. No safety clearance from missing warnings; hard constraints and ingredient provenance remain unchanged. No schema or seed migration.
 
 - **4.23 — 2026-11-14:** Correct inconsistent 1/3/5km restaurant discovery. Same-center SerpApi searches up to 5km share a five-minute candidate snapshot populated by first pages of fixed 1/3/5km viewports (three requests per phrase). Partial snapshots retry after 15 seconds, retain successful observations without extending expiry, and continue reporting degradation. Exact radius/bounds filtering follows bounded candidate selection. Web distinguishes unavailable data from a confirmed empty result and refreshes partial queries when revisited. This improves consistency within a snapshot, without promising exhaustive provider coverage or identical results after expiry.
 

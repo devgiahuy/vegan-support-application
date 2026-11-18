@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.78
+**Version:** 4.79
 
 **Cập nhật:** 16/11/2026
 
@@ -9,6 +9,16 @@
 **Contract target:** `/api/v1`
 
 Changelog 2026-11-16 (4.78 — mobile): native mobile đã tích hợp phía consumer cho các thay đổi 4.61/4.62/4.71/4.74–4.77 (không đổi backend contract). Form công thức có 6 ô dinh dưỡng mỗi khẩu phần (`recipe.nutrition`, chỉ gửi ô đã nhập; bắt buộc đủ cho CONTRIBUTOR/ADMIN, Member để trống được), điền sẵn khi sửa từ `recipe.authorNutrition` (không dùng `nutrition` đã công bố), hiển thị kết quả submit theo `revision.status`, và hiển thị lý do khi lưu nháp được nhưng submit lỗi (`RECIPE_NUTRITION_REQUIRED` kèm `fields.missingMetrics`). `PATCH /meal-plans/{id}/items/{itemId}/manual-add` xử lý `MEAL_PLAN_INGREDIENTS_UNVERIFIED` (nêu tên nguyên liệu, không gọi là vi phạm). `POST /recipe-drafts/generate` hiển thị `suggestedTiming` khi khác giá trị đã nhập. Restaurants: nhà hàng rỗng kèm `externalDataUnavailable=true` hiện "Chưa tải được kết quả tìm quán" thay vì khuyên nới bán kính; mobile vẫn dùng phân trang, không gửi `all=true`. Panel duyệt dinh dưỡng (`GET/PATCH /admin/content-review/{id}/nutrition`, dùng bởi Contributor) hiển thị `author`, `deviationPercent` và cảnh báo `deviationWarning` (>30%, không chặn duyệt). Mobile không có màn dành riêng cho Admin; không có thay đổi nào ở phía Admin. `POST /posts/{id}/submit` vẫn `CHANGING` cho tới khi kiểm chứng thủ công trên thiết bị với backend đã chạy `npm run prisma:push`.
+
+### Personal recipe allergy warnings — 2026-11-16 (4.79)
+
+| Endpoint | Status | FE integrated | Contract |
+| --- | --- | --- | --- |
+| `GET /posts/{idOrSlug}` | READY | Yes, web 2026-11-16 | Recipe detail adds `allergyWarnings: {kind: ALLERGEN or INGREDIENT, identifier, label, ingredientNames: string[]}[]`. Only active saved allergies of the authenticated viewer can match. Guests/no known match return `[]`. |
+
+Matches use exact allergen codes or canonical ingredient IDs, including current transitive components; recipe snapshot allergens are an additional conservative signal. The response contains only matched allergies, not the entire profile. Explicit exclusions, diet and tradition are not allergy warnings. No fuzzy-name or shared-legume inference. Unknown/partial composition is not a match by itself, and an empty warning array is not a safety clearance; existing fail-closed discovery/planning rules remain. `allergenCodes` still describes the recipe generally and must not drive a personal warning. Other post responses may omit `allergyWarnings`; clients treat omission as no personal warning.
+
+Detail is viewer-specific with `Cache-Control: private, no-store` and `Vary: Authorization`; frontend query caches vary by authenticated viewer and invalidate after allergy edits. Web DTO/Model/Mapper maps only `allergyWarnings` into the banner; no matches/missing array render nothing. No new route, error code, authorization rule, persistence schema or seed/migration. Backend lint/typecheck/build and OpenAPI generation/sync pass. Twelve isolated matching checks, service viewer/profile-update checks and real router/controller HTTP validation pass with fixture repository/authentication; local MongoDB is unavailable. Web typecheck, scoped lint (existing warnings only), 871 tests and production build pass; browser preview of actual backend output → mapper → component confirms two matched alerts and two hidden states, with no horizontal overflow at 375px. Logged-in live-database E2E and mobile migration were not run. Changelog 2026-11-16 (4.79): personal warnings replace the general recipe-allergen banner on web; backend/client contracts and canonical business rule synchronized.
 
 Changelog 2026-11-10 (4.70): `PATCH /admin/billing/products/{id}` accepts an omitted reason. Non-empty reasons remain 3–500 characters; an omitted reason is stored as an empty string in the existing audit record. Creation and availability changes still require a reason. OpenAPI, backend lint/typecheck/build and isolated Mongo smoke passed; no persistence schema or seed change required.
 

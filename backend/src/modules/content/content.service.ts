@@ -40,6 +40,7 @@ import type {
 import { recipeIneligibilityReasonCodes } from './content.schemas.js';
 import type { MediaService } from './media.service.js';
 import type { ContentPublicationPolicy } from './content-publication.policy.js';
+import { recipeAllergyWarnings } from './recipe-allergy-warnings.js';
 import {
   buildAuthenticatedSearchConstraints,
   buildGuestSearchConstraints,
@@ -262,11 +263,24 @@ export class ContentService {
     if (!revision) throw this.notFoundError();
     const usageUserCount =
       post.type === PostType.RECIPE ? await this.repository.recipeUsageUserCount(post.id) : null;
-    return this.postOutput(
+    const output = this.postOutput(
       post,
       revision,
       usageUserCount === null ? undefined : this.recipeUsageStatistics(usageUserCount),
     );
+    if (output.type === PostType.RECIPE) {
+      output.recipe.allergyWarnings = [];
+      const profile = actor ? await this.repository.findRecipeAllergyProfile(actor.userId) : null;
+      if (profile && (profile.allergies.length || profile.ingredientAllergies.length)) {
+        output.recipe.allergyWarnings = recipeAllergyWarnings(
+          revision.ingredients,
+          output.recipe.allergenCodes,
+          profile,
+          await this.repository.safetyCatalog(),
+        );
+      }
+    }
+    return output;
   }
 
   async createPost(actor: ContentActor, input: CreatePostInput): Promise<PostOutput> {

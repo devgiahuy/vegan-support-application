@@ -419,6 +419,21 @@ const recipeOutputSchema = z
       ),
     mealPlannerEligible: z.boolean(),
     allergenCodes: z.array(z.string()),
+    allergyWarnings: z
+      .array(
+        z
+          .object({
+            kind: z.enum(['ALLERGEN', 'INGREDIENT']),
+            identifier: z.string(),
+            label: z.string(),
+            ingredientNames: z.array(z.string()),
+          })
+          .strict(),
+      )
+      .optional()
+      .describe(
+        'GET detail only: matches against the authenticated viewer’s active saved allergies. Empty for guests or no known match; not a safety clearance.',
+      ),
     traditionWarnings: z.array(traditionWarningSchema),
     dietCompatibilities: z.array(recipeCompatibilitySchema),
     ingredients: z.array(recipeIngredientSchema),

@@ -1,12 +1,14 @@
 # Backend Implementation Phases
 
-**Version:** 3.25
+**Version:** 3.26
 
-**Updated:** 2026-11-14
+**Updated:** 2026-11-16
 
 **Stack:** Node.js · Express · TypeScript · MongoDB replica set · Prisma · Zod · OpenAPI
 
 **Current baseline:** Phases 00–20 and 23–26 completed; Phases 21–22 and 27 are in progress. OpenAI image adapters are implemented for Phase 21/22, but live Vietnamese image and receipt validation remains before production readiness.
+
+**Content allergy-warning maintenance — 2026-11-16:** User requests recipe detail warnings only for positive matches to the viewer's active saved allergies. GET detail adds private `allergyWarnings`, matching exact allergen codes from snapshot/current catalog and specific ingredient IDs through the current transitive composition graph. Guests/no match return []; no absence-as-safe claim or change to hard constraints. Existing authorization/visibility stays; detail sets private/no-store and Vary: Authorization. No schema, seed or migration. Backend lint/typecheck/build and OpenAPI pass. Temporary isolated verification covers 12 match/uncertainty/deduplication cases, guest/viewer isolation, current profile edits, non-persistence, actual router/controller response validation and cache headers; repository/authentication fixtures replace unavailable local MongoDB. Web maps the optional array, renders only matches and isolates/invalidates viewer caches. No new backend test infrastructure or numbered-phase completion. Integration 4.79 and frontend WORK-LOG record final frontend gates and browser preview limitations.
 
 **Phase 24 radius-consistency maintenance — 2026-11-14:** Fix same-center 1/3/5km discovery losing nearby places by using one bounded 5km SerpApi snapshot, first pages of three nested viewports, exact local radius filtering and retained partial observations with retry/expiry. Keep the nine-call nearby ceiling, explicit advanced filters, consent, partial/truncated metadata and no persistent content/location cache. Wider-radius clients retain bounded paging; no schema/seed/auth or phase-status change. Backend lint/typecheck/build/OpenAPI/served schema and nine isolated provider/service groups pass. Real API with the user's replacement key verifies 15→12→39→12 places at 3→1→5→1km around a public restaurant, with Chi Cao retained and nested IDs; result truncation remains visible. Integration 4.77 and frontend WORK-LOG carry consumer/browser evidence.
 

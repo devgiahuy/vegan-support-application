@@ -1,5 +1,12 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-16] — Rebase nhánh sửa cảnh báo dị ứng lên main và chuẩn bị PR
+
+- **Yêu cầu:** Rebase trên main, push và tạo PR vào main cho phần sửa cảnh báo theo hồ sơ.
+- **Đã làm:** Tạo nhánh riêng `fix/recipe-profile-allergy-warnings`, commit đúng 25 file liên quan, rebase một commit lên `origin/main` (`394a8ac`, PR #63). Chỉ conflict hai tài liệu BACKEND_INTEGRATION/PROGRESS; giữ cả nội dung main và sửa dị ứng. Dùng integration 4.79 để giữ nguyên mục mobile 4.78 của main. Không đưa các diagram hoặc `.DS_Store` vào commit.
+- **Verify sau rebase:** `npx tsc --noEmit --incremental false` pass; `npm test` 112 files / 874 tests pass; `npm run build` pass. Script cô lập `/tmp/veggie-personal-allergy/verify.mjs` kiểm tra matching, viewer/profile update, router/controller response/cache headers và served OpenAPI so với file generated đều pass. Backend source/package không đổi so với commit trước rebase đã qua lint/typecheck/build. Không còn conflict markers; `git diff --check` pass.
+- **PROGRESS / giới hạn:** Không đổi % scaffold. Local MongoDB/Docker daemon vẫn không chạy, chưa có E2E trên hồ sơ thật; PR ghi rõ giới hạn này. Chuẩn bị push nhánh và mở PR thường vào main; chưa yêu cầu merge.
+
 ## [2026-11-16] — Làm tròn các chỉ số dinh dưỡng về tối đa 2 chữ số thập phân
 
 - **Yêu cầu:** Chỉ số ở tinh bột (carbs) đang khá dài (ví dụ: `1975.8900000000003g` trong ảnh tải lên), cần làm tròn các số về tối đa 2 chữ số thập phân.
@@ -5224,6 +5231,25 @@
 - File sửa: `src/features/pantry/components/pantry-item-card.tsx`, `docs/PROGRESS.md`, `docs/WORK-LOG.md`.
 - Verify: `npx tsc --noEmit` pass. Chưa chạy production build hoặc kiểm tra viewport thực tế trong task này.
 - Tiến độ Pantry: giữ nguyên; chỉ sửa bố cục responsive.
+
+## [2026-11-16] — Làm rõ thông tin dị ứng của công thức
+
+- **Yêu cầu:** Người dùng khai báo dị ứng đậu phộng nhưng thấy đậu nành trong khối cảnh báo ở chi tiết món.
+- **Kết quả truy vết:** `PEANUT` và `SOY` không đảo nhãn. Component nhận nhóm dị ứng của công thức, không đọc hồ sơ cá nhân. Kiểm tra cô lập dữ liệu seed Bún Bò Huế Chay xác nhận nhóm `SOY` đến từ đậu hũ; đây không phải bằng chứng dữ liệu triển khai trùng seed. MongoDB local `localhost:27018` không kết nối được nên chưa kiểm chứng bản ghi thực tế.
+- **Đã sửa:** Đổi tiêu đề thành “Thành phần có thể gây dị ứng”, badge “Trong công thức” và mô tả rõ chưa đối chiếu với hồ sơ. Giữ các nhãn theo dữ liệu món. Khi danh sách rỗng, dùng thông tin trung tính thay vì biểu tượng khiên xanh/nhãn “An toàn dinh dưỡng”; nói rõ thiếu ghi nhận không xác nhận món phù hợp với dị ứng cá nhân. Không thay đổi API, mapper, dữ liệu danh mục hoặc cơ chế bảo vệ ở backend.
+- **File sửa:** `src/features/recipe/components/recipe-allergen-highlight.tsx`, `docs/PROGRESS.md`, `docs/WORK-LOG.md`.
+- **Verify:** `npx tsc --noEmit` pass; scoped ESLint pass; `npm test` 110 files / 864 tests pass; `npm run build` pass (cảnh báo middleware/proxy đã có); Impeccable detector không có findings. Browser kiểm tra bản render React component thật cùng CSS dự án với SOY, nhiều nhóm và danh sách rỗng trên desktop và 375px; document width = viewport width = 375, không tràn ngang. Preview tạm ở `/tmp/veggie-allergen-copy-review/`, không thêm route hoặc fixture vào repo. `git diff --check` pass.
+- **PROGRESS:** UC-02 95% → 95%; chỉ làm rõ hiển thị. Chưa chạy E2E đăng nhập/hồ sơ hoặc truy vấn database; phần này vẫn là thông tin chung của món, không phải đánh giá dị ứng cá nhân. Không cần Swagger sync/backend gates vì không sửa consumer hoặc backend.
+
+## [2026-11-16] — Chỉ cảnh báo khi công thức trùng dị ứng trong hồ sơ
+
+- **Yêu cầu tiếp theo:** Không hiển thị danh sách dị ứng chung trên chi tiết món; chỉ cảnh báo khi trùng dị ứng đã lưu của người đang xem. Thay thế cách hiển thị của lần làm rõ nhãn phía trên.
+- **Backend:** GET detail đọc đúng hồ sơ của actor được optional authentication xác nhận, chỉ chọn allergy/ingredientAllergy đang active. `recipe.allergyWarnings` chứa nhóm mã chính xác hoặc nguyên liệu có ID trùng, kèm nguyên liệu gốc gây khớp; sử dụng current canonical transitive components và snapshot allergens như tín hiệu bổ sung. Không suy diễn đậu phộng thành đậu nành, không biến explicit exclusion/diet/tradition hay thành phần chưa rõ thành dị ứng. Không ghi kết quả cá nhân vào revision; guest/no profile/no known match trả `[]`. `private, no-store` và `Vary: Authorization`. Không sửa schema, seed, quyền hay hard-constraint filtering/planning.
+- **Frontend:** Đồng bộ Swagger từ OpenAPI mới trước khi cập nhật DTO/Model/Mapper. Component chỉ nhận các matched warnings, trả null nếu rỗng/không có trường; không fallback sang `allergenCodes`, không có khối “an toàn”. Giữ dữ liệu allergen chung trong Model cho consumer khác. Detail cache theo account/guest, staleTime=0; lưu diet/schedule invalidate cả recipe list/detail. Tiếp tục dùng Alert/Badge hiện có, không thêm route.
+- **File:** Backend content schema/repository/service/controller/OpenAPI và helper `recipe-allergy-warnings.ts`; web recipe DTO/Model/Mapper/components/queries/tests, diet queries; generated catalogs/OpenAPI, SRS, IMPLEMENTATION_PLAN, IMPLEMENTATION_PHASES, integration/PROGRESS/WORK-LOG.
+- **Verify backend:** lint/typecheck/build pass; OpenAPI generation/sync pass. Script tạm ngoài repo `/tmp/veggie-personal-allergy/verify.mjs` kiểm tra 12 trường hợp: PEANUT profile + SOY-only dish không khớp, SOY match, current metadata, snapshot-only, specific mushroom, nested group/ingredient match, unresolved/empty no false match, dedup and partial positive/negative. Service kiểm tra guest không đọc hồ sơ, tách viewer, hồ sơ đổi có hiệu lực ngay, bỏ catalog load khi không có allergy, không ghi public revision. HTTP qua router/controller thật kiểm tra response schema và cache headers; repository/auth là fixtures, không phải kiểm thử xác thực/database thật. Không thêm backend test suite/infrastructure.
+- **Verify frontend:** typecheck pass; 111 files / 871 tests pass (7 tests thêm về mapper, conditional rendering và account-isolated cache); build pass 47 static/dynamic generation entries. Scoped ESLint không có lỗi, còn 14 cảnh báo có sẵn ở recipe-detail-view; detector UI không có findings. Browser preview dùng output thật của ContentService qua mapper/component thật và CSS dự án: số alert theo bốn case `[0,1,1,0]` (không khớp, peanut, mushroom, guest), documentWidth=viewportWidth=375. Preview ở `/tmp/veggie-personal-allergy/index.html`; viewport đã reset. `git diff --check` pass.
+- **PROGRESS / giới hạn:** UC-02 95% → 95%; endpoint GET detail giữ READY với field bổ sung, web integrated; mobile chưa thay đổi. MongoDB local không chạy và Docker daemon không có nên chưa kiểm thử E2E đăng nhập/database thật; không sửa dữ liệu người dùng. Không chạy lại các gates backend khác sau chỉnh mô tả OpenAPI/optional-auth security metadata vì không đổi domain logic; OpenAPI đã regenerate/sync. Chưa commit/push.
 
 ## [2026-11-09] — Xóa cuộc trò chuyện trong lịch sử
 
