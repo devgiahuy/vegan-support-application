@@ -1,41 +1,16 @@
-import { DietPattern, PracticeSchedule, Tradition } from '@/common/enums';
-
-/**
- * Domain Model diet. Nhãn tiếng Việt xử lý trong mapper, không format trong JSX.
- * Dị ứng + kiêng + quy tắc cứng luôn là ràng buộc backend-enforced (frontend chỉ hiển thị).
- */
-export interface DietRule {
-  ruleDefinitionId: string;
-  name: string;
-  source: string;
-  isDefault: boolean;
-  /** Cứng → toggle disabled + nhãn "Luôn bật". */
-  isHard: boolean;
-  enabled: boolean;
-}
-
-export interface DietPreview {
-  ruleSetVersion: number;
-  selection: {
-    dietPattern: DietPattern;
-    practiceSchedule: PracticeSchedule;
-    tradition: Tradition;
-  };
-  rules: DietRule[];
-}
+import type { FoodAllowances } from './food-allowances.model';
+import type { DietaryImpact } from './diet-impact.model';
 
 export interface Allergy {
   allergenCode: string;
   label: string;
   severity: string;
 }
-
 export interface IngredientExclusion {
   ingredientId: string | null;
   ingredientName: string;
   reason: string;
 }
-
 export interface IngredientAllergy {
   ingredientId: string;
   ingredientName: string;
@@ -43,32 +18,38 @@ export interface IngredientAllergy {
   ingredientActive: boolean;
 }
 
-export interface EffectiveConstraints {
-  always: string[];
-  scheduledTradition: string | null;
-}
-
-export interface DietPreference {
-  dietPattern: DietPattern;
-  dietPatternLabel: string;
-  practiceSchedule: PracticeSchedule;
-  practiceScheduleLabel: string;
-  tradition: Tradition;
-  traditionLabel: string;
-  ruleSetVersion: number;
+export interface DietPreference extends FoodAllowances {
+  selectionValid: boolean;
+  policyVersion: number;
+  dietaryRevision: number;
   confirmedAt: Date | null;
   requiresRuleReview: boolean;
-  rules: DietRule[];
-  schedule: { timezone: string; dates: string[] } | null;
   allergies: Allergy[];
   ingredientAllergies: IngredientAllergy[];
   ingredientExclusions: IngredientExclusion[];
-  effectiveConstraints: EffectiveConstraints;
+  effectiveConstraints: { always: string[] };
+  impact?: DietaryImpact;
+  impactUnavailable: boolean;
 }
 
-export interface DietSchedule {
-  practiceSchedule: PracticeSchedule;
-  timezone: string;
-  /** Mỗi phần tử `YYYY-MM-DD`. */
-  dates: string[];
+export interface DietPreferenceDraft extends FoodAllowances {
+  policyVersion: number;
+  expectedDietaryRevision: number;
+  allergies: Allergy[];
+  ingredientAllergies?: IngredientAllergy[];
+  ingredientExclusions: IngredientExclusion[];
 }
+
+export interface DietPreview {
+  policyVersion: number;
+  selection: FoodAllowances;
+  constraints: Array<{ code: string; label: string; allowed: boolean }>;
+}
+
+export const foodSummary = (preference: FoodAllowances) =>
+  [
+    preference.allowEggs ? 'Ăn trứng' : 'Kiêng trứng',
+    preference.allowDairy ? 'Ăn sữa' : 'Kiêng sữa',
+    preference.allowHoney ? 'Ăn mật ong' : 'Kiêng mật ong',
+    preference.allowFivePungent ? 'Ăn ngũ vị tân' : 'Kiêng ngũ vị tân',
+  ].join(' · ');

@@ -1,26 +1,37 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import api from '@/lib/axios';
 import { dietApi } from './diet.api';
-
-describe('diet API response mapping', () => {
+const flags = { allowEggs: true, allowDairy: false, allowHoney: true, allowFivePungent: false };
+describe('diet API contract', () => {
   afterEach(() => vi.restoreAllMocks());
-
-  it('maps preview rules and explicit schedule dates from response envelopes', async () => {
-    vi.spyOn(api, 'post').mockResolvedValueOnce({
-      data: { data: { ruleSetVersion: 2, rules: [{ id: 'rule-1', hardConstraint: true }] } },
+  it('sends independent options and revision without removed fields', async () => {
+    const put = vi.spyOn(api, 'put').mockResolvedValue({
+      data: { data: { ...flags, dietaryRevision: 4, policyVersion: 1, impactUnavailable: true } },
     });
-    vi.spyOn(api, 'put').mockResolvedValueOnce({
-      data: { data: { timezone: 'Asia/Ho_Chi_Minh', dates: ['2026-11-05'] } },
+    const input = {
+      ...flags,
+      policyVersion: 1,
+      expectedDietaryRevision: 3,
+      allergies: [{ allergenCode: 'EGG', label: 'Trứng', severity: 'MODERATE' }],
+      ingredientAllergies: [],
+      ingredientExclusions: [],
+    };
+    const result = await dietApi.saveDietPreferences(input);
+    expect(put.mock.calls[0][1]).toEqual(input);
+    expect(result.allowDairy).toBe(false);
+    expect(result.impactUnavailable).toBe(true);
+    expect(result.allergies).toEqual([]);
+  });
+  it('maps policy preview', async () => {
+    vi.spyOn(api, 'post').mockResolvedValue({
+      data: {
+        data: {
+          policyVersion: 1,
+          selection: flags,
+          constraints: [{ code: 'EGG', label: 'Trứng', allowed: true }],
+        },
+      },
     });
-    const preview = await dietApi.previewDietRules({
-      dietPattern: 'VEGAN',
-      practiceSchedule: 'PERIODIC',
-      tradition: 'NONE',
-    });
-    expect(preview.ruleSetVersion).toBe(2);
-    expect(preview.rules[0].isHard).toBe(true);
-    expect((await dietApi.saveDietSchedule({ dates: ['2026-11-05'] })).dates).toEqual([
-      '2026-11-05',
-    ]);
+    expect((await dietApi.previewDietRules(flags)).constraints[0].allowed).toBe(true);
   });
 });

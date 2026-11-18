@@ -1,4 +1,5 @@
 import { CatalogStatus, type Category, type Prisma, type PrismaClient } from '@prisma/client';
+import { lockIngredientCatalog } from './catalog-lock.js';
 import type {
   AdminCategoryQuery,
   AdminIngredientQuery,
@@ -235,16 +236,19 @@ export class CatalogRepository {
     input: CreateIngredientInput,
     normalizedName: string,
   ): Promise<IngredientRecord> {
-    return this.prisma.ingredient.create({
-      data: {
-        canonicalName: input.canonicalName,
-        normalizedName,
-        foodGroup: input.foodGroup,
-        allergens: { create: input.allergenCodes.map((allergenCode) => ({ allergenCode })) },
-        dietCompatibilities: { create: input.dietCompatibilities },
-        traditionWarnings: { create: input.traditionWarnings },
-      },
-      include: ingredientInclude,
+    return this.prisma.$transaction(async (transaction) => {
+      await lockIngredientCatalog(transaction);
+      return transaction.ingredient.create({
+        data: {
+          canonicalName: input.canonicalName,
+          normalizedName,
+          foodGroup: input.foodGroup,
+          allergens: { create: input.allergenCodes.map((allergenCode) => ({ allergenCode })) },
+          dietCompatibilities: { create: input.dietCompatibilities },
+          traditionWarnings: { create: input.traditionWarnings },
+        },
+        include: ingredientInclude,
+      });
     });
   }
 
@@ -254,6 +258,7 @@ export class CatalogRepository {
     normalizedName?: string,
   ): Promise<IngredientRecord> {
     return this.prisma.$transaction(async (transaction) => {
+      await lockIngredientCatalog(transaction);
       await transaction.ingredient.update({
         where: { id },
         data: {
@@ -264,6 +269,8 @@ export class CatalogRepository {
           ...(input.status ? { status: input.status } : {}),
           ...(input.canonicalName || input.foodGroup || input.allergenCodes || input.status
             ? {
+                dietaryEvidence: null,
+                dietaryClassificationVersion: { increment: 1 },
                 compositionStatus: 'UNKNOWN',
                 compositionEvidence: null,
                 compositionVersion: { increment: 1 },
@@ -301,10 +308,13 @@ export class CatalogRepository {
   }
 
   archiveIngredient(id: string): Promise<IngredientRecord> {
-    return this.prisma.ingredient.update({
-      where: { id },
-      data: { status: CatalogStatus.ARCHIVED },
-      include: ingredientInclude,
+    return this.prisma.$transaction(async (transaction) => {
+      await lockIngredientCatalog(transaction);
+      return transaction.ingredient.update({
+        where: { id },
+        data: { status: CatalogStatus.ARCHIVED },
+        include: ingredientInclude,
+      });
     });
   }
 
@@ -313,17 +323,23 @@ export class CatalogRepository {
     alias: string,
     normalizedAlias: string,
   ): Promise<IngredientRecord> {
-    return this.prisma.ingredient.update({
-      where: { id: ingredientId },
-      data: { aliases: { create: { alias, normalizedAlias } } },
-      include: ingredientInclude,
+    return this.prisma.$transaction(async (transaction) => {
+      await lockIngredientCatalog(transaction);
+      return transaction.ingredient.update({
+        where: { id: ingredientId },
+        data: { aliases: { create: { alias, normalizedAlias } } },
+        include: ingredientInclude,
+      });
     });
   }
 
   async deleteIngredientAlias(ingredientId: string, aliasId: string): Promise<boolean> {
-    const result = await this.prisma.ingredientAlias.deleteMany({
-      where: { id: aliasId, ingredientId },
+    return this.prisma.$transaction(async (transaction) => {
+      await lockIngredientCatalog(transaction);
+      const result = await transaction.ingredientAlias.deleteMany({
+        where: { id: aliasId, ingredientId },
+      });
+      return result.count > 0;
     });
-    return result.count > 0;
   }
 }

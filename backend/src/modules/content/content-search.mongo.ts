@@ -114,6 +114,7 @@ export async function searchMongoPublished(
   const recipeChecks: Expression[] = [{ $gt: [{ $size: '$details' }, 0] }];
   if (
     constraints.requireResolvedIngredients ||
+    constraints.blockedFoodGroups?.length ||
     constraints.dietPattern ||
     constraints.traditions.length ||
     constraints.allergenCodes.length ||

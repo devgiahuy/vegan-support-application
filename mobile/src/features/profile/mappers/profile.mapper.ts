@@ -4,10 +4,10 @@ import {
   safeArray,
   safeBoolean,
   safeDate,
-  safeEnum,
+  safeNumber,
   safeString,
 } from '@/lib/mapper';
-import { DietPattern, PracticeSchedule, Tradition } from '@/common/enums';
+import type { DietPreferenceDto } from '@/features/diet-preferences/types/diet-preferences.dto';
 import { authMapper } from '@/features/auth/mappers/auth.mapper';
 import type { UserDto } from '@/features/auth/types/auth.dto';
 import { formatDate } from '@/lib/utils';
@@ -20,24 +20,6 @@ import type {
   IngredientAllergySummary,
   IngredientExclusionSummary,
 } from '../types/profile.model';
-
-const PATTERN_LABELS: Record<DietPattern, string> = {
-  [DietPattern.VEGAN]: 'Thuần chay',
-  [DietPattern.LACTO_OVO]: 'Có trứng sữa',
-};
-
-const SCHEDULE_LABELS: Record<PracticeSchedule, string> = {
-  [PracticeSchedule.PERMANENT]: 'Trường chay',
-  [PracticeSchedule.PERIODIC]: 'Chay kỳ',
-};
-
-const TRADITION_LABELS: Record<Tradition, string> = {
-  [Tradition.NONE]: 'Không theo truyền thống',
-  [Tradition.BUDDHIST]: 'Phật giáo',
-  [Tradition.CHRISTIAN]: 'Kitô giáo',
-};
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export class ProfileMapper extends BaseMapper<ProfileResponseDto, DetailedProfile> {
   toModel(dto: ProfileResponseDto | null | undefined): DetailedProfile {
@@ -74,41 +56,20 @@ export class ProfileMapper extends BaseMapper<ProfileResponseDto, DetailedProfil
 }
 
 /** Dùng lại cho response `PUT /users/me/diet-preferences` — cùng shape `dietPreferenceSchema`. */
-export function toDietSummary(raw: Record<string, unknown> | null | undefined): DietPreferenceSummary | null {
+export function toDietSummary(raw: DietPreferenceDto | Record<string, unknown> | null | undefined): DietPreferenceSummary | null {
   if (!raw || typeof raw !== 'object') return null;
-
-  const pattern = safeEnum(
-    pickField(raw, ['dietPattern', 'diet_pattern'], DietPattern.VEGAN),
-    DietPattern,
-    DietPattern.VEGAN
-  );
-  const schedule = safeEnum(
-    pickField(raw, ['practiceSchedule', 'practice_schedule'], PracticeSchedule.PERMANENT),
-    PracticeSchedule,
-    PracticeSchedule.PERMANENT
-  );
-  const tradition = safeEnum(
-    pickField(raw, ['tradition'], Tradition.NONE),
-    Tradition,
-    Tradition.NONE
-  );
-  const rawSchedule = pickField<Record<string, unknown> | null>(raw, ['schedule'], null);
-
+  if (typeof raw.allowEggs !== 'boolean' || typeof raw.allowDairy !== 'boolean' ||
+    typeof raw.allowHoney !== 'boolean' || typeof raw.allowFivePungent !== 'boolean' ||
+    safeNumber(raw.dietaryRevision) <= 0) return null;
   return {
-    dietPattern: pattern,
-    dietPatternLabel: PATTERN_LABELS[pattern],
-    practiceSchedule: schedule,
-    practiceScheduleLabel: SCHEDULE_LABELS[schedule],
-    tradition,
-    traditionLabel: TRADITION_LABELS[tradition],
-    requiresRuleReview: safeBoolean(
-      pickField(raw, ['requiresRuleReview', 'requires_rule_review'], false)
-    ),
-    confirmedAt: safeDate(pickField(raw, ['confirmedAt', 'confirmed_at'], null)),
-    scheduleDates: safeArray<unknown, string>(pickField(rawSchedule, ['dates'], null), (date) =>
-      typeof date === 'string' && DATE_RE.test(date) ? date : ''
-    ).filter(Boolean),
-    scheduleTimezone: safeString(pickField(rawSchedule, ['timezone'], 'Asia/Ho_Chi_Minh')),
+    allowEggs: raw.allowEggs,
+    allowDairy: raw.allowDairy,
+    allowHoney: raw.allowHoney,
+    allowFivePungent: raw.allowFivePungent,
+    policyVersion: safeNumber(raw.policyVersion, 1),
+    dietaryRevision: safeNumber(raw.dietaryRevision),
+    requiresRuleReview: safeBoolean(raw.requiresRuleReview),
+    confirmedAt: safeDate(raw.confirmedAt),
     allergies: safeArray<unknown, AllergySummary>(pickField(raw, ['allergies'], null), (allergy) => {
       const source = allergy as Record<string, unknown>;
       const code = safeString(pickField(source, ['allergenCode', 'allergen_code', 'code'], ''));

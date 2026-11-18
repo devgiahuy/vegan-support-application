@@ -39,7 +39,8 @@ export interface RecommendationResponseDto {
       dietPattern?: string | null;
       allergyCount?: number | string;
       ingredientExclusionCount?: number | string;
-      traditions?: string[];
+      foodGroups?: string[];
+      dietaryRevision?: number | null;
       forDate?: string;
     };
   };

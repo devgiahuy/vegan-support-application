@@ -1,38 +1,36 @@
-import type { DietPattern, PracticeSchedule, Tradition } from '@/common/enums';
-
-export interface DietRulePreviewItem {
-  id: string;
-  code: string;
-  label: string;
-  description: string;
-  defaultEnabled: boolean;
-  /** Quy tắc bắt buộc — không cho tắt trên UI (backend luôn ép áp dụng). */
-  hardConstraint: boolean;
-  source: string;
-  version: number;
-}
+import type { FoodAllowanceSelection } from './food-allowances.model';
+import type { DietaryImpact } from './diet-impact.model';
+import type { DietPreferenceSummary } from '@/features/profile/types/profile.model';
 
 export interface DietRulePreview {
-  ruleSetVersion: number;
-  selection: { dietPattern: DietPattern; practiceSchedule: PracticeSchedule; tradition: Tradition };
-  rules: DietRulePreviewItem[];
+  policyVersion: number;
+  selection: FoodAllowanceSelection;
+  constraints: { code: string; label: string; allowed: boolean }[];
 }
-
 export interface DraftAllergy {
   allergenCode: string;
   label: string;
   severity: 'MILD' | 'MODERATE' | 'SEVERE';
 }
-
 export interface DraftIngredientAllergy {
   ingredientId: string;
   ingredientName: string;
   severity: 'MILD' | 'MODERATE' | 'SEVERE';
 }
-
 export interface DraftIngredientExclusion {
   ingredientName: string;
-  /** Id nguyên liệu chuẩn khi người dùng chọn từ gợi ý; undefined khi là tên tự nhập. */
   ingredientId?: string;
   reason?: string;
+}
+export interface SaveDietPreferencesInput extends FoodAllowanceSelection {
+  policyVersion: number;
+  expectedDietaryRevision: number;
+  allergies: DraftAllergy[];
+  ingredientAllergies?: DraftIngredientAllergy[];
+  ingredientExclusions: DraftIngredientExclusion[];
+}
+export interface SavedDietPreferences {
+  preference: DietPreferenceSummary;
+  impact: DietaryImpact | null;
+  impactUnavailable: boolean;
 }

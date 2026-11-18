@@ -11,14 +11,15 @@ export interface Ingredient {
   canonicalName: string;
   foodGroup: FoodGroup;
   foodGroupLabel: string;
+  dietaryGroups: string[];
+  dietaryGroupLabels: string[];
   aliases: IngredientAlias[];
   allergenCodes: string[];
 }
 
-/** Ứng viên phân giải: nguyên liệu kèm tương thích chế độ ăn và cảnh báo truyền thống. */
+/** Ứng viên phân giải: nguyên liệu kèm tương thích chế độ ăn và nhóm thực phẩm. */
 export interface ResolvedIngredient extends Ingredient {
   dietCompatibilities: { label: string; compatible: boolean }[];
-  traditionWarnings: string[];
 }
 
 export interface IngredientResolution {

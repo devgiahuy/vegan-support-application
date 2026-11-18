@@ -1,3 +1,10 @@
+import {lockIngredientCatalog} from '../catalog/catalog-lock.js';
+import { AppError } from '../../common/errors/app-error.js';
+import { loadIngredientSafetyCatalog } from '../catalog/ingredient-safety.js';
+import {
+  buildAuthenticatedSearchConstraints,
+  dateOnlyInSearchTimezone,
+} from '../content/search-constraints.js';
 import { lockDocument } from '../../database/locking.js';
 import type { Prisma } from '@prisma/client';
 import {
@@ -146,7 +153,27 @@ export class MealProgramRepository {
   }
 
   async updateAlternativeSnapshot(id: string, snapshot: Prisma.InputJsonValue): Promise<void> {
-    await this.prisma.mealProgramWeekAlternative.update({ where: { id }, data: { snapshot } });
+    await this.prisma.$transaction(async (transaction) => {
+      const alternative = await transaction.mealProgramWeekAlternative.findUniqueOrThrow({
+        where: { id },
+        include: { week: { include: { mealProgram: true } } },
+      });
+      const owner = alternative.week.mealProgram;
+      await lockDocument(transaction, 'user', { id: owner.userId });
+      await lockDocument(transaction, 'mealProgram', { id: owner.id });
+      const program = await transaction.mealProgram.findUniqueOrThrow({ where: { id: owner.id } });
+      if (program.status === MealProgramStatus.CONFIRMED) return;
+      const plan = await transaction.mealPlan.findUniqueOrThrow({
+        where: { id: alternative.mealPlanId },
+        select: { lockVersion: true },
+      });
+      if (
+        !snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot) ||
+        !('lockVersion' in snapshot) ||
+        snapshot.lockVersion !== plan.lockVersion
+      ) return;
+      await transaction.mealProgramWeekAlternative.update({ where: { id }, data: { snapshot } });
+    });
   }
 
   async finalizeGeneration(programId: string): Promise<MealProgramRecord> {
@@ -289,6 +316,91 @@ export class MealProgramRepository {
     payloadHash: string;
   }) {
     return this.mutate(data, MealProgramMutationType.CONFIRM, async (transaction) => {
+      const program = await transaction.mealProgram.findUniqueOrThrow({
+        where: { id: data.programId },
+      });
+      const profile = await transaction.user.findUniqueOrThrow({
+        where: { id: data.userId },
+        include: {
+          dietPreference: true,
+          allergies: { where: { active: true } },
+          ingredientAllergies: { where: { active: true } },
+          ingredientExclusions: { where: { active: true } },
+        },
+      });
+      const today = dateOnlyInSearchTimezone(new Date());
+      const constraints = buildAuthenticatedSearchConstraints(
+        profile,
+        undefined,
+        today,
+      ).constraints;
+      await lockIngredientCatalog(transaction);
+      const catalog = await loadIngredientSafetyCatalog(transaction);
+      const weeks = await transaction.mealProgramWeek.findMany({
+        where: { mealProgramId: data.programId },
+        include: { alternatives: true },
+      });
+      for (const week of weeks) {
+        const selected = week.alternatives.find((a) => a.rank === week.selectedAlternativeRank);
+        if (!selected) continue;
+        const plan = await transaction.mealPlan.findFirst({
+          where: { id: selected.mealPlanId, userId: data.userId, deletedAt: null },
+          include: {
+            items: {
+              include: {
+                recipeRevision: { include: { ingredients: true, recipeDetail: true } },
+                customMeal: { include: { ingredients: true } },
+              },
+            },
+          },
+        });
+        if (!plan) throw new MealProgramVersionConflictError();
+        const selectedSnapshot = selected.snapshot;
+        if (
+          !selectedSnapshot || typeof selectedSnapshot !== 'object' ||
+          Array.isArray(selectedSnapshot) || selectedSnapshot.lockVersion !== plan.lockVersion
+        ) throw new MealProgramVersionConflictError();
+        for (const item of plan.items) {
+          if (item.date.toISOString().slice(0, 10) < today || item.status !== 'FILLED') continue;
+          const ingredients =
+            item.recipeRevision?.ingredients ?? item.customMeal?.ingredients ?? [];
+          const snapshot = item.recipeRevision?.recipeDetail?.allergenCodes;
+          const reasons = catalog.reasons(
+            ingredients.map((i) => i.ingredientId),
+            constraints,
+            {
+              unresolved:
+                !ingredients.length || ingredients.some((i) => i.resolutionStatus !== 'EXACT'),
+              snapshotAllergens: Array.isArray(snapshot)
+                ? snapshot.filter((x): x is string => typeof x === 'string')
+                : [],
+            },
+          );
+          if (
+            ingredients.some((i) => constraints.excludedNormalizedNames.includes(i.normalizedName))
+          )
+            reasons.push('INGREDIENT_EXCLUSION');
+          if (reasons.length)
+            throw new AppError({
+              statusCode: 409,
+              code: 'MEAL_PROGRAM_HARD_CONSTRAINT_VIOLATION',
+              message:
+                'Thiết lập hoặc dữ liệu thành phần vừa thay đổi. Vui lòng kiểm tra thực đơn.',
+              fields: { weekIndexes: [String(week.weekIndex)] },
+            });
+        }
+      }
+      if (program.sourceProgramId) {
+        const source = await transaction.mealProgram.findFirst({
+          where: { id: program.sourceProgramId, userId: data.userId },
+        });
+        if (!source || (source.replacedByProgramId && source.replacedByProgramId !== program.id))
+          throw new MealProgramVersionConflictError();
+        await transaction.mealProgram.update({
+          where: { id: source.id },
+          data: { replacedByProgramId: program.id },
+        });
+      }
       await transaction.mealProgram.update({
         where: { id: data.programId },
         data: { status: MealProgramStatus.CONFIRMED, confirmedAt: new Date() },
@@ -305,6 +417,11 @@ export class MealProgramRepository {
     weeklyAnalyses: Prisma.InputJsonValue;
   }): Promise<MealProgramAnalysisRecord> {
     return this.prisma.$transaction(async (transaction) => {
+      const owner = await transaction.mealProgram.findUniqueOrThrow({
+        where: { id: data.programId },
+        select: { userId: true },
+      });
+      await lockDocument(transaction, 'user', { id: owner.userId });
       await lockDocument(transaction, 'mealProgram', { id: data.programId });
       const latest = await transaction.mealProgramAnalysis.findFirst({
         where: { mealProgramId: data.programId },
@@ -348,6 +465,7 @@ export class MealProgramRepository {
     apply: (transaction: Prisma.TransactionClient) => Promise<void>,
   ): Promise<MealProgramRecord> {
     return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: data.userId });
       await lockDocument(transaction, 'mealProgram', { id: data.programId });
       const existing = await transaction.mealProgramMutation.findUnique({
         where: {

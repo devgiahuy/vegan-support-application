@@ -10,15 +10,8 @@ function apiError(code: string, fields?: Record<string, unknown>) {
   };
 }
 
-test('DIET_SCHEDULE_REQUIRED lists every missing week from the backend', () => {
-  const message = getMealProgramErrorMessage(
-    apiError('DIET_SCHEDULE_REQUIRED', { weekStarts: ['2026-11-02', '2026-11-09'] })
-  );
-  assert.match(message, /02\/11\/2026, 09\/11\/2026/);
-});
-
-test('DIET_SCHEDULE_REQUIRED without fields keeps the generic guidance', () => {
-  assert.match(getMealProgramErrorMessage(apiError('DIET_SCHEDULE_REQUIRED')), /chay kỳ/);
+test('a changed dietary revision asks the user to reload instead of selecting fasting dates', () => {
+  assert.match(getMealProgramErrorMessage(apiError('DIETARY_REVISION_CONFLICT')), /Hồ sơ ăn uống đã thay đổi/);
 });
 
 test('MEAL_PROGRAM_HARD_CONSTRAINT_VIOLATION converts zero-based week indexes', () => {

@@ -97,6 +97,8 @@ export const RECIPE_INELIGIBILITY_REASON_NAMES: Record<string, string> = {
   DIET_PATTERN: 'Không hợp kiểu ăn của bạn',
   INGREDIENT_COMPOSITION_UNCERTAIN: 'Chưa xác minh đủ thành phần nguyên liệu',
   INGREDIENT_EXCLUSION: 'Có nguyên liệu bạn không ăn',
+  FOOD_GROUP_EXCLUSION: 'Có nhóm thực phẩm bạn chọn kiêng',
+  INGREDIENT_DIETARY_UNCERTAIN: 'Chưa xác minh phân loại thực phẩm',
   TRADITION_RULE: 'Vi phạm quy tắc truyền thống bạn bật',
   UNRESOLVED_INGREDIENT: 'Có nguyên liệu chưa khớp danh mục chuẩn',
 };

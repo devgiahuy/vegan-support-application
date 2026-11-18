@@ -7,7 +7,8 @@ const REASON_LABELS: Record<string, string> = {
   DIET_PATTERN: 'Không đúng kiểu ăn của bạn',
   INGREDIENT_COMPOSITION_UNCERTAIN: 'Thành phần nguyên liệu chưa được xác minh',
   INGREDIENT_EXCLUSION: 'Chứa nguyên liệu bạn kiêng',
-  TRADITION_RULE: 'Vi phạm quy tắc truyền thống đã chọn',
+  FOOD_GROUP_EXCLUSION: 'Chứa nhóm thực phẩm bạn kiêng',
+  INGREDIENT_DIETARY_UNCERTAIN: 'Phân loại thực phẩm chưa được xác minh',
   UNRESOLVED_INGREDIENT: 'Có nguyên liệu chưa liên kết với danh mục chuẩn',
 };
 

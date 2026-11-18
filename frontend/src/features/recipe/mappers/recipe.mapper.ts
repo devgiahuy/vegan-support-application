@@ -339,6 +339,9 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       allergenCodes,
       allergens,
       allergyWarnings,
+      dietaryGroups: safeArray<string>(detail?.dietaryGroups).filter(
+        (value) => typeof value === 'string'
+      ),
       traditionWarnings,
       dietCompatibilities,
       usageCount,
@@ -374,7 +377,11 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
                 meta.appliedConstraints.ingredientExclusionCount,
                 0
               ),
-              traditions: safeArray<string>(meta.appliedConstraints.traditions),
+              foodGroups: safeArray<string>(meta.appliedConstraints.foodGroups),
+              dietaryRevision:
+                typeof meta.appliedConstraints.dietaryRevision === 'number'
+                  ? meta.appliedConstraints.dietaryRevision
+                  : null,
               forDate: safeString(meta.appliedConstraints.forDate, ''),
             }
           : undefined,

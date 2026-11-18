@@ -2,6 +2,7 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
 import { loadIngredientSafetyCatalog, MAX_COMPOSITION_DEPTH } from './ingredient-safety.js';
 import type { CompositionInput } from './composition.schemas.js';
+import { lockIngredientCatalog } from './catalog-lock.js';
 
 export class CompositionService {
   constructor(private readonly prisma: PrismaClient) {}
@@ -58,6 +59,9 @@ export class CompositionService {
     const closure = catalog.closure(id);
     return {
       ingredientId: id,
+      dietaryGroups: ingredient.dietaryGroups,
+      dietaryEvidence: ingredient.dietaryEvidence,
+      dietaryClassificationVersion: ingredient.dietaryClassificationVersion,
       status: ingredient.compositionStatus,
       kind: ingredient.compositionKind,
       version: ingredient.compositionVersion,
@@ -89,11 +93,7 @@ export class CompositionService {
     await this.prisma.$transaction(async (tx) => {
       // All graph mutations write this same document before reading graph state.
       // Mongo write conflicts retry the entire transaction against a fresh graph.
-      await tx.catalogGraphState.upsert({
-        where: { id: 'ingredient-composition' },
-        create: { id: 'ingredient-composition', version: 1 },
-        update: { version: { increment: 1 } },
-      });
+      await lockIngredientCatalog(tx);
       const current = await tx.ingredient.findUnique({ where: { id } });
       if (!current || current.status !== 'ACTIVE')
         throw this.error(404, 'NOT_FOUND', 'Không tìm thấy nguyên liệu đang hoạt động');
@@ -175,6 +175,9 @@ export class CompositionService {
       await tx.ingredient.update({
         where: { id },
         data: {
+          dietaryGroups: input.dietaryGroups,
+          dietaryEvidence: input.status === 'UNKNOWN' ? null : evidence,
+          dietaryClassificationVersion: { increment: 1 },
           compositionStatus: input.status,
           compositionKind: input.kind,
           compositionEvidence: evidence,
@@ -187,6 +190,7 @@ export class CompositionService {
           actorId,
           version,
           snapshot: {
+            dietaryGroups: input.dietaryGroups,
             status: input.status,
             kind: input.kind,
             componentIds: input.componentIds,

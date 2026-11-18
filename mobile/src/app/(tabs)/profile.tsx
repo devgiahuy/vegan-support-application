@@ -31,9 +31,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   ActivityLevel,
   BiologicalSex,
-  PracticeSchedule,
   UserRole,
 } from '@/common/enums';
+import { FOOD_ALLOWANCE_OPTIONS } from '@/features/diet-preferences/components/food-allowance-switches';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { DropdownField, type DropdownOption } from '@/components/ui/dropdown-field';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -320,7 +320,7 @@ export default function ProfileScreen() {
                 {diet ? (
                   <View className="rounded-full bg-muted px-2.5 py-1">
                     <Text className="text-xs font-semibold text-foreground">
-                      {diet.dietPatternLabel} · {diet.practiceScheduleLabel}
+                      Thiết lập ăn uống mỗi ngày
                     </Text>
                   </View>
                 ) : null}
@@ -487,14 +487,13 @@ export default function ProfileScreen() {
               <View className="flex-row items-center gap-2">
                 <Leaf size={18} color={colors.primary} />
                 <Text numberOfLines={1} className="flex-1 text-base font-bold text-foreground">
-                  {diet.dietPatternLabel}
+                  Thực phẩm bạn dùng
                 </Text>
               </View>
               <View className="mt-3 gap-2">
-                <ProfileRow label="Lịch thực hành" value={diet.practiceScheduleLabel} />
-                <ProfileRow label="Truyền thống" value={diet.traditionLabel} />
-                <ProfileRow label="Ngày chay kỳ" value={diet.scheduleDates.length ? diet.scheduleDates.join(', ') : '-'} />
-                <ProfileRow label="Múi giờ" value={diet.scheduleTimezone} />
+                {FOOD_ALLOWANCE_OPTIONS.map((option) => (
+                  <ProfileRow key={option.key} label={option.label} value={diet[option.key] ? 'Được ăn' : 'Kiêng'} />
+                ))}
               </View>
 
               <Text className="mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -527,13 +526,7 @@ export default function ProfileScreen() {
                     <Text className="text-sm font-semibold text-foreground">Chỉnh sửa chế độ ăn</Text>
                   </Pressable>
                 </Link>
-                {diet.practiceSchedule === PracticeSchedule.PERIODIC ? (
-                  <Link href={'/diet-schedule' as Href} asChild>
-                    <Pressable className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl bg-primary/10 py-2.5">
-                      <Text className="text-sm font-semibold text-primary">Sửa lịch chay kỳ</Text>
-                    </Pressable>
-                  </Link>
-                ) : null}
+
               </View>
             </>
           ) : (
@@ -541,7 +534,7 @@ export default function ProfileScreen() {
               <Activity size={22} color={colors.primary} />
               <Text className="mt-2 text-center font-semibold text-foreground">Chưa thiết lập chế độ ăn</Text>
               <Text className="mt-1 text-center text-sm text-muted-foreground">
-                Thiết lập kiểu ăn, dị ứng và nguyên liệu loại trừ để lọc công thức phù hợp hơn.
+                Thiết lập thực phẩm được ăn, dị ứng và nguyên liệu kiêng để lọc công thức phù hợp hơn.
               </Text>
               <Link href={'/diet-preferences' as Href} asChild>
                 <PrimaryButton label="Thiết lập ngay" className="mt-4 w-full" />

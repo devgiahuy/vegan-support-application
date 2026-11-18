@@ -1,3 +1,4 @@
+import type { DietaryCompatibility } from '@/features/diet-preferences/types/diet-impact.model';
 import type { MealPlanGoal, MealType, NutritionDataQuality } from '@/common/enums';
 
 /** Ô bữa trong thực đơn tuần. */
@@ -113,6 +114,8 @@ export interface PlanWarning {
  * (backend chỉ trả summary); detail có đủ 21 slots.
  */
 export interface MealPlan {
+  compatibility?: DietaryCompatibility;
+  selectedPlanIds?: string[];
   id: string;
   /** `YYYY-MM-DD`, luôn là Thứ Hai. */
   weekStart: string;

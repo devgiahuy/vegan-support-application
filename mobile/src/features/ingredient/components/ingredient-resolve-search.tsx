@@ -66,9 +66,9 @@ function CandidateRow({
       {candidate.allergenCodes.length > 0 ? (
         <Text className="text-[11px] text-muted-foreground">Nhóm dị ứng liên quan: {candidate.allergenCodes.join(', ')}</Text>
       ) : null}
-      {candidate.traditionWarnings.map((warning) => (
+      {candidate.dietaryGroupLabels.map((warning) => (
         <Text key={warning} className="text-[11px] text-amber-700">
-          Lưu ý truyền thống: {warning}
+          Nhóm thực phẩm: {warning}
         </Text>
       ))}
     </Pressable>

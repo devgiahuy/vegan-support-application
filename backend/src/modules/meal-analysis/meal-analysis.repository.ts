@@ -35,11 +35,9 @@ const analysisPlanInclude = {
 const profileSelect = {
   healthProfile: true,
   dietPreference: true,
-  dietPreferenceRules: { where: { enabled: true }, include: { ruleDefinition: true } },
   allergies: { where: { active: true } },
   ingredientAllergies: { where: { active: true }, select: { ingredientId: true } },
   ingredientExclusions: { where: { active: true } },
-  dietScheduleDates: { where: { enabled: true }, select: { date: true } },
 } satisfies Prisma.UserSelect;
 
 export type AnalysisPlanRecord = Prisma.MealPlanGetPayload<{ include: typeof analysisPlanInclude }>;

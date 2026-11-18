@@ -1,5 +1,11 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Đã triển khai bốn tùy chọn và xử lý thực đơn — Updated 2026-11-19
+
+Backend, web và mobile đã bỏ kiểu ăn/truyền thống/setup lịch; dùng bốn toggle độc lập trứng/sữa/mật ong/ngũ vị tân áp mỗi ngày. Đổi profile có impact preview, hai lựa chọn thay hoặc giữ với cảnh báo bền vững, replacement preview/apply theo từng plan và linked DRAFT cho chương trình confirmed. Admin catalog dùng reviewed food groups có provenance; allergy/exclusion luôn ưu tiên. Hơn 20 plan chia nhóm rõ ràng ở cả clients.
+
+Backend gates/OpenAPI/Mongo provisioning/seed/acceptance/live API và browser có đăng nhập đạt. Web final 119 files/922 tests, typecheck/lint đạt, production build47 pages đã đạt trước batch-only fix. Mobile typecheck/lint/166 tests/iOS export đạt; authenticated native iOS/Android và web↔native UI chưa chạy vì thiếu native driver/Simulator.app GUI và Android tooling. Không dùng bundle để khẳng định native E2E. Chi tiết và setup dev database tại [báo cáo kiểm chứng](../../docs/DIETARY_PREFERENCES_VERIFICATION.md). Không đổi % scaffold/tính năng không thuộc scope.
+
 ## Rebase cảnh báo dị ứng lên main — Updated 2026-11-16
 
 Nhánh `fix/recipe-profile-allergy-warnings` được rebase lên `origin/main` (`394a8ac`), chỉ có một commit sửa dị ứng so với main. Giải quyết conflict BACKEND_INTEGRATION/PROGRESS bằng cách giữ cả cập nhật mobile/meal-program trên main và bản sửa hiện tại; integration tăng lên 4.79, không ghi đè changelog mobile 4.78. Sau rebase: frontend typecheck, 112 files / 874 tests và build đạt; các kiểm tra backend cô lập/served OpenAPI đạt, backend source không đổi so với lần đã qua lint/typecheck/build. Giữ nguyên % tính năng; diagram và `.DS_Store` không nằm trong commit. Chi tiết tại WORK-LOG.

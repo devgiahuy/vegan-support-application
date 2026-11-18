@@ -32,6 +32,7 @@ describe('composition mapper', () => {
           status: 'PARTIAL',
           kind: 'COMPOUND',
           componentIds: ['a', 'a'],
+          dietaryGroups: ['EGG', 'EGG'],
           sourceId: 's',
           sourceVersion: ' v1 ',
           sourceRecordId: ' label ',
@@ -44,6 +45,7 @@ describe('composition mapper', () => {
       status: 'PARTIAL',
       kind: 'COMPOUND',
       componentIds: ['a'],
+      dietaryGroups: ['EGG'],
       evidence: { sourceId: 's', sourceVersion: 'v1', sourceRecordId: 'label', scope: 'product' },
     });
   });

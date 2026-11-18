@@ -4,13 +4,11 @@ import {
   dietPreferenceResponseSchema,
   dietRulePreviewResponseSchema,
   dietRuleSelectionSchema,
-  dietScheduleResponseSchema,
   healthProfileRequestSchema,
   healthProfileResponseSchema,
   profileResponseSchema,
   saveDietPreferencesRequestSchema,
   updateBasicProfileRequestSchema,
-  updateDietScheduleRequestSchema,
 } from './profile.schemas.js';
 
 const authenticated = [{ BearerAuth: [] }, { AccessTokenCookie: [] }];
@@ -90,15 +88,6 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     'DietPreferenceResponse',
     dietPreferenceResponseSchema,
   );
-  const updateDietScheduleRequest = registry.register(
-    'UpdateDietScheduleRequest',
-    updateDietScheduleRequestSchema,
-  );
-  const dietScheduleResponse = registry.register(
-    'DietScheduleResponse',
-    dietScheduleResponseSchema,
-  );
-
   registry.registerPath({
     method: 'get',
     path: '/api/v1/users/me',
@@ -188,10 +177,10 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     method: 'post',
     path: '/api/v1/diet-rules/preview',
     tags: ['Diet Rules'],
-    summary: 'Xem trước bộ quy tắc diet/tradition hiện hành',
-    description:
-      'Tradition rules là tùy chọn do user xác nhận; allergy và explicit exclusions không nằm trong danh sách toggle này.',
     operationId: 'previewDietRules',
+    summary: 'Xem trước bốn tùy chọn thực phẩm áp dụng mọi ngày',
+    description:
+      'Bật nghĩa là được ăn; dị ứng và nguyên liệu kiêng luôn ưu tiên. Ngũ vị tân: hành, hẹ, tỏi, kiệu, hưng cừ. Không có lựa chọn tôn giáo hay lịch chay.',
     security: authenticated,
     request: {
       body: {
@@ -200,9 +189,10 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
           'application/json': {
             schema: dietRulePreviewRequest,
             example: {
-              dietPattern: 'VEGAN',
-              practiceSchedule: 'PERIODIC',
-              tradition: 'BUDDHIST',
+              allowEggs: true,
+              allowDairy: false,
+              allowHoney: true,
+              allowFivePungent: false,
             },
           },
         },
@@ -210,24 +200,22 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     },
     responses: {
       200: {
-        description: 'Rule set có version và default toggle',
+        description: 'Chính sách hiện hành và nhóm thực phẩm',
         content: { 'application/json': { schema: dietRulePreviewResponse } },
       },
       400: errorResponse(errorSchema, 'Lựa chọn không hợp lệ', 'VALIDATION_ERROR'),
       401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', 'AUTH_REQUIRED'),
-      403: errorResponse(errorSchema, 'Tài khoản đã bị cấm', 'ACCOUNT_BANNED'),
-      503: errorResponse(errorSchema, 'Bộ quy tắc chưa sẵn sàng', 'DIET_RULES_UNAVAILABLE'),
+      403: errorResponse(errorSchema, 'Tài khoản không được phép', 'ACCOUNT_BANNED'),
     },
   });
-
   registry.registerPath({
     method: 'put',
     path: '/api/v1/users/me/diet-preferences',
     tags: ['Users', 'Diet Rules'],
-    summary: 'Xác nhận diet preferences, rules và hard constraints cá nhân',
-    description:
-      'Rule IDs phải khớp toàn bộ preview/version. Diet-pattern rule không thể tắt. PERIODIC bắt buộc có scheduleDates theo Asia/Ho_Chi_Minh. Ingredient exclusion nhận optional canonical ingredientId; free-text vẫn được giữ khi chưa map. Allergies và exclusions luôn là hard constraints.',
     operationId: 'saveDietPreferences',
+    summary: 'Lưu bốn tùy chọn thực phẩm và hạn chế cá nhân',
+    description:
+      'Contract mới cho bản dev. Bốn boolean độc lập áp dụng mọi ngày; thịt/cá và thành phần thuộc nhóm cấm luôn bị loại. policyVersion=1; expectedDietaryRevision=0 cho lần lưu đầu. Save kiểm tra revision, lưu nguyên tử và làm stale các phân tích/thực đơn liên quan. IngredientAllergies bỏ qua thì giữ nguyên; [] xóa hết. Allergies/exclusions được thay thế theo payload. Không tự thay món chỉ vì profile đã lưu.',
     security: authenticated,
     request: {
       body: {
@@ -236,23 +224,15 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
           'application/json': {
             schema: saveDietPreferencesRequest,
             example: {
-              dietPattern: 'VEGAN',
-              practiceSchedule: 'PERIODIC',
-              tradition: 'BUDDHIST',
-              ruleSetVersion: 1,
-              rules: [
-                { ruleDefinitionId: '11111111-1111-4111-8111-111111111111', enabled: true },
-                { ruleDefinitionId: '22222222-2222-4222-8222-222222222222', enabled: false },
-              ],
-              scheduleDates: ['2026-09-18', '2026-09-25'],
-              allergies: [{ allergenCode: 'PEANUT', severity: 'SEVERE' }],
-              ingredientExclusions: [
-                {
-                  ingredientId: '33333333-3333-4333-8333-333333333333',
-                  ingredientName: 'Đậu hũ',
-                  reason: 'Không thích',
-                },
-              ],
+              allowEggs: true,
+              allowDairy: false,
+              allowHoney: true,
+              allowFivePungent: false,
+              policyVersion: 1,
+              expectedDietaryRevision: 0,
+              allergies: [],
+              ingredientAllergies: [],
+              ingredientExclusions: [],
             },
           },
         },
@@ -260,62 +240,21 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     },
     responses: {
       200: {
-        description: 'Snapshot preference và effective constraints đã lưu',
+        description: 'Thiết lập đã lưu và dietary revision',
         content: { 'application/json': { schema: dietPreferenceResponse } },
       },
-      400: multipleErrorResponse(errorSchema, 'Rule hoặc preference không hợp lệ', [
+      400: multipleErrorResponse(errorSchema, 'Lựa chọn không hợp lệ', [
         'VALIDATION_ERROR',
-        'INVALID_DIET_RULE_SELECTION',
-        'DIET_RULE_REQUIRED',
-        'INVALID_INGREDIENT_EXCLUSIONS',
         'INVALID_ALLERGEN_SELECTION',
         'INVALID_INGREDIENT_ALLERGIES',
-        'DIET_SCHEDULE_NOT_APPLICABLE',
+        'INVALID_INGREDIENT_EXCLUSIONS',
       ]),
       401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', 'AUTH_REQUIRED'),
-      403: errorResponse(errorSchema, 'Tài khoản đã bị cấm', 'ACCOUNT_BANNED'),
-      409: multipleErrorResponse(
-        errorSchema,
-        'Bộ quy tắc đã thay đổi hoặc lịch PERIODIC chưa có ngày',
-        ['DIET_RULE_RECONFIRMATION_REQUIRED', 'DIET_SCHEDULE_REQUIRED'],
-      ),
-      503: errorResponse(errorSchema, 'Bộ quy tắc chưa sẵn sàng', 'DIET_RULES_UNAVAILABLE'),
-    },
-  });
-
-  registry.registerPath({
-    method: 'put',
-    path: '/api/v1/users/me/diet-schedule',
-    tags: ['Users', 'Diet Rules'],
-    summary: 'Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC',
-    description:
-      'Date-only YYYY-MM-DD được lưu trong MongoDB bằng UTC midnight với semantic Asia/Ho_Chi_Minh; backend không tự tính lịch âm/ngày lễ.',
-    operationId: 'updateDietSchedule',
-    security: authenticated,
-    request: {
-      body: {
-        required: true,
-        content: {
-          'application/json': {
-            schema: updateDietScheduleRequest,
-            example: { dates: ['2026-09-18', '2026-09-25'] },
-          },
-        },
-      },
-    },
-    responses: {
-      200: {
-        description: 'Lịch PERIODIC đã cập nhật',
-        content: { 'application/json': { schema: dietScheduleResponse } },
-      },
-      400: errorResponse(errorSchema, 'Danh sách ngày không hợp lệ', 'VALIDATION_ERROR'),
-      401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', 'AUTH_REQUIRED'),
-      403: errorResponse(errorSchema, 'Tài khoản đã bị cấm', 'ACCOUNT_BANNED'),
-      409: multipleErrorResponse(
-        errorSchema,
-        'Cần diet preference PERIODIC và ít nhất một ngày hợp lệ',
-        ['DIET_PREFERENCES_REQUIRED', 'DIET_SCHEDULE_NOT_APPLICABLE', 'DIET_SCHEDULE_REQUIRED'],
-      ),
+      403: errorResponse(errorSchema, 'Tài khoản không được phép', 'ACCOUNT_BANNED'),
+      409: multipleErrorResponse(errorSchema, 'Thiết lập hoặc chính sách đã thay đổi', [
+        'DIET_PREFERENCES_CONFLICT',
+        'DIET_RULE_RECONFIRMATION_REQUIRED',
+      ]),
     },
   });
 }

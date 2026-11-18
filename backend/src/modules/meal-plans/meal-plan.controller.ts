@@ -1,3 +1,4 @@
+import type { DietaryImpactService } from '../dietary-impact/dietary-impact.service.js';
 import type { Request, Response } from 'express';
 import { AppError } from '../../common/errors/app-error.js';
 import {
@@ -25,14 +26,28 @@ function userId(request: Request): string {
 }
 
 export class MealPlanController {
-  constructor(private readonly service: MealPlanService) {}
+  constructor(
+    private readonly service: MealPlanService,
+    private readonly impact: DietaryImpactService,
+  ) {}
 
   generate = async (request: Request, response: Response): Promise<void> => {
     const data = await this.service.generate(
       userId(request),
       getValidatedBody<GenerateMealPlanInput>(request),
     );
-    response.status(201).json(mealPlanResponseSchema.parse({ success: true, data, meta: null }));
+    response
+      .status(201)
+      .json(
+        mealPlanResponseSchema.parse({
+          success: true,
+          data: {
+            ...data,
+            compatibility: await this.impact.planCompatibility(userId(request), data.id),
+          },
+          meta: null,
+        }),
+      );
   };
 
   list = async (request: Request, response: Response): Promise<void> => {
@@ -43,7 +58,16 @@ export class MealPlanController {
     response
       .status(200)
       .json(
-        mealPlanListResponseSchema.parse({ success: true, data: result.data, meta: result.meta }),
+        mealPlanListResponseSchema.parse({
+          success: true,
+          data: await Promise.all(
+            result.data.map(async (plan) => ({
+              ...plan,
+              compatibility: await this.impact.planCompatibility(userId(request), plan.id),
+            })),
+          ),
+          meta: result.meta,
+        }),
       );
   };
 
@@ -52,7 +76,18 @@ export class MealPlanController {
       userId(request),
       getValidatedParams<MealPlanParams>(request).id,
     );
-    response.status(200).json(mealPlanResponseSchema.parse({ success: true, data, meta: null }));
+    response
+      .status(200)
+      .json(
+        mealPlanResponseSchema.parse({
+          success: true,
+          data: {
+            ...data,
+            compatibility: await this.impact.planCompatibility(userId(request), data.id),
+          },
+          meta: null,
+        }),
+      );
   };
 
   swap = async (request: Request, response: Response): Promise<void> => {
@@ -63,7 +98,18 @@ export class MealPlanController {
       params.itemId,
       getValidatedBody<SwapMealPlanItemInput>(request),
     );
-    response.status(200).json(mealPlanResponseSchema.parse({ success: true, data, meta: null }));
+    response
+      .status(200)
+      .json(
+        mealPlanResponseSchema.parse({
+          success: true,
+          data: {
+            ...data,
+            compatibility: await this.impact.planCompatibility(userId(request), data.id),
+          },
+          meta: null,
+        }),
+      );
   };
 
   manualAdd = async (request: Request, response: Response): Promise<void> => {
@@ -74,7 +120,18 @@ export class MealPlanController {
       params.itemId,
       getValidatedBody<ManualAddMealPlanItemInput>(request),
     );
-    response.status(200).json(mealPlanResponseSchema.parse({ success: true, data, meta: null }));
+    response
+      .status(200)
+      .json(
+        mealPlanResponseSchema.parse({
+          success: true,
+          data: {
+            ...data,
+            compatibility: await this.impact.planCompatibility(userId(request), data.id),
+          },
+          meta: null,
+        }),
+      );
   };
 
   delete = async (request: Request, response: Response): Promise<void> => {

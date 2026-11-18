@@ -18,6 +18,8 @@ export function getMealPlanErrorMessage(error: unknown): string {
       return 'Thao tác trước đó đang được xử lý. Hãy đợi một chút rồi thử lại.';
     case 'MEAL_PLAN_SUPERSEDES_INVALID':
       return 'Chỉ có thể tạo lại từ thực đơn của bạn trong cùng tuần.';
+    case 'DIETARY_REVISION_CONFLICT':
+      return 'Hồ sơ ăn uống đã thay đổi. Hãy tải lại thực đơn và kiểm tra các món cần điều chỉnh.';
     case 'NO_ELIGIBLE_RECIPE':
       return 'Không có món thay thế phù hợp với luật ăn và mục tiêu năng lượng.';
     case 'MEAL_PLAN_HARD_CONSTRAINT_VIOLATION':
@@ -30,8 +32,6 @@ export function getMealPlanErrorMessage(error: unknown): string {
     }
     case 'HEALTH_PROFILE_INCOMPLETE':
       return 'Hãy cập nhật hồ sơ sức khỏe trước khi tạo thực đơn.';
-    case 'DIET_SCHEDULE_REQUIRED':
-      return 'Bạn cần chọn ngày thực hành ăn chay trong tuần này ở hồ sơ.';
     case 'AUTH_REQUIRED':
     case 'INVALID_ACCESS_TOKEN':
     case 'TOKEN_EXPIRED':

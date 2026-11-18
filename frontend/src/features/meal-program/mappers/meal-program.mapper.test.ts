@@ -5,7 +5,7 @@ import type { MealProgramDto, MealProgramListItemDto } from '../types/meal-progr
 describe('MealProgramMapper', () => {
   const mapper = new MealProgramMapper();
 
-  it('preserves a partial program and explains a week blocked by its periodic schedule', () => {
+  it('preserves a partial program and explains a week missing health prerequisites', () => {
     const model = mapper.toModel({
       id: 'program',
       title: 'Lộ trình thử',
@@ -18,15 +18,15 @@ describe('MealProgramMapper', () => {
           id: 'week-2',
           status: 'FAILED',
           weekIndex: 1,
-          failure: { code: 'DIET_SCHEDULE_REQUIRED', message: 'Internal message' },
+          failure: { code: 'HEALTH_PROFILE_INCOMPLETE', message: 'Internal message' },
         },
       ],
     });
     expect(model.status).toBe('PARTIAL');
     expect(model.statusLabel).toContain('Chưa đủ');
     expect(model.weeks[0].weekNumber).toBe(2);
-    expect(model.weeks[0].failureCode).toBe('DIET_SCHEDULE_REQUIRED');
-    expect(model.weeks[0].failureMessage).toContain('ngày chay kỳ');
+    expect(model.weeks[0].failureCode).toBe('HEALTH_PROFILE_INCOMPLETE');
+    expect(model.weeks[0].failureMessage).toContain('hồ sơ sức khỏe');
     expect(model.weeks[0].failureMessage).not.toContain('Internal');
   });
 

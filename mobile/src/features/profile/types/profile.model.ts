@@ -1,5 +1,5 @@
 import type { User } from '@/features/auth/types/auth.model';
-import { DietPattern, PracticeSchedule, Tradition } from '@/common/enums';
+import type { FoodAllowanceSelection } from '@/features/diet-preferences/types/food-allowances.model';
 import type { HealthProfile } from './health.model';
 
 export interface AllergySummary {
@@ -24,17 +24,11 @@ export interface IngredientExclusionSummary {
   reason: string | null;
 }
 
-export interface DietPreferenceSummary {
-  dietPattern: DietPattern;
-  dietPatternLabel: string;
-  practiceSchedule: PracticeSchedule;
-  practiceScheduleLabel: string;
-  tradition: Tradition;
-  traditionLabel: string;
+export interface DietPreferenceSummary extends FoodAllowanceSelection {
+  policyVersion: number;
+  dietaryRevision: number;
   requiresRuleReview: boolean;
   confirmedAt: Date | null;
-  scheduleDates: string[];
-  scheduleTimezone: string;
   allergies: AllergySummary[];
   ingredientAllergies: IngredientAllergySummary[];
   ingredientExclusions: IngredientExclusionSummary[];

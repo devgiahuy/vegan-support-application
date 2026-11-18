@@ -85,6 +85,9 @@ Resolve tên/alias ingredient không phân biệt dấu
           "id",
           "canonicalName",
           "normalizedName",
+          "dietaryGroups",
+          "dietaryEvidence",
+          "dietaryClassificationVersion",
           "compositionStatus",
           "compositionKind",
           "compositionVersion",
@@ -94,7 +97,6 @@ Resolve tên/alias ingredient không phân biệt dấu
           "aliases",
           "allergenCodes",
           "dietCompatibilities",
-          "traditionWarnings",
           "createdAt",
           "updatedAt"
         ],
@@ -109,6 +111,21 @@ Resolve tên/alias ingredient không phân biệt dấu
           },
           "normalizedName": {
             "type": "string",
+            "_truncated": true
+          },
+          "dietaryGroups": {
+            "type": "array",
+            "_truncated": true
+          },
+          "dietaryEvidence": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "dietaryClassificationVersion": {
+            "type": "integer",
             "_truncated": true
           },
           "compositionStatus": {
@@ -147,10 +164,6 @@ Resolve tên/alias ingredient không phân biệt dấu
             "type": "array",
             "_truncated": true
           },
-          "traditionWarnings": {
-            "type": "array",
-            "_truncated": true
-          },
           "createdAt": {
             "type": "string",
             "_truncated": true
@@ -182,14 +195,7 @@ Resolve tên/alias ingredient không phân biệt dấu
           "type": "integer"
         },
         "totalPages": {
-          "type": "integer"
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-  "additionalProperties": false
-}
+  …(truncated — xem api-catalog.json)
 ```
 
 #### IngredientResolutionResponse

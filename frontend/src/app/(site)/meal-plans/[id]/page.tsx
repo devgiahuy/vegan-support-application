@@ -1,4 +1,5 @@
 'use client';
+import { DietaryPlanNotice } from '@/features/diet-preferences/components/dietary-plan-notice';
 
 import * as React from 'react';
 import Link from 'next/link';
@@ -28,10 +29,10 @@ import { ErrorState } from '@/components/shared/error-state';
 import { getApiErrorStatus } from '@/lib/api-error';
 import {
   useMealPlanDetailQuery,
-  useSwapMealItemMutation,
   useManualAddMealItemMutation,
 } from '@/features/meal-plan/queries/meal-plan.queries';
 import { DayGrid, formatDayLabel } from '@/features/meal-plan/components/day-grid';
+import { DietaryMealBadge } from '@/features/diet-preferences/components/dietary-meal-badge';
 import { WarningsBanner } from '@/features/meal-plan/components/warnings-banner';
 import { groupConstraintDetails } from '@/features/meal-plan/lib/constraint-details';
 import { SwapMealItemDialog } from '@/features/meal-plan/components/swap-dialog';
@@ -52,7 +53,6 @@ function MealPlanDetailContent({ id }: { id: string }) {
   const [selectorSlot, setSelectorSlot] = React.useState<MealSlot | null>(null);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
 
-  const swapMutation = useSwapMealItemMutation();
   const manualAddMutation = useManualAddMealItemMutation();
 
   // Mục tiêu dinh dưỡng đa lượng hàng ngày: ưu tiên từ backend, fallback chuẩn theo calo TDEE (20% Đạm, 30% Béo, 50% Bột, 14g xơ/1000kcal)
@@ -411,10 +411,16 @@ function MealPlanDetailContent({ id }: { id: string }) {
           </div>
 
           {/* 4. BANNER CẢNH BÁO & LƯU Ý TỐI ƯU THỰC ĐƠN */}
+          <DietaryPlanNotice compatibility={plan.compatibility} planIds={[plan.id]} />
           <WarningsBanner warnings={plan.warnings} warningDetails={plan.warningDetails} />
 
           {/* 5. LƯỚI LỊCH 7 NGÀY × 3 BỮA */}
           <DayGrid
+            slotBadge={(slot) => (
+              <DietaryMealBadge
+                item={plan.compatibility?.items.find((item) => item.itemId === slot.id)}
+              />
+            )}
             shopping
             items={plan.items}
             days={plan.days}

@@ -113,7 +113,7 @@ Admin rà soát cấu tạo nguyên liệu
 - Responses: `200` → IngredientCompositionResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ```json
-{"type":"object","required":["expectedVersion","status","kind","componentIds"],"properties":{"expectedVersion":{"type":"integer"},"status":{"type":"string","enum":["UNKNOWN","PARTIAL","COMPLETE"]},"kind":{"type":"string","enum":["UNSPECIFIED","SIMPLE","COMPOUND"]},"componentIds":{"type":"array","items":{"type":"string","format":"uuid"}},"evidence":{"type":"object","required":["sourceId","sourceVersion","sourceRecordId","scope"],"properties":{"sourceId":{"type":"string","format":"uuid"},"sourceVersion":{"type":"string"},"sourceRecordId":{"type":"string"},"scope":{"type":"string"}},"additionalProperties":false}},"additionalProperties":false}
+{"type":"object","required":["expectedVersion","dietaryGroups","status","kind","componentIds"],"properties":{"expectedVersion":{"type":"integer"},"dietaryGroups":{"type":"array","items":{"type":"string","enum":["MEAT","FISH_SEAFOOD","EGG","DAIRY","HONEY","FIVE_PUNGENT","OTHER_ANIMAL"]}},"status":{"type":"string","enum":["UNKNOWN","PARTIAL","COMPLETE"]},"kind":{"type":"string","enum":["UNSPECIFIED","SIMPLE","COMPOUND"]},"componentIds":{"type":"array","items":{"type":"string","format":"uuid"}},"evidence":{"type":"object","required":["sourceId","sourceVersion","sourceRecordId","scope"],"properties":{"sourceId":{"type":"string","format":"uuid"},"sourceVersion":{"type":"string"},"sourceRecordId":{"type":"string"},"scope":{"type":"string"}},"additionalProperties":false}},"additionalProperties":false}
 ```
 
 ---
@@ -474,6 +474,9 @@ Admin rà soát cấu tạo nguyên liệu
       "type": "object",
       "required": [
         "ingredientId",
+        "dietaryGroups",
+        "dietaryEvidence",
+        "dietaryClassificationVersion",
         "status",
         "kind",
         "version",
@@ -488,6 +491,22 @@ Admin rà soát cấu tạo nguyên liệu
         "ingredientId": {
           "type": "string",
           "format": "uuid"
+        },
+        "dietaryGroups": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "_truncated": true
+          }
+        },
+        "dietaryEvidence": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "dietaryClassificationVersion": {
+          "type": "integer"
         },
         "status": {
           "type": "string",
@@ -580,6 +599,9 @@ Admin rà soát cấu tạo nguyên liệu
           "id",
           "canonicalName",
           "normalizedName",
+          "dietaryGroups",
+          "dietaryEvidence",
+          "dietaryClassificationVersion",
           "compositionStatus",
           "compositionKind",
           "compositionVersion",
@@ -589,7 +611,6 @@ Admin rà soát cấu tạo nguyên liệu
           "aliases",
           "allergenCodes",
           "dietCompatibilities",
-          "traditionWarnings",
           "createdAt",
           "updatedAt"
         ],
@@ -604,6 +625,21 @@ Admin rà soát cấu tạo nguyên liệu
           },
           "normalizedName": {
             "type": "string",
+            "_truncated": true
+          },
+          "dietaryGroups": {
+            "type": "array",
+            "_truncated": true
+          },
+          "dietaryEvidence": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "dietaryClassificationVersion": {
+            "type": "integer",
             "_truncated": true
           },
           "compositionStatus": {
@@ -642,10 +678,6 @@ Admin rà soát cấu tạo nguyên liệu
             "type": "array",
             "_truncated": true
           },
-          "traditionWarnings": {
-            "type": "array",
-            "_truncated": true
-          },
           "createdAt": {
             "type": "string",
             "_truncated": true
@@ -677,14 +709,7 @@ Admin rà soát cấu tạo nguyên liệu
           "type": "integer"
         },
         "totalPages": {
-          "type": "integer"
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-  "additionalProperties": false
-}
+  …(truncated — xem api-catalog.json)
 ```
 
 #### IngredientResponse
@@ -709,6 +734,9 @@ Admin rà soát cấu tạo nguyên liệu
         "id",
         "canonicalName",
         "normalizedName",
+        "dietaryGroups",
+        "dietaryEvidence",
+        "dietaryClassificationVersion",
         "compositionStatus",
         "compositionKind",
         "compositionVersion",
@@ -718,7 +746,6 @@ Admin rà soát cấu tạo nguyên liệu
         "aliases",
         "allergenCodes",
         "dietCompatibilities",
-        "traditionWarnings",
         "createdAt",
         "updatedAt"
       ],
@@ -732,6 +759,22 @@ Admin rà soát cấu tạo nguyên liệu
         },
         "normalizedName": {
           "type": "string"
+        },
+        "dietaryGroups": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "_truncated": true
+          }
+        },
+        "dietaryEvidence": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "dietaryClassificationVersion": {
+          "type": "integer"
         },
         "compositionStatus": {
           "type": "string",
@@ -801,13 +844,6 @@ Admin rà soát cấu tạo nguyên liệu
             "_truncated": true
           }
         },
-        "traditionWarnings": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "_truncated": true
-          }
-        },
         "createdAt": {
           "type": "string",
           "format": "date-time"
@@ -819,10 +855,5 @@ Admin rà soát cấu tạo nguyên liệu
       },
       "additionalProperties": false
     },
-    "meta": {
-      "type": "null"
-    }
-  },
-  "additionalProperties": false
-}
+  …(truncated — xem api-catalog.json)
 ```

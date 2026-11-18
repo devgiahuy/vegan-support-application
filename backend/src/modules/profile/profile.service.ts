@@ -1,11 +1,4 @@
-import {
-  ActivityLevel,
-  DietRuleSource,
-  HealthSex,
-  PracticeSchedule,
-  type DietRuleDefinition,
-  type HealthProfile,
-} from '@prisma/client';
+import { ActivityLevel, HealthSex, type HealthProfile } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import { toPublicUser } from '../auth/auth.service.js';
@@ -18,16 +11,24 @@ import type {
   ProfileOutput,
   SaveDietPreferencesInput,
   UpdateBasicProfileInput,
-  UpdateDietScheduleInput,
 } from './profile.schemas.js';
 import type {
   NormalizedIngredientExclusion,
-  PreferenceRuleRecord,
   ProfileRecord,
   ProfileRepository,
 } from './profile.repository.js';
 
-const TIMEZONE = 'Asia/Ho_Chi_Minh' as const;
+const POLICY_VERSION = 1;
+const FOOD_OPTIONS = [
+  { code: 'EGG', label: 'Trứng', field: 'allowEggs' },
+  { code: 'DAIRY', label: 'Sữa và sản phẩm từ sữa', field: 'allowDairy' },
+  { code: 'HONEY', label: 'Mật ong', field: 'allowHoney' },
+  {
+    code: 'FIVE_PUNGENT',
+    label: 'Ngũ vị tân (hành, hẹ, tỏi, kiệu, hưng cừ)',
+    field: 'allowFivePungent',
+  },
+] as const;
 
 const activityFactors: Record<ActivityLevel, number> = {
   [ActivityLevel.SEDENTARY]: 1.2,
@@ -39,23 +40,6 @@ const activityFactors: Record<ActivityLevel, number> = {
 
 function roundToTwo(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
-}
-
-function dateOnly(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function rulePreview(definition: DietRuleDefinition): DietRulePreviewOutput {
-  return {
-    id: definition.id,
-    code: definition.code,
-    label: definition.label,
-    description: definition.description,
-    defaultEnabled: definition.defaultEnabled,
-    hardConstraint: definition.hardConstraint,
-    source: definition.source,
-    version: definition.ruleSetVersion,
-  };
 }
 
 function healthOutput(profile: HealthProfile): HealthProfileOutput {
@@ -73,94 +57,77 @@ function healthOutput(profile: HealthProfile): HealthProfileOutput {
   };
 }
 
-function savedRule(rule: PreferenceRuleRecord) {
-  return { ...rulePreview(rule.ruleDefinition), enabled: rule.enabled };
-}
-
-function dietPreferenceOutput(
-  profile: ProfileRecord,
-  latestRuleSetVersion: number | null,
-): DietPreferenceOutput | null {
-  const preference = profile.dietPreference;
-  if (!preference) return null;
-
-  const rules = profile.dietPreferenceRules.map(savedRule);
-  const dates = profile.dietScheduleDates.map((scheduleDate) => dateOnly(scheduleDate.date));
-  const enabledDietPatternRules = rules.filter(
-    (rule) => rule.source === DietRuleSource.DIET_PATTERN && rule.enabled,
-  );
-  const enabledTraditionRules = rules.filter(
-    (rule) => rule.source === DietRuleSource.TRADITION && rule.enabled,
-  );
-
+export function dietPreferenceOutput(profile: ProfileRecord): DietPreferenceOutput | null {
+  const p = profile.dietPreference;
+  if (!p) return null;
   return {
-    dietPattern: preference.dietPattern,
-    practiceSchedule: preference.practiceSchedule,
-    tradition: preference.tradition,
-    ruleSetVersion: preference.ruleSetVersion,
-    confirmedAt: preference.confirmedAt.toISOString(),
-    requiresRuleReview:
-      latestRuleSetVersion !== null && latestRuleSetVersion !== preference.ruleSetVersion,
-    rules,
-    schedule: { timezone: TIMEZONE, dates },
-    allergies: profile.allergies.map((allergy) => ({
-      id: allergy.id,
-      allergenCode: allergy.allergenCode,
-      label: allergy.label,
-      severity: allergy.severity,
-      active: allergy.active,
+    allowEggs: p.allowEggs,
+    allowDairy: p.allowDairy,
+    allowHoney: p.allowHoney,
+    allowFivePungent: p.allowFivePungent,
+    policyVersion: p.policyVersion,
+    dietaryRevision: p.dietaryRevision,
+    confirmedAt: p.confirmedAt.toISOString(),
+    requiresRuleReview: p.policyVersion !== POLICY_VERSION,
+    allergies: profile.allergies.map((a) => ({
+      id: a.id,
+      allergenCode: a.allergenCode,
+      label: a.label,
+      severity: a.severity,
+      active: a.active,
     })),
-    ingredientExclusions: profile.ingredientExclusions.map((exclusion) => ({
-      id: exclusion.id,
-      ingredientId: exclusion.ingredientId,
-      ingredientName: exclusion.ingredientName,
-      normalizedName: exclusion.normalizedName,
-      reason: exclusion.reason,
-      active: exclusion.active,
+    ingredientAllergies: profile.ingredientAllergies.map((a) => ({
+      ingredientId: a.ingredientId,
+      ingredientName: a.ingredient.canonicalName,
+      severity: a.severity,
+      ingredientActive: a.ingredient.status === 'ACTIVE',
     })),
-    ingredientAllergies: profile.ingredientAllergies.map((entry) => ({
-      ingredientId: entry.ingredientId,
-      ingredientName: entry.ingredient.canonicalName,
-      severity: entry.severity,
-      ingredientActive: entry.ingredient.status === 'ACTIVE',
+    ingredientExclusions: profile.ingredientExclusions.map((e) => ({
+      id: e.id,
+      ingredientId: e.ingredientId,
+      ingredientName: e.ingredientName,
+      normalizedName: e.normalizedName,
+      reason: e.reason,
+      active: e.active,
     })),
     effectiveConstraints: {
       always: [
-        ...profile.ingredientAllergies.map((entry) => ({
+        ...profile.allergies.map((a) => ({
           priority: 1,
           source: 'ALLERGY' as const,
-          code: entry.ingredientId,
-          label: entry.ingredient.canonicalName,
+          code: a.allergenCode,
+          label: a.label ?? a.allergenCode,
           hardConstraint: true as const,
         })),
-        ...profile.allergies.map((allergy) => ({
+        ...profile.ingredientAllergies.map((a) => ({
           priority: 1,
           source: 'ALLERGY' as const,
-          code: allergy.allergenCode,
-          label: allergy.label ?? allergy.allergenCode,
+          code: a.ingredientId,
+          label: a.ingredient.canonicalName,
           hardConstraint: true as const,
         })),
-        ...profile.ingredientExclusions.map((exclusion) => ({
+        ...profile.ingredientExclusions.map((e) => ({
           priority: 2,
           source: 'INGREDIENT_EXCLUSION' as const,
-          code: exclusion.normalizedName,
-          label: exclusion.ingredientName,
+          code: e.normalizedName,
+          label: e.ingredientName,
           hardConstraint: true as const,
         })),
-        ...enabledDietPatternRules.map((rule) => ({
+        {
           priority: 3,
-          source: 'DIET_PATTERN' as const,
-          code: rule.code,
-          label: rule.label,
+          source: 'FOOD_GROUP' as const,
+          code: 'MEAT_FISH',
+          label: 'Kiêng thịt, cá và thành phần có nguồn từ thịt/cá',
+          hardConstraint: true as const,
+        },
+        ...FOOD_OPTIONS.filter((o) => !p[o.field]).map((o) => ({
+          priority: 3,
+          source: 'FOOD_GROUP' as const,
+          code: o.code,
+          label: 'Kiêng ' + o.label,
           hardConstraint: true as const,
         })),
       ],
-      scheduledTradition: {
-        practiceSchedule: preference.practiceSchedule,
-        timezone: TIMEZONE,
-        dates,
-        rules: enabledTraditionRules,
-      },
     },
   };
 }
@@ -169,10 +136,7 @@ export class ProfileService {
   constructor(private readonly repository: ProfileRepository) {}
 
   async getProfile(userId: string): Promise<ProfileOutput> {
-    const [profile, latestRuleSetVersion] = await Promise.all([
-      this.repository.findProfile(userId),
-      this.repository.latestRuleSetVersion(),
-    ]);
+    const profile = await this.repository.findProfile(userId);
     if (!profile) {
       throw new AppError({
         statusCode: 404,
@@ -184,7 +148,7 @@ export class ProfileService {
     return {
       ...toPublicUser(profile, profile.applications[0] ?? null, profile.contributorProfile),
       healthProfile: profile.healthProfile ? healthOutput(profile.healthProfile) : null,
-      dietPreference: dietPreferenceOutput(profile, latestRuleSetVersion),
+      dietPreference: dietPreferenceOutput(profile),
     };
   }
 
@@ -208,20 +172,39 @@ export class ProfileService {
   }
 
   async previewDietRules(selection: DietRuleSelectionInput): Promise<{
-    ruleSetVersion: number;
+    policyVersion: number;
     selection: DietRuleSelectionInput;
-    rules: DietRulePreviewOutput[];
+    constraints: DietRulePreviewOutput[];
   }> {
-    const ruleSetVersion = await this.requireLatestRuleSetVersion();
-    const definitions = await this.repository.findRuleDefinitions(selection, ruleSetVersion);
-    if (!definitions.length) throw this.rulesUnavailableError();
-    return { ruleSetVersion, selection, rules: definitions.map(rulePreview) };
+    return Promise.resolve({
+      policyVersion: POLICY_VERSION,
+      selection,
+      constraints: [
+        { code: 'MEAT_FISH', label: 'Thịt, cá và thành phần từ thịt/cá', allowed: false },
+        ...FOOD_OPTIONS.map((o) => ({ code: o.code, label: o.label, allowed: selection[o.field] })),
+      ],
+    });
   }
 
-  async saveDietPreferences(
+  async validateDietPreferences(
     userId: string,
     input: SaveDietPreferencesInput,
-  ): Promise<DietPreferenceOutput> {
+  ): Promise<{ input: SaveDietPreferencesInput; exclusions: NormalizedIngredientExclusion[] }> {
+    if (input.policyVersion !== POLICY_VERSION)
+      throw new AppError({
+        statusCode: 409,
+        code: 'DIET_RULE_RECONFIRMATION_REQUIRED',
+        message: 'Chính sách đã thay đổi. Vui lòng xem lại.',
+      });
+    const profile = await this.repository.findProfile(userId);
+    if (!profile) throw this.profileNotFoundError();
+    if ((profile.dietPreference?.dietaryRevision ?? 0) !== input.expectedDietaryRevision)
+      throw new AppError({
+        statusCode: 409,
+        code: 'DIET_PREFERENCES_CONFLICT',
+        message: 'Thiết lập đã thay đổi. Vui lòng tải lại.',
+        fields: { currentRevision: [String(profile.dietPreference?.dietaryRevision ?? 0)] },
+      });
     const ingredientIds = input.ingredientAllergies?.map((entry) => entry.ingredientId) ?? [];
     const activeIngredients = await this.repository.findActiveIngredients(ingredientIds);
     const validIds = new Set(activeIngredients.map((entry) => entry.id));
@@ -252,113 +235,25 @@ export class ProfileService {
         label: labels.get(entry.allergenCode)!,
       })),
     };
-    if (input.practiceSchedule === PracticeSchedule.PERIODIC && !input.scheduleDates?.length) {
-      throw new AppError({
-        statusCode: 409,
-        code: 'DIET_SCHEDULE_REQUIRED',
-        message: 'Cần chọn ít nhất một ngày cho lịch PERIODIC',
-      });
-    }
-    if (input.practiceSchedule === PracticeSchedule.PERMANENT && input.scheduleDates?.length) {
-      throw new AppError({
-        statusCode: 400,
-        code: 'DIET_SCHEDULE_NOT_APPLICABLE',
-        message: 'Lịch PERMANENT không nhận danh sách ngày',
-      });
-    }
+    return { input, exclusions: await this.normalizeExclusions(input) };
+  }
 
-    const latestRuleSetVersion = await this.requireLatestRuleSetVersion();
-    if (input.ruleSetVersion !== latestRuleSetVersion) {
-      throw new AppError({
-        statusCode: 409,
-        code: 'DIET_RULE_RECONFIRMATION_REQUIRED',
-        message: 'Bộ quy tắc đã thay đổi, vui lòng xem và xác nhận lại',
-      });
-    }
-
-    const definitions = await this.repository.findRuleDefinitions(input, input.ruleSetVersion);
-    this.validateSelectedRules(input, definitions);
-    const exclusions = await this.normalizeExclusions(input);
-    await this.repository.saveDietPreferences(userId, input, definitions, exclusions, new Date());
+  async saveDietPreferences(
+    userId: string,
+    input: SaveDietPreferencesInput,
+  ): Promise<DietPreferenceOutput> {
+    const validated = await this.validateDietPreferences(userId, input);
+    await this.repository.saveDietPreferences(
+      userId,
+      validated.input,
+      validated.exclusions,
+      new Date(),
+    );
     const profile = await this.repository.findProfile(userId);
     if (!profile) throw this.profileNotFoundError();
-    const preference = dietPreferenceOutput(profile, latestRuleSetVersion);
+    const preference = dietPreferenceOutput(profile);
     if (!preference) throw this.profileNotFoundError();
     return preference;
-  }
-
-  async updateDietSchedule(
-    userId: string,
-    input: UpdateDietScheduleInput,
-  ): Promise<{ practiceSchedule: PracticeSchedule; timezone: typeof TIMEZONE; dates: string[] }> {
-    const profile = await this.repository.findProfile(userId);
-    if (!profile?.dietPreference) {
-      throw new AppError({
-        statusCode: 409,
-        code: 'DIET_PREFERENCES_REQUIRED',
-        message: 'Cần lưu lựa chọn chế độ ăn trước khi cập nhật lịch',
-      });
-    }
-    if (profile.dietPreference.practiceSchedule !== PracticeSchedule.PERIODIC) {
-      throw new AppError({
-        statusCode: 409,
-        code: 'DIET_SCHEDULE_NOT_APPLICABLE',
-        message: 'Lịch ngày chỉ áp dụng cho chế độ PERIODIC',
-      });
-    }
-    if (!input.dates.length) {
-      throw new AppError({
-        statusCode: 409,
-        code: 'DIET_SCHEDULE_REQUIRED',
-        message: 'Cần chọn ít nhất một ngày cho lịch PERIODIC',
-      });
-    }
-    await this.repository.replaceDietSchedule(userId, input.dates);
-    return {
-      practiceSchedule: PracticeSchedule.PERIODIC,
-      timezone: TIMEZONE,
-      dates: [...input.dates].sort(),
-    };
-  }
-
-  private async requireLatestRuleSetVersion(): Promise<number> {
-    const version = await this.repository.latestRuleSetVersion();
-    if (version === null) throw this.rulesUnavailableError();
-    return version;
-  }
-
-  private validateSelectedRules(
-    input: SaveDietPreferencesInput,
-    definitions: DietRuleDefinition[],
-  ): void {
-    const expectedIds = new Set(definitions.map((definition) => definition.id));
-    const selectedIds = new Set(input.rules.map((selection) => selection.ruleDefinitionId));
-    if (
-      expectedIds.size !== selectedIds.size ||
-      [...expectedIds].some((id) => !selectedIds.has(id))
-    ) {
-      throw new AppError({
-        statusCode: 400,
-        code: 'INVALID_DIET_RULE_SELECTION',
-        message: 'Danh sách rule không thuộc preview hoặc không đầy đủ',
-      });
-    }
-
-    const selectedById = new Map(
-      input.rules.map((selection) => [selection.ruleDefinitionId, selection.enabled]),
-    );
-    if (
-      definitions.some(
-        (definition) =>
-          definition.source === DietRuleSource.DIET_PATTERN && !selectedById.get(definition.id),
-      )
-    ) {
-      throw new AppError({
-        statusCode: 400,
-        code: 'DIET_RULE_REQUIRED',
-        message: 'Không thể tắt hard constraint của diet pattern',
-      });
-    }
   }
 
   private async normalizeExclusions(
@@ -399,14 +294,6 @@ export class ProfileService {
       });
     }
     return exclusions;
-  }
-
-  private rulesUnavailableError(): AppError {
-    return new AppError({
-      statusCode: 503,
-      code: 'DIET_RULES_UNAVAILABLE',
-      message: 'Bộ quy tắc chế độ ăn chưa sẵn sàng',
-    });
   }
 
   private profileNotFoundError(): AppError {

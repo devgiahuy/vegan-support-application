@@ -1,4 +1,8 @@
-import { IngredientCompositionKind, IngredientCompositionStatus } from '@prisma/client';
+import {
+  DietaryFoodGroup,
+  IngredientCompositionKind,
+  IngredientCompositionStatus,
+} from '@prisma/client';
 import { z } from '../../common/validation/zod.js';
 
 export const compositionEvidenceInputSchema = z
@@ -13,6 +17,13 @@ export const compositionEvidenceInputSchema = z
 export const compositionInputSchema = z
   .object({
     expectedVersion: z.number().int().nonnegative(),
+    dietaryGroups: z
+      .array(z.enum(DietaryFoodGroup))
+      .max(7)
+      .refine(
+        (groups) => new Set(groups).size === groups.length,
+        'Nhóm thực phẩm không được trùng',
+      ),
     status: z.enum(IngredientCompositionStatus),
     kind: z.enum(IngredientCompositionKind),
     componentIds: z
@@ -38,6 +49,9 @@ export type CompositionInput = z.infer<typeof compositionInputSchema>;
 export const compositionDataSchema = z
   .object({
     ingredientId: z.string().uuid(),
+    dietaryGroups: z.array(z.enum(DietaryFoodGroup)),
+    dietaryEvidence: z.record(z.string(), z.unknown()).nullable(),
+    dietaryClassificationVersion: z.number().int().nonnegative(),
     status: z.enum(IngredientCompositionStatus),
     kind: z.enum(IngredientCompositionKind),
     version: z.number().int().nonnegative(),

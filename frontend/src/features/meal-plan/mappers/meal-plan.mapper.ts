@@ -1,3 +1,4 @@
+import { dietImpactMapper } from '@/features/diet-preferences/mappers/diet-impact.mapper';
 import {
   BaseMapper,
   pickField,
@@ -118,6 +119,7 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
       rawDays && rawDays.length > 0 ? this.toDays(rawDays) : this.synthesizeDaysFromSlots(items);
 
     return {
+      compatibility: dietImpactMapper.compatibility(dto?.compatibility),
       id: safeString(pickField(dto, ['id'], '')),
       weekStart,
       formattedWeekRange: toWeekRange(weekStart),

@@ -1,3 +1,4 @@
+import type { DietaryCompatibilityDto } from '@/features/diet-preferences/types/diet-impact.dto';
 /**
  * DTO meal plans — khớp OpenAPI backend (`MealPlanResponse`). Các field mới của contract 2026-09-28
  * (`days`, `userSummary`, `warningDetails`, `estimatedNutritionTargets`) đều optional để tương thích ngược.
@@ -103,6 +104,7 @@ export interface MealPlanDayDto {
 }
 
 export interface MealPlanDto {
+  compatibility?: DietaryCompatibilityDto;
   id?: string;
   weekStart?: string;
   week_start?: string;

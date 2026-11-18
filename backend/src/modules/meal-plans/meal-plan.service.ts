@@ -5,7 +5,6 @@ import {
   MealType,
   MediaKind,
   NutritionDataQuality,
-  PracticeSchedule,
   type MealGoal,
   type Prisma,
 } from '@prisma/client';
@@ -55,6 +54,7 @@ const WEEKLY_REUSE_SCORE_PENALTY = 0.35;
 const UNVERIFIED_INGREDIENT_REASONS = new Set([
   'UNRESOLVED_INGREDIENT',
   'INGREDIENT_COMPOSITION_UNCERTAIN',
+  'INGREDIENT_DIETARY_UNCERTAIN',
 ]);
 const SAME_DAY_REPEAT_SCORE_PENALTY = 1.2;
 const MEAL_SPLITS: Record<MealType, number> = {
@@ -275,28 +275,6 @@ export class MealPlanService {
         code: 'HEALTH_PROFILE_INCOMPLETE',
         message: 'Bạn cần bổ sung thông tin sức khỏe trước khi tạo thực đơn tuần.',
       });
-    const profile = await this.contentRepository.findSearchProfile(userId);
-    if (profile?.dietPreference?.practiceSchedule !== PracticeSchedule.PERIODIC) return;
-    const scheduled = new Set(profile.dietScheduleDates.map((entry) => dateOnly(entry.date)));
-    const missing = weekStarts
-      .map((weekStart) => ({
-        weekStart,
-        dates: buildWeeklySlotBlueprint(dateFromDateOnly(weekStart))
-          .filter((slot) => slot.mealType === MealType.BREAKFAST)
-          .map((slot) => dateOnly(slot.date)),
-      }))
-      .filter((week) => !week.dates.some((day) => scheduled.has(day)));
-    if (missing.length)
-      throw new AppError({
-        statusCode: 409,
-        code: 'DIET_SCHEDULE_REQUIRED',
-        message:
-          'Vui lòng chọn và lưu ít nhất một ngày chay kỳ cho mỗi tuần của lộ trình trước khi tạo.',
-        fields: {
-          weekStarts: missing.map((week) => week.weekStart),
-          availableDates: missing.flatMap((week) => week.dates),
-        },
-      });
   }
 
   async generate(userId: string, input: GenerateMealPlanInput) {
@@ -324,7 +302,6 @@ export class MealPlanService {
       .filter((slot) => slot.mealType === MealType.BREAKFAST)
       .map((slot) => slot.date);
     const profile = await this.contentRepository.findSearchProfile(userId);
-    this.assertPeriodicSchedule(profile, dates);
 
     const supersedesMealPlanId = input.supersedesMealPlanId;
     if (supersedesMealPlanId) {
@@ -878,21 +855,6 @@ export class MealPlanService {
     if (nutrition.warning) warnings.add(nutrition.warning);
     if (shopping.warning) warnings.add(shopping.warning);
     return { nutrition, shopping, warnings: [...warnings].sort() };
-  }
-
-  private assertPeriodicSchedule(
-    profile: Awaited<ReturnType<ContentRepository['findSearchProfile']>>,
-    dates: Date[],
-  ) {
-    if (profile?.dietPreference?.practiceSchedule !== PracticeSchedule.PERIODIC) return;
-    const weekDates = new Set(dates.map(dateOnly));
-    if (profile.dietScheduleDates.some((item) => weekDates.has(dateOnly(item.date)))) return;
-    throw new AppError({
-      statusCode: 409,
-      code: 'DIET_SCHEDULE_REQUIRED',
-      message: 'Vui lòng chọn ngày áp dụng chế độ ăn theo lịch trong tuần trước khi tạo thực đơn.',
-      fields: { availableDates: [...weekDates] },
-    });
   }
 
   private explanation(slots: PlannedSlot[], targetCalories: number, goal: MealGoal): string {

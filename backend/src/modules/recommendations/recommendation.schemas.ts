@@ -1,4 +1,4 @@
-import { BehaviorEventType, DietPattern, RecipeDifficulty, Tradition } from '@prisma/client';
+import { BehaviorEventType, DietPattern, RecipeDifficulty } from '@prisma/client';
 import { z, mediaUrlSchema } from '../../common/validation/zod.js';
 
 export const PERSONALIZATION_CONSENT_VERSION = 'behavior-personalization-v1' as const;
@@ -102,7 +102,8 @@ const appliedConstraintsSchema = z
     dietPattern: z.enum(DietPattern).nullable(),
     allergyCount: z.number().int().nonnegative(),
     ingredientExclusionCount: z.number().int().nonnegative(),
-    traditions: z.array(z.enum(Tradition)),
+    foodGroups: z.array(z.string()),
+    dietaryRevision: z.number().int().positive().nullable(),
     forDate: dateOnlySchema,
   })
   .strict();

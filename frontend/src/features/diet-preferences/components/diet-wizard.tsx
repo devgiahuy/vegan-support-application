@@ -1,564 +1,330 @@
 'use client';
-
-import * as React from 'react';
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, Loader2, RefreshCw, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
 } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ErrorState } from '@/components/shared/error-state';
-import { DietSelector, type DietSelection } from './diet-selector';
-import { DietRuleList } from './diet-rule-list';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { FoodPreferenceFields } from './food-preference-fields';
 import { AllergyEditor } from './allergy-editor';
 import { ExclusionEditor } from './exclusion-editor';
-import { ScheduleDatePicker } from './schedule-date-picker';
-import { DietWizardSummary } from './diet-wizard-summary';
+import { DietImpactDialog } from './diet-impact-dialog';
+import { DietImpactNotice } from './diet-impact-notice';
 import { useAllergenCatalogQuery } from '../queries/allergen.queries';
-import { useDietPreviewQuery, useSaveDietPreferencesMutation } from '../queries/diet.queries';
-import { dietMapper } from '../mappers/diet.mapper';
-import type { DietRulePreviewRequestDto } from '../types/diet.dto';
+import { useSaveDietPreferencesMutation, useDietPreviewQuery } from '../queries/diet.queries';
+import { useDietImpactPreview } from '../queries/diet-impact.queries';
+import { useDetailedProfileQuery } from '@/features/profile/queries/profile.queries';
+import { impactMealViews } from '../utils/diet-impact-view';
+import { getApiErrorCode, getApiErrorMessage } from '@/lib/api-error';
+import type { FoodAllowances } from '../types/food-allowances.model';
 import type {
-  Allergy,
   DietPreference,
-  DietRule,
+  DietPreferenceDraft,
+  Allergy,
   IngredientAllergy,
   IngredientExclusion,
 } from '../types/diet.model';
-import { PracticeSchedule } from '@/common/enums';
-import { getApiErrorCode } from '@/lib/api-error';
+import type { DietaryImpact } from '../types/diet-impact.model';
 
-type Step = 'diet' | 'rules' | 'restrictions' | 'confirm';
-
-const STEPS: Array<{ id: Step; title: string; description: string }> = [
-  {
-    id: 'diet',
-    title: 'Chế độ ăn',
-    description: 'Chọn kiểu ăn, thời gian thực hành và truyền thống bạn theo.',
-  },
-  {
-    id: 'rules',
-    title: 'Quy tắc',
-    description: 'Xem những gì hệ thống sẽ lọc và bật thêm quy tắc tùy chọn.',
-  },
-  {
-    id: 'restrictions',
-    title: 'Dị ứng & kiêng',
-    description: 'Khai báo thực phẩm gây dị ứng và nguyên liệu bạn không muốn ăn.',
-  },
-  {
-    id: 'confirm',
-    title: 'Xác nhận',
-    description: 'Kiểm tra lại toàn bộ thiết lập trước khi lưu.',
-  },
-];
-
-function toPreviewRequest(selection: DietSelection): DietRulePreviewRequestDto | null {
-  if (!selection.dietPattern || !selection.practiceSchedule || !selection.tradition) return null;
+function selectionOf(preference: FoodAllowances | null | undefined): FoodAllowances {
   return {
-    dietPattern: selection.dietPattern,
-    practiceSchedule: selection.practiceSchedule,
-    tradition: selection.tradition,
+    allowEggs: preference?.allowEggs ?? false,
+    allowDairy: preference?.allowDairy ?? false,
+    allowHoney: preference?.allowHoney ?? false,
+    allowFivePungent: preference?.allowFivePungent ?? false,
   };
 }
-
-function sameSelection(a: DietRulePreviewRequestDto | null, b: DietRulePreviewRequestDto | null) {
-  return (
-    !!a &&
-    !!b &&
-    a.dietPattern === b.dietPattern &&
-    a.practiceSchedule === b.practiceSchedule &&
-    a.tradition === b.tradition
-  );
-}
-
-/**
- * Wizard thiết lập chế độ ăn 4 bước:
- * 1. Chế độ ăn (bộ ba + ngày chay kỳ) → 2. Quy tắc từ preview → 3. Dị ứng & kiêng → 4. Xác nhận lưu.
- * Cột tóm tắt bên phải cập nhật theo từng lựa chọn.
- */
 export function DietWizard({
   initial,
-  initialSelection,
   onSaved,
   onCancel,
-  scheduleSlot,
 }: {
   initial?: DietPreference | null;
-  /** Bộ ba chọn sẵn (vd từ tóm tắt hồ sơ) — chỉ preselect, không tự gọi preview. */
-  initialSelection?: DietSelection | null;
   onSaved?: (preference: DietPreference) => void;
   onCancel?: () => void;
-  /** Slot lịch chay kỳ — hiện sau khi lưu với PERIODIC. */
-  scheduleSlot?: (preference: DietPreference) => React.ReactNode;
 }) {
-  const [step, setStep] = React.useState<Step>('diet');
-  const [selection, setSelection] = React.useState<DietSelection>({
-    dietPattern: initialSelection?.dietPattern ?? initial?.dietPattern,
-    practiceSchedule: initialSelection?.practiceSchedule ?? initial?.practiceSchedule,
-    tradition: initialSelection?.tradition ?? initial?.tradition,
-  });
-  const [confirmed, setConfirmed] = React.useState<DietRulePreviewRequestDto | null>(null);
-  const [ruleOverrides, setRuleOverrides] = React.useState<Record<string, boolean>>(() =>
-    Object.fromEntries((initial?.rules ?? []).map((r) => [r.ruleDefinitionId, r.enabled]))
-  );
-  const [allergies, setAllergies] = React.useState<Allergy[]>(initial?.allergies ?? []);
-  const [allergySearch, setAllergySearch] = React.useState('');
-  const [ingredientAllergies, setIngredientAllergies] = React.useState<IngredientAllergy[]>(
+  const router = useRouter();
+  const [base, setBase] = useState(initial ?? null);
+  const [selection, setSelection] = useState<FoodAllowances>(() => selectionOf(initial));
+  const [allergies, setAllergies] = useState<Allergy[]>(initial?.allergies ?? []);
+  const [ingredientAllergies, setIngredientAllergies] = useState<IngredientAllergy[]>(
     initial?.ingredientAllergies ?? []
   );
-  const [exclusions, setExclusions] = React.useState<IngredientExclusion[]>(
+  const [exclusions, setExclusions] = useState<IngredientExclusion[]>(
     initial?.ingredientExclusions ?? []
   );
-  const [exclusionSearch, setExclusionSearch] = React.useState('');
-  // Backend bắt buộc `scheduleDates` kèm preferences khi PERIODIC (thiếu → `DIET_SCHEDULE_REQUIRED`).
-  const [scheduleDates, setScheduleDates] = React.useState<string[]>(
-    initial?.schedule?.dates ?? []
-  );
-  const [stepError, setStepError] = React.useState<string | null>(null);
-  const [saved, setSaved] = React.useState<DietPreference | null>(null);
-  const [saveError, setSaveError] = React.useState<string | null>(null);
-  const [configUnavailable, setConfigUnavailable] = React.useState(false);
-
-  const allergenCatalog = useAllergenCatalogQuery();
-  const previewQuery = useDietPreviewQuery(confirmed);
-  const saveMutation = useSaveDietPreferencesMutation();
-  const preview = previewQuery.data ?? null;
-
-  const request = toPreviewRequest(selection);
-  const isPeriodic = selection.practiceSchedule === PracticeSchedule.PERIODIC;
-  const dietStepValid = !!request && (!isPeriodic || scheduleDates.length > 0);
-
-  const mergedRules: DietRule[] | null = preview
-    ? preview.rules.map((r) => ({
-        ...r,
-        enabled: r.isHard
-          ? true
-          : (ruleOverrides[r.ruleDefinitionId] ?? (r.isDefault || r.enabled)),
-      }))
-    : null;
-
-  const restrictionIssue = (() => {
-    if (allergenCatalog.isPending) return 'Đang tải danh mục dị ứng, vui lòng chờ.';
-    if (allergenCatalog.isError)
-      return 'Không tải được danh mục dị ứng. Hãy thử lại trước khi lưu.';
-    if (allergies.some((a) => !allergenCatalog.data?.some((o) => o.code === a.allergenCode)))
-      return 'Có nhóm dị ứng không còn trong danh mục. Hãy bỏ mục đó trước khi lưu.';
-    if (ingredientAllergies.some((a) => !a.ingredientActive))
-      return 'Có nguyên liệu dị ứng đã ngừng hoạt động. Hãy bỏ mục đó trước khi lưu.';
-    return null;
-  })();
-
-  const stepIndex = STEPS.findIndex((s) => s.id === step);
-  const canReach = (target: Step) => {
-    if (target === 'diet') return true;
-    if (!dietStepValid) return false;
-    if (target === 'rules') return true;
-    return !!preview;
+  const [allergySearch, setAllergySearch] = useState('');
+  const [exclusionSearch, setExclusionSearch] = useState('');
+  const [impact, setImpact] = useState<DietaryImpact | null>(null);
+  const [pending, setPending] = useState<DietPreferenceDraft | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState(false);
+  const [saved, setSaved] = useState<DietPreference | null>(null);
+  const catalog = useAllergenCatalogQuery();
+  const policy = useDietPreviewQuery(selection);
+  const profile = useDetailedProfileQuery();
+  const preview = useDietImpactPreview();
+  const save = useSaveDietPreferencesMutation();
+  const busy = preview.isPending || save.isPending;
+  const fail = (failure: unknown) => {
+    const code = getApiErrorCode(failure);
+    setConflict(code === 'DIET_PREFERENCES_CONFLICT');
+    if (code === 'DIET_RULE_RECONFIRMATION_REQUIRED') void policy.refetch();
+    if (code === 'INVALID_ALLERGEN_SELECTION') void catalog.refetch();
+    setError(getApiErrorMessage(failure));
   };
-
-  const goTo = (target: Step) => {
-    setStepError(null);
-    if (target !== 'diet') {
-      if (!request) {
-        setStepError('Vui lòng chọn đủ kiểu ăn, thời gian và truyền thống.');
-        return;
-      }
-      if (isPeriodic && scheduleDates.length === 0) {
-        setStepError('Chay kỳ cần ít nhất một ngày. Hãy thêm ngày ở bên trên.');
-        return;
-      }
-      if (!sameSelection(request, confirmed)) {
-        // Đổi bộ ba → bộ quy tắc mới, bỏ lựa chọn bật/tắt cũ.
-        if (confirmed) setRuleOverrides({});
-        setConfigUnavailable(false);
-        setConfirmed(request);
-        setStep('rules');
-        return;
-      }
-    }
-    setStep(target);
-  };
-
-  const handleSave = async () => {
-    if (!confirmed || !preview || !mergedRules) return;
-    if (restrictionIssue) {
-      setSaveError(restrictionIssue);
+  const reload = async () => {
+    const fresh = await profile.refetch();
+    if (fresh.isError) {
+      setError('Không tải lại được thiết lập. Vui lòng thử lại.');
       return;
     }
-    setSaveError(null);
+    const preference = fresh.data?.diet ?? null;
+    setBase(preference);
+    setSelection(selectionOf(preference));
+    setAllergies(preference?.allergies ?? []);
+    setIngredientAllergies(preference?.ingredientAllergies ?? []);
+    setExclusions(preference?.ingredientExclusions ?? []);
+    setImpact(null);
+    setPending(null);
+    setSaved(null);
+    setConflict(false);
+    setError(null);
+  };
+  const repair = (preference: DietPreference, assessment: DietaryImpact) => {
+    const params = new URLSearchParams({
+      plans: assessment.plans.map((plan) => plan.planId).join(','),
+      revision: String(preference.dietaryRevision),
+    });
+    router.push('/meal-plans/diet-repair?' + params.toString());
+  };
+  const persist = async (replace: boolean, input: DietPreferenceDraft) => {
+    setError(null);
     try {
-      const result = await saveMutation.mutateAsync(
-        dietMapper.toSaveDto({
-          ...confirmed,
-          ruleSetVersion: preview.ruleSetVersion,
-          rules: mergedRules,
-          ...(confirmed.practiceSchedule === PracticeSchedule.PERIODIC ? { scheduleDates } : {}),
-          allergies,
-          ingredientAllergies,
-          ingredientExclusions: exclusions,
-        })
-      );
-
-      if (result.requiresRuleReview) {
-        // Backend yêu cầu xem lại — quay về bước quy tắc, giữ nguyên lựa chọn.
-        setSaveError('Bộ quy tắc vừa được cập nhật. Vui lòng xem lại trước khi lưu.');
-        setStep('rules');
-        void previewQuery.refetch();
+      const preference = await save.mutateAsync(input);
+      setSaved(preference);
+      setBase(preference);
+      setImpact(null);
+      setPending(null);
+      if (preference.impactUnavailable || !preference.impact) {
+        setSaved({ ...preference, impactUnavailable: true });
+        toast.warning('Đã lưu thiết lập, chưa kiểm tra được ảnh hưởng lên thực đơn.');
         return;
       }
-      setSaved(result);
-      onSaved?.(result);
-    } catch (error) {
-      const code = getApiErrorCode(error);
-      if (code === 'INVALID_ALLERGEN_SELECTION') {
-        setSaveError('Danh mục dị ứng đã thay đổi. Vui lòng chọn lại thực phẩm từ danh sách.');
-        void allergenCatalog.refetch();
-        return;
-      }
-      if (code === 'INVALID_INGREDIENT_ALLERGIES') {
-        setSaveError(
-          'Một số nguyên liệu dị ứng không còn hoạt động. Vui lòng bỏ chúng và chọn lại từ danh mục chuẩn.'
-        );
-        return;
-      }
-      if (code === 'DIET_RULE_RECONFIRMATION_REQUIRED') {
-        setSaveError('Bộ quy tắc đã thay đổi. Vui lòng xem lại trước khi xác nhận.');
-        setStep('rules');
-        void previewQuery.refetch();
-        return;
-      }
-      if (code === 'INVALID_DIET_RULE_SELECTION') {
-        setSaveError('Lựa chọn chưa khớp bộ quy tắc mới. Đã tải lại, vui lòng xem lại quy tắc.');
-        setStep('rules');
-        void previewQuery.refetch();
-        return;
-      }
-      if (code === 'DIET_RULES_UNAVAILABLE') {
-        setConfigUnavailable(true);
-        setSaveError('Cấu hình chế độ ăn chưa sẵn sàng. Vui lòng thử lại sau.');
-        return;
-      }
-      if (code === 'DIET_SCHEDULE_REQUIRED') {
-        setSaveError('Chay kỳ cần ít nhất một ngày. Hãy quay lại bước 1 để thêm ngày.');
-        return;
-      }
-      if (code === 'INVALID_INGREDIENT_EXCLUSIONS') {
-        setSaveError('Danh sách kiêng có mục rỗng hoặc trùng. Vui lòng kiểm tra lại.');
-        return;
-      }
-      setSaveError('Lưu chế độ ăn thất bại. Vui lòng kiểm tra lại thông tin.');
+      toast.success('Đã lưu thiết lập ăn uống.');
+      if (replace && preference.impact.affectedMealCount > 0) repair(preference, preference.impact);
+      else onSaved?.(preference);
+    } catch (failure) {
+      fail(failure);
     }
   };
-
-  if (saved) {
-    return (
-      <Card>
-        <CardHeader>
-          <div className="flex items-start gap-3">
-            <CheckCircle2 aria-hidden className="mt-0.5 size-6 shrink-0 text-primary" />
-            <div className="flex flex-col gap-1">
-              <CardTitle className="text-balance">Đã lưu chế độ ăn của bạn</CardTitle>
-              <CardDescription className="text-pretty">
-                {saved.dietPatternLabel} · {saved.practiceScheduleLabel} · {saved.traditionLabel}.
-                Gợi ý công thức và thực đơn từ giờ sẽ tuân theo thiết lập này.
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        {saved.practiceSchedule === PracticeSchedule.PERIODIC && scheduleSlot && (
-          <CardContent>{scheduleSlot(saved)}</CardContent>
-        )}
-        {onCancel && (
-          <CardFooter>
-            <Button type="button" onClick={onCancel}>
-              Hoàn tất
-            </Button>
-          </CardFooter>
-        )}
-      </Card>
-    );
-  }
-
-  const current = STEPS[stepIndex]!;
-  const summary = (
-    <DietWizardSummary
-      selection={selection}
-      scheduleDates={scheduleDates}
-      rules={mergedRules}
-      allergies={allergies}
-      ingredientAllergies={ingredientAllergies}
-      exclusions={exclusions}
-      onEdit={step === 'confirm' ? (section) => goTo(section) : undefined}
-      compact={step !== 'confirm'}
-    />
-  );
-
+  const review = async () => {
+    setError(null);
+    if (catalog.isPending || catalog.isError || !catalog.data) {
+      setError('Hãy tải lại danh mục dị ứng trước khi lưu.');
+      return;
+    }
+    if (
+      allergies.some((item) => !catalog.data.some((option) => option.code === item.allergenCode))
+    ) {
+      setError(
+        'Có dị ứng không còn trong danh mục. Hãy kiểm tra và chọn lại; lựa chọn đã lưu chưa bị xóa.'
+      );
+      return;
+    }
+    if (ingredientAllergies.some((item) => !item.ingredientActive)) {
+      setError('Có nguyên liệu dị ứng đã ngừng hoạt động. Hãy bỏ hoặc chọn lại trước khi lưu.');
+      return;
+    }
+    if (allergySearch.trim() || exclusionSearch.trim()) {
+      setError('Hãy chọn kết quả tìm kiếm hoặc xóa nội dung đang nhập trước khi lưu.');
+      return;
+    }
+    if (policy.isError || !policy.data?.policyVersion) {
+      setError('Chưa tải được chính sách ăn uống. Vui lòng thử lại.');
+      return;
+    }
+    if (base && !base.selectionValid) {
+      setError('Thiết lập hiện tại chưa đủ dữ liệu. Hãy tải lại trước khi lưu.');
+      setConflict(true);
+      return;
+    }
+    const input: DietPreferenceDraft = {
+      ...selection,
+      policyVersion: policy.data.policyVersion,
+      expectedDietaryRevision: base?.dietaryRevision ?? 0,
+      allergies,
+      ingredientAllergies,
+      ingredientExclusions: exclusions,
+    };
+    try {
+      const assessment = await preview.mutateAsync(input);
+      if (assessment.affectedMealCount > 0) {
+        setPending(input);
+        setImpact(assessment);
+      } else await persist(false, input);
+    } catch (failure) {
+      fail(failure);
+    }
+  };
+  const recheck = async () => {
+    if (!saved) return;
+    setError(null);
+    try {
+      const assessment = await preview.mutateAsync({
+        ...selectionOf(saved),
+        policyVersion: saved.policyVersion,
+        expectedDietaryRevision: saved.dietaryRevision,
+        allergies: saved.allergies,
+        ingredientAllergies: saved.ingredientAllergies,
+        ingredientExclusions: saved.ingredientExclusions,
+      });
+      const preference = { ...saved, impact: assessment, impactUnavailable: false };
+      setSaved(preference);
+      if (assessment.affectedMealCount > 0) {
+        setImpact(assessment);
+        setPending(null);
+      } else {
+        toast.success('Không có thực đơn nào bị ảnh hưởng.');
+        onSaved?.(preference);
+      }
+    } catch (failure) {
+      setError('Thiết lập đã được lưu. ' + getApiErrorMessage(failure));
+    }
+  };
+  const selectAction = (replace: boolean) => {
+    if (pending) void persist(replace, pending);
+    else if (saved && impact) {
+      if (replace) repair(saved, impact);
+      else {
+        setImpact(null);
+        onSaved?.(saved);
+      }
+    }
+  };
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-semibold text-balance">Thiết lập chế độ ăn</h2>
-          <p className="text-sm text-pretty text-muted-foreground">
-            Hệ thống dùng thiết lập này để lọc món, gợi ý công thức và lập thực đơn an toàn cho bạn.
-          </p>
-        </div>
-        {onCancel && (
-          <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-            <X data-icon="inline-start" />
-            Hủy
-          </Button>
-        )}
-      </div>
-
-      <nav aria-label="Các bước thiết lập">
-        <ol className="grid grid-cols-4 gap-2">
-          {STEPS.map((s, index) => {
-            const active = s.id === step;
-            const done = index < stepIndex;
-            const reachable = canReach(s.id);
-            return (
-              <li key={s.id}>
-                <button
-                  type="button"
-                  disabled={!reachable || saveMutation.isPending}
-                  aria-current={active ? 'step' : undefined}
-                  onClick={() => goTo(s.id)}
-                  className="group flex w-full flex-col gap-2 text-left disabled:cursor-not-allowed"
-                >
-                  <span
-                    aria-hidden
-                    className={cn(
-                      'h-1 w-full rounded-full bg-muted transition-colors',
-                      (active || done) && 'bg-primary'
-                    )}
-                  />
-                  <span className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        'flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums',
-                        active && 'border-primary bg-primary text-primary-foreground',
-                        done && 'border-primary text-primary',
-                        !active && !done && 'text-muted-foreground'
-                      )}
-                    >
-                      {done ? <Check aria-hidden className="size-3.5" /> : index + 1}
-                    </span>
-                    <span
-                      className={cn(
-                        'hidden truncate text-sm sm:inline',
-                        active ? 'font-semibold' : 'text-muted-foreground',
-                        reachable && !active && 'group-hover:text-foreground'
-                      )}
-                    >
-                      {s.title}
-                    </span>
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-        <p className="mt-2 text-sm font-medium sm:hidden">
-          Bước {stepIndex + 1}/{STEPS.length}: {current.title}
-        </p>
-      </nav>
-
-      <div
-        className={cn(
-          'grid items-start gap-6',
-          step !== 'confirm' && 'lg:grid-cols-[minmax(0,1fr)_18rem]'
-        )}
-      >
+    <>
+      {saved ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-balance">{current.title}</CardTitle>
-            <CardDescription className="text-pretty">{current.description}</CardDescription>
+            <CardTitle>Đã lưu thiết lập ăn uống</CardTitle>
+            <CardDescription>
+              Thiết lập mới đã có hiệu lực. Thực đơn chỉ thay đổi khi bạn áp dụng phương án thay
+              món.
+            </CardDescription>
           </CardHeader>
-
-          <CardContent className="flex flex-col gap-6">
-            {step === 'diet' && (
-              <DietSelector
-                value={selection}
-                onChange={(next) => {
-                  setStepError(null);
-                  setSelection(next);
-                }}
-                scheduleSlot={
-                  isPeriodic && (
-                    <div className="flex flex-col gap-3 rounded-xl border bg-muted/30 p-4">
-                      <div className="flex flex-col gap-0.5">
-                        <p className="text-sm font-medium">Ngày chay trong năm</p>
-                        <p className="text-xs text-muted-foreground">
-                          Cần ít nhất một ngày. Thực đơn và gợi ý chỉ lọc chay vào các ngày này.
-                        </p>
-                      </div>
-                      <ScheduleDatePicker
-                        dates={scheduleDates}
-                        onChange={(dates) => {
-                          setStepError(null);
-                          setScheduleDates(dates);
-                        }}
-                      />
-                    </div>
-                  )
-                }
-              />
-            )}
-
-            {step === 'rules' && (
-              <>
-                {previewQuery.isPending && (
-                  <div className="flex flex-col gap-2" aria-label="Đang tải bộ quy tắc">
-                    <Skeleton className="h-5 w-40" />
-                    <Skeleton className="h-14 w-full" />
-                    <Skeleton className="h-14 w-full" />
-                    <Skeleton className="h-14 w-full" />
-                  </div>
-                )}
-                {previewQuery.isError && (
-                  <ErrorState
-                    title="Không tải được bộ quy tắc."
-                    error={previewQuery.error}
-                    onRetry={() => void previewQuery.refetch()}
-                  />
-                )}
-                {mergedRules && (
-                  <DietRuleList
-                    rules={mergedRules}
-                    onToggle={(id, enabled) =>
-                      setRuleOverrides((prev) => ({ ...prev, [id]: enabled }))
-                    }
-                  />
-                )}
-              </>
-            )}
-
-            {step === 'restrictions' && (
-              <>
-                <AllergyEditor
-                  value={allergies}
-                  onChange={setAllergies}
-                  search={allergySearch}
-                  onSearchChange={setAllergySearch}
-                  catalog={allergenCatalog.data ?? []}
-                  loading={allergenCatalog.isPending}
-                  failed={allergenCatalog.isError}
-                  onRetry={() => void allergenCatalog.refetch()}
-                  ingredientValue={ingredientAllergies}
-                  onIngredientChange={setIngredientAllergies}
-                />
-                <ExclusionEditor
-                  value={exclusions}
-                  onChange={setExclusions}
-                  search={exclusionSearch}
-                  onSearchChange={setExclusionSearch}
-                />
-              </>
-            )}
-
-            {step === 'confirm' && (
-              <>
-                {summary}
-                {restrictionIssue && (
-                  <Alert>
-                    <AlertDescription>{restrictionIssue}</AlertDescription>
-                  </Alert>
-                )}
-              </>
-            )}
-
-            {(saveError || configUnavailable) && (
+          <CardContent className="flex flex-col gap-4">
+            <DietImpactNotice
+              affectedCount={saved.impact?.affectedMealCount ?? 0}
+              assessmentUnavailable={saved.impactUnavailable}
+              onRecheck={() => void recheck()}
+              onRepair={saved.impact ? () => repair(saved, saved.impact!) : undefined}
+              pending={busy}
+            />
+            {error && (
               <Alert variant="destructive">
-                <AlertTitle>Chưa lưu được</AlertTitle>
-                <AlertDescription>
-                  {saveError ?? 'Cấu hình chế độ ăn chưa sẵn sàng. Nút lưu tạm thời bị khóa.'}
-                </AlertDescription>
+                <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
           </CardContent>
-
-          <CardFooter className="flex flex-col items-stretch gap-3 border-t pt-6">
-            {stepError && (
-              <p role="alert" className="text-sm text-destructive">
-                {stepError}
-              </p>
-            )}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              {stepIndex > 0 ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => goTo(STEPS[stepIndex - 1]!.id)}
-                  disabled={saveMutation.isPending}
-                >
-                  <ArrowLeft data-icon="inline-start" />
-                  Quay lại
-                </Button>
-              ) : (
-                <span />
-              )}
-              <div className="flex items-center gap-2">
-                {step === 'rules' && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => void previewQuery.refetch()}
-                    disabled={previewQuery.isFetching}
-                  >
-                    <RefreshCw data-icon="inline-start" />
-                    Tải lại
-                  </Button>
-                )}
-                {step === 'confirm' ? (
-                  <Button
-                    type="button"
-                    onClick={() => void handleSave()}
-                    disabled={
-                      !preview || configUnavailable || saveMutation.isPending || !!restrictionIssue
-                    }
-                  >
-                    {saveMutation.isPending ? (
-                      <Loader2 data-icon="inline-start" className="animate-spin" />
-                    ) : (
-                      <Check data-icon="inline-start" />
-                    )}
-                    {saveMutation.isPending ? 'Đang lưu…' : 'Lưu chế độ ăn'}
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    onClick={() => goTo(STEPS[stepIndex + 1]!.id)}
-                    disabled={step === 'rules' && !preview}
-                  >
-                    Tiếp tục
-                    <ArrowRight data-icon="inline-end" />
-                  </Button>
-                )}
-              </div>
-            </div>
+          <CardFooter>
+            <Button onClick={() => onSaved?.(saved)} disabled={busy}>
+              Hoàn tất
+            </Button>
           </CardFooter>
         </Card>
-
-        {step !== 'confirm' && (
-          <aside className="hidden lg:sticky lg:top-24 lg:block" aria-label="Tóm tắt thiết lập">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Tóm tắt</CardTitle>
-              </CardHeader>
-              <CardContent>{summary}</CardContent>
-            </Card>
-          </aside>
-        )}
-      </div>
-    </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Thiết lập ăn uống</CardTitle>
+            <CardDescription>
+              Chọn thực phẩm bạn ăn. Mọi giới hạn được áp dụng mỗi ngày.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-7">
+            <fieldset disabled={busy} className="flex flex-col gap-7">
+              <FoodPreferenceFields value={selection} onChange={setSelection} disabled={busy} />
+              <AllergyEditor
+                value={allergies}
+                onChange={setAllergies}
+                search={allergySearch}
+                onSearchChange={setAllergySearch}
+                catalog={catalog.data ?? []}
+                loading={catalog.isPending}
+                failed={catalog.isError}
+                onRetry={() => void catalog.refetch()}
+                ingredientValue={ingredientAllergies}
+                onIngredientChange={setIngredientAllergies}
+              />
+              <ExclusionEditor
+                value={exclusions}
+                onChange={setExclusions}
+                search={exclusionSearch}
+                onSearchChange={setExclusionSearch}
+              />
+            </fieldset>
+            {policy.isError && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  Không tải được chính sách ăn uống.{' '}
+                  <Button variant="link" onClick={() => void policy.refetch()}>
+                    Thử lại
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            {conflict && (
+              <Button
+                variant="outline"
+                className="w-fit"
+                onClick={() => void reload()}
+                disabled={profile.isFetching}
+              >
+                Tải lại thiết lập hiện tại
+              </Button>
+            )}
+          </CardContent>
+          <CardFooter className="flex flex-wrap gap-3">
+            <Button
+              disabled={busy || catalog.isPending || policy.isPending}
+              onClick={() => void review()}
+            >
+              {busy ? 'Đang kiểm tra…' : 'Xem lại và lưu'}
+            </Button>
+            {onCancel && (
+              <Button variant="outline" disabled={busy} onClick={onCancel}>
+                Hủy
+              </Button>
+            )}
+          </CardFooter>
+        </Card>
+      )}
+      <DietImpactDialog
+        open={!!impact}
+        profileAlreadySaved={!!saved}
+        planCount={impact?.affectedPlanCount ?? 0}
+        meals={impact ? impactMealViews(impact) : []}
+        busy={busy}
+        error={error}
+        onReplace={() => selectAction(true)}
+        onKeep={() => selectAction(false)}
+        onBack={() => {
+          setImpact(null);
+          setPending(null);
+        }}
+      />
+    </>
   );
 }

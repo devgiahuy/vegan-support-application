@@ -156,6 +156,7 @@ Edit, regenerate, reanalyze, or confirm a program
       "items": {
         "type": "object",
         "required": [
+          "compatibility",
           "id",
           "title",
           "goal",
@@ -172,6 +173,31 @@ Edit, regenerate, reanalyze, or confirm a program
           "updatedAt"
         ],
         "properties": {
+          "compatibility": {
+            "type": "object",
+            "_truncated": true
+          },
+          "sourceProgramId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "effectiveFrom": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "replacedByProgramId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "_truncated": true
+          },
           "id": {
             "type": "string",
             "_truncated": true
@@ -250,18 +276,7 @@ Edit, regenerate, reanalyze, or confirm a program
         "limit": {
           "type": "integer"
         },
-        "total": {
-          "type": "integer"
-        },
-        "totalPages": {
-          "type": "integer"
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-  "additionalProperties": false
-}
+  …(truncated — xem api-catalog.json)
 ```
 
 #### MealProgramResponse
@@ -283,6 +298,7 @@ Edit, regenerate, reanalyze, or confirm a program
     "data": {
       "type": "object",
       "required": [
+        "compatibility",
         "id",
         "title",
         "goal",
@@ -303,6 +319,59 @@ Edit, regenerate, reanalyze, or confirm a program
         "analysis"
       ],
       "properties": {
+        "compatibility": {
+          "type": "object",
+          "required": [
+            "status",
+            "dietaryRevision",
+            "assessedFrom",
+            "affectedMealCount",
+            "items"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "_truncated": true
+            },
+            "dietaryRevision": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "assessedFrom": {
+              "type": "string",
+              "_truncated": true
+            },
+            "affectedMealCount": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "items": {
+              "type": "array",
+              "_truncated": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "sourceProgramId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "effectiveFrom": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "replacedByProgramId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
         "id": {
           "type": "string",
           "format": "uuid"
@@ -356,60 +425,6 @@ Edit, regenerate, reanalyze, or confirm a program
           ],
           "format": "date-time"
         },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "generationParameters": {
-          "type": "object"
-        },
-        "failureSummary": {
-          "type": [
-            "object",
-            "null"
-          ]
-        },
-        "weeks": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "_truncated": true
-          }
-        },
-        "analysis": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "required": [
-            "id",
-            "version",
-            "status",
-            "invalidatedFromWeekIndex",
-            "warnings",
-            "nutritionSummary",
-            "weeklyAnalyses",
-            "createdAt"
-          ],
-          "properties": {
-            "id": {
-              "type": "string",
-              "_truncated": true
-            },
-            "version": {
-              "type": "integer",
-              "_truncated": true
-            },
-            "status": {
-              "type": "string",
-              "_truncated": true
-            },
-            "invalidatedFromWeekIndex": {
-              "type": [
   …(truncated — xem api-catalog.json)
 ```
 

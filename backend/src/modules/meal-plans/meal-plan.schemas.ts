@@ -1,3 +1,4 @@
+import { compatibilitySchema } from '../dietary-impact/dietary-impact.schemas.js';
 import {
   MealGoal,
   MealSlotStatus,
@@ -234,6 +235,7 @@ const micronutrientSummarySchema = z
 
 const mealPlanSummarySchema = z
   .object({
+    compatibility: compatibilitySchema,
     id: z.string().uuid(),
     weekStart: dateOnlySchema,
     goal: z.enum(MealGoal),

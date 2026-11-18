@@ -1,81 +1,38 @@
-/**
- * DTO cho luồng thiết lập chế độ ăn/dị ứng/loại trừ (đồng bộ backend
- * `profile.schemas.ts`: `dietRulePreviewResponseSchema`, `saveDietPreferencesRequestSchema`,
- * `dietPreferenceResponseSchema`). Đây là ràng buộc backend-enforced — frontend chỉ thu
- * thập và hiển thị, KHÔNG tự lọc thay backend.
- */
-export interface DietRulePreviewItemDto {
-  id?: string;
-  code?: string;
-  label?: string;
-  description?: string;
-  defaultEnabled?: boolean;
-  hardConstraint?: boolean;
-  source?: string;
-  version?: number;
-}
+import type { DietaryImpactDto } from './diet-impact.dto';
 
-/** `POST /diet-rules/preview` response. */
+export interface FoodAllowancesDto {
+  allowEggs: boolean;
+  allowDairy: boolean;
+  allowHoney: boolean;
+  allowFivePungent: boolean;
+}
 export interface DietRulePreviewResponseDto {
   success?: boolean;
   data?: {
-    ruleSetVersion?: number;
-    selection?: { dietPattern?: string; practiceSchedule?: string; tradition?: string };
-    rules?: (DietRulePreviewItemDto | null)[];
+    policyVersion?: number;
+    selection?: Partial<FoodAllowancesDto>;
+    constraints?: { code?: string; label?: string; allowed?: boolean }[];
   } | null;
-  meta?: null;
 }
-
-export interface SelectedDietRuleDto {
-  ruleDefinitionId: string;
-  enabled: boolean;
+export interface SaveDietPreferencesRequestDto extends FoodAllowancesDto {
+  policyVersion: number;
+  expectedDietaryRevision: number;
+  allergies: { allergenCode: string; label?: string; severity?: string }[];
+  ingredientAllergies?: { ingredientId: string; severity?: string }[];
+  ingredientExclusions: { ingredientId?: string; ingredientName: string; reason?: string }[];
 }
-
-export interface AllergyInputDto {
-  allergenCode: string;
-  label?: string;
-  severity?: string;
+export interface DietPreferenceDto extends Partial<FoodAllowancesDto> {
+  policyVersion?: number;
+  dietaryRevision?: number;
+  confirmedAt?: string;
+  requiresRuleReview?: boolean;
+  allergies?: { allergenCode?: string; label?: string | null; severity?: string | null; active?: boolean }[];
+  ingredientAllergies?: { ingredientId?: string; ingredientName?: string; severity?: string; ingredientActive?: boolean }[];
+  ingredientExclusions?: { ingredientId?: string | null; ingredientName?: string; reason?: string | null; active?: boolean }[];
+  impact?: DietaryImpactDto;
+  impactUnavailable?: boolean;
 }
-
-export interface IngredientAllergyInputDto {
-  ingredientId: string;
-  severity?: string;
-}
-
-export interface IngredientExclusionInputDto {
-  ingredientId?: string;
-  ingredientName: string;
-  reason?: string;
-}
-
-/** `PUT /users/me/diet-preferences` request. */
-export interface SaveDietPreferencesRequestDto {
-  dietPattern: string;
-  practiceSchedule: string;
-  tradition: string;
-  ruleSetVersion: number;
-  rules: SelectedDietRuleDto[];
-  scheduleDates?: string[];
-  allergies: AllergyInputDto[];
-  /** Bỏ qua = giữ nguyên lựa chọn hiện có; `[]` = xoá hết. Tối đa 100, không trùng. */
-  ingredientAllergies?: IngredientAllergyInputDto[];
-  ingredientExclusions: IngredientExclusionInputDto[];
-}
-
-/** `PUT /users/me/diet-preferences` response — cùng shape `dietPreference` trong `GET /users/me`. */
 export interface DietPreferenceResponseDto {
   success?: boolean;
-  data?: Record<string, unknown> | null;
-  meta?: null;
-}
-
-/** `PUT /users/me/diet-schedule` response — chỉ cập nhật ngày chay kỳ, không đụng rule set. */
-export interface DietScheduleResponseDto {
-  success?: boolean;
-  data?: {
-    practiceSchedule?: string;
-    timezone?: string;
-    dates?: string[];
-  } | null;
-  meta?: null;
+  data?: DietPreferenceDto | null;
 }

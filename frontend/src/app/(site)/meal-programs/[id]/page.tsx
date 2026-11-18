@@ -1,4 +1,5 @@
 'use client';
+import { DietaryPlanNotice } from '@/features/diet-preferences/components/dietary-plan-notice';
 
 import React, { useState, use } from 'react';
 import { useRouter } from 'next/navigation';
@@ -19,6 +20,8 @@ import { ProgramConfirmDialog } from '@/features/meal-program/components/program
 import { RegenerateWeekDialog } from '@/features/meal-program/components/regenerate-week-dialog';
 import { DownstreamInvalidationBanner } from '@/features/meal-program/components/downstream-invalidation-banner';
 import { VersionConflictModal } from '@/features/meal-program/components/version-conflict-modal';
+import Link from 'next/link';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface MealProgramDetailPageProps {
   params: Promise<{ id: string }>;
@@ -103,12 +106,43 @@ export default function MealProgramDetailPage({ params }: MealProgramDetailPageP
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl space-y-6">
       {/* Tiêu đề & Thông tin tổng quan lộ trình */}
+      <DietaryPlanNotice
+        compatibility={program.compatibility}
+        planIds={program.selectedPlanIds}
+        programId={program.id}
+      />
       <ProgramHeader
         program={program}
         onOpenConfirmDialog={() => setConfirmDialogOpen(true)}
         onArchiveProgram={handleArchiveProgram}
         isArchiving={updateMutation.isPending}
       />
+      {program.sourceProgramId && (
+        <Alert>
+          <AlertTitle>Bản điều chỉnh theo thiết lập ăn uống</AlertTitle>
+          <AlertDescription>
+            Phần điều chỉnh áp dụng từ{' '}
+            {program.effectiveFrom?.split('-').reverse().join('/') ?? 'ngày được chọn'}. Hãy thay
+            các món chưa phù hợp rồi xác nhận bản này.{' '}
+            <Link href={`/meal-programs/${program.sourceProgramId}`} className="underline">
+              Xem bản nguồn
+            </Link>
+            .
+          </AlertDescription>
+        </Alert>
+      )}
+      {program.replacedByProgramId && (
+        <Alert>
+          <AlertTitle>Lộ trình đã có bản điều chỉnh</AlertTitle>
+          <AlertDescription>
+            Phần ngày tương lai đã được thay thế bởi{' '}
+            <Link href={`/meal-programs/${program.replacedByProgramId}`} className="underline">
+              bản điều chỉnh đã xác nhận
+            </Link>
+            . Nội dung bản này được giữ để xem lại lịch sử.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Cảnh báo vô hiệu hóa hạ lưu */}
       <DownstreamInvalidationBanner
@@ -174,6 +208,7 @@ export default function MealProgramDetailPage({ params }: MealProgramDetailPageP
           {/* Chi tiết thực đơn tuần đã chọn */}
           {selectedWeek && (
             <WeekPlanView
+              dietaryWarnings={program.compatibility?.items}
               week={selectedWeek}
               isDraft={isDraft}
               onOpenRegenerateModal={(wNum) => setRegenerateWeekNumber(wNum)}

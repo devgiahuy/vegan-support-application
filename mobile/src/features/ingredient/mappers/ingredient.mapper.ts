@@ -1,3 +1,4 @@
+import { dietaryGroupLabel } from '@/common/constants/dietary-groups';
 import { BaseMapper, pickField, safeArray, safeEnum, safeNumber, safeString } from '@/lib/mapper';
 import type { PaginationResult } from '@/types/api';
 import type { IngredientDto, IngredientListResponseDto, IngredientResolveResponseDto } from '../types/ingredient.dto';
@@ -40,6 +41,8 @@ export class IngredientMapper extends BaseMapper<IngredientDto, Ingredient> {
       canonicalName: safeString(pickField(dto, ['canonicalName', 'canonical_name', 'name'], '')),
       foodGroup: group,
       foodGroupLabel: FOOD_GROUP_LABELS[group],
+      dietaryGroups: safeArray<string>(dto?.dietaryGroups),
+      dietaryGroupLabels: safeArray<string>(dto?.dietaryGroups).map(dietaryGroupLabel),
       aliases: safeArray<unknown, IngredientAlias>(pickField(dto, ['aliases'], null), (a) =>
         toAlias(a)
       ).filter((a) => a.alias.length > 0),
@@ -85,10 +88,6 @@ export class IngredientMapper extends BaseMapper<IngredientDto, Ingredient> {
           compatible: entry?.compatible === true,
         })
       ).filter((entry) => entry.label.length > 0),
-      traditionWarnings: safeArray<{ label?: string } | null, string>(
-        pickField(item, ['traditionWarnings'], null),
-        (entry) => safeString(entry?.label)
-      ).filter((label) => label.length > 0),
     })).filter((item) => item.id.length > 0);
     return {
       query: safeString(pickField(data, ['query'], '')),

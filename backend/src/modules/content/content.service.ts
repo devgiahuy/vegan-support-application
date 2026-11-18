@@ -727,6 +727,9 @@ export class ContentService {
       authorNutrition,
       mealPlannerEligible: false,
       allergenCodes,
+      dietaryGroups: [
+        ...new Set(canonicalIngredients.flatMap((ingredient) => ingredient.dietaryGroups)),
+      ].sort(),
       traditionWarnings: [...warningMap.values()],
       ingredients: resolved,
       steps: recipe.steps.map((step) => ({
@@ -811,7 +814,12 @@ export class ContentService {
             revision.status === 'PUBLISHED' &&
             detail.mealPlannerEligible,
           allergenCodes: stringList(detail.allergenCodes),
-          traditionWarnings: traditionWarningList(detail.traditionWarnings),
+          dietaryGroups: [
+            ...new Set([
+              ...stringList(detail.dietaryGroups),
+              ...revision.ingredients.flatMap((line) => line.ingredient?.dietaryGroups ?? []),
+            ]),
+          ].sort(),
           dietCompatibilities: revision.dietCompatibility.map((compatibility) => ({
             dietPattern: compatibility.dietPattern,
             compatible: compatibility.compatible,

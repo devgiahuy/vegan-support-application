@@ -704,9 +704,7 @@ export class ChatService {
   ): string {
     const context = personalized
       ? {
-          dietPattern: profile?.dietPreference?.dietPattern ?? null,
-          practiceSchedule: profile?.dietPreference?.practiceSchedule ?? null,
-          tradition: profile?.dietPreference?.tradition ?? null,
+          dietaryPreferences: profile?.dietPreference ?? null,
           allergenCodes: profile?.allergies.map((item) => item.allergenCode) ?? [],
         }
       : null;

@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
   Clock,
-  Flame,
-  Dumbbell,
   Star,
   Share2,
   CalendarPlus,
@@ -17,15 +15,11 @@ import {
   Home,
   Utensils,
   Lightbulb,
-  Heart,
   MessageSquare,
   Users,
-  ShieldCheck,
   Leaf,
   Plus,
   Minus,
-  Hourglass,
-  AlertTriangle,
   Pencil,
   Info,
 } from 'lucide-react';
@@ -35,19 +29,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { NutritionFactsPanel } from '@/features/food-data/components/nutrition-facts-panel';
 import { RecipeNutritionCard } from '@/features/recipe-nutrition/components/recipe-nutrition-card';
 import { RecipeCard } from './recipe-card';
 import { RecipeAllergenHighlight } from './recipe-allergen-highlight';
 import type { Recipe } from '../types/recipe.model';
-import {
-  getAllergenName,
-  getTraditionName,
-  getDietPatternName,
-  getDietReasonLabel,
-} from '@/common/constants/diet-labels';
 import { VoteControl } from '@/components/shared/vote-control';
 import { CommentSection } from '@/components/shared/comment-section';
 import { CommunitySummary } from '@/features/community/components/community-summary';
@@ -61,6 +48,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { UserRole } from '@/common/enums';
 import { ReviewStatusBanner } from '@/features/review/components/review-status-banner';
 import { ReviewHistoryDialog } from '@/features/review/components/review-history-dialog';
+import { dietaryGroupLabel } from '@/features/ingredient/constants/dietary-groups';
 import { getAuthorInitials, resolveAuthorDisplay } from '@/lib/author-display';
 
 interface RecipeDetailViewProps {
@@ -86,8 +74,6 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
   } | null>(null);
 
   // Tỷ lệ nhân khẩu phần
-  const baseServings = recipe.servings || 2;
-  const ratio = servings / baseServings;
 
   const toggleIngredient = (name: string) => {
     setCheckedIngredients((prev) =>
@@ -110,20 +96,6 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
       },
     });
   };
-
-  const incompatibilities = (recipe.dietCompatibilities || []).filter((c) => !c.compatible);
-  const allergens =
-    recipe.allergens && recipe.allergens.length > 0
-      ? recipe.allergens
-      : (recipe.allergenCodes || []).map((code) => ({
-          code,
-          name: getAllergenName(code),
-        }));
-  const hasCompatibilityInfo =
-    allergens.length > 0 ||
-    (recipe.traditionWarnings && recipe.traditionWarnings.length > 0) ||
-    incompatibilities.length > 0 ||
-    typeof recipe.mealPlannerEligible === 'boolean';
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 lg:px-6">
@@ -267,9 +239,12 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
 
           {/* Hero Media Cover */}
           <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-border/60 shadow-md bg-muted">
-            <img
+            <Image
               src={recipe.image}
               alt={recipe.title}
+              fill
+              sizes="(max-width: 768px) 100vw, 70vw"
+              unoptimized
               className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
@@ -527,75 +502,18 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
           </div>
 
           {/* Tương thích & dị ứng từ backend — chỉ hiện khi có dữ liệu thật */}
-          {/* {hasCompatibilityInfo && (
-            <Card className="border-border/60 shadow-sm">
-              <CardHeader className="pb-3 border-b">
-                <CardTitle className="text-base font-bold flex items-center gap-2 text-foreground">
-                  <ShieldCheck className="h-4 w-4 text-primary" /> Tương thích & dị ứng
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-5 space-y-3 text-sm">
-                {allergens.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground">
-                      Có thể chứa dị ứng:
-                    </p>
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      {allergens.map((allergen) => (
-                        <Badge
-                          key={allergen.code}
-                          variant="outline"
-                          className="rounded-full border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                        >
-                          {allergen.name || allergen.code}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {typeof recipe.mealPlannerEligible === 'boolean' && !recipe.mealPlannerEligible && (
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Công thức chưa đủ điều kiện đưa vào thực đơn tự động (nguyên liệu chưa chuẩn hóa
-                    hết hoặc thiếu chỉ số dinh dưỡng).
-                  </p>
-                )}
-                {recipe.traditionWarnings && recipe.traditionWarnings.length > 0 && (
-                  <ul className="space-y-1.5">
-                    {recipe.traditionWarnings.map((w) => (
-                      <li
-                        key={`${w.tradition}-${w.warningCode}`}
-                        className="text-xs text-muted-foreground leading-relaxed"
-                      >
-                        <span className="font-semibold text-foreground">
-                          {w.traditionName || w.traditionLabel || getTraditionName(w.tradition)}:
-                        </span>{' '}
-                        {w.label || w.warningCode}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {incompatibilities.map((c) => {
-                  const patternDisplay =
-                    c.dietPatternName || c.dietPatternLabel || getDietPatternName(c.dietPattern);
-                  const reasonsDisplay =
-                    c.reasonLabels && c.reasonLabels.length > 0
-                      ? c.reasonLabels.join(', ')
-                      : c.reasonCodes && c.reasonCodes.length > 0
-                        ? c.reasonCodes.map(getDietReasonLabel).join(', ')
-                        : 'đang cập nhật nguyên nhân';
-                  return (
-                    <p
-                      key={c.dietPattern}
-                      className="text-xs text-muted-foreground leading-relaxed"
-                    >
-                      <span className="font-semibold text-foreground">{patternDisplay}:</span> chưa
-                      tương thích ({reasonsDisplay}).
-                    </p>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          )} */}
+          {!!recipe.dietaryGroups?.length && (
+            <section className="flex flex-col gap-3" aria-label="Nhóm thực phẩm đã ghi nhận">
+              <h2 className="text-base font-semibold">Nhóm thực phẩm đã ghi nhận</h2>
+              <div className="flex flex-wrap gap-2">
+                {recipe.dietaryGroups.map((group) => (
+                  <Badge key={group} variant="outline">
+                    {dietaryGroupLabel(group)}
+                  </Badge>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* REVIEWS & COMMUNITY FEEDBACK — chỉ hiện khi có dữ liệu thật */}
           {((recipe.reviews && recipe.reviews.length > 0) ||

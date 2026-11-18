@@ -1,3 +1,4 @@
+import type { DietaryCompatibility } from '@/features/diet-preferences/types/diet-impact.model';
 import type { MealProgramGoalDto, MealProgramStatusDto } from './meal-program.dto';
 
 export type ProgramWeekStatus = 'PENDING' | 'READY' | 'FAILED';
@@ -63,6 +64,10 @@ export interface ProgramAnalysis {
 }
 
 export interface MealProgram {
+  compatibility: DietaryCompatibility | null;
+  sourceProgramId: string | null;
+  effectiveFrom: string | null;
+  replacedByProgramId: string | null;
   id: string;
   title: string;
   goal: MealProgramGoalDto;

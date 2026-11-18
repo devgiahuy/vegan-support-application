@@ -1,3 +1,4 @@
+import type { DietaryImpactService } from '../dietary-impact/dietary-impact.service.js';
 import type { Request, Response } from 'express';
 import { AppError } from '../../common/errors/app-error.js';
 import {
@@ -24,13 +25,27 @@ function userId(request: Request): string {
 }
 
 export class MealProgramController {
-  constructor(private readonly service: MealProgramService) {}
+  constructor(
+    private readonly service: MealProgramService,
+    private readonly impact: DietaryImpactService,
+  ) {}
   create = async (request: Request, response: Response): Promise<void> => {
     const data = await this.service.create(
       userId(request),
       getValidatedBody<CreateMealProgramInput>(request),
     );
-    response.status(201).json(mealProgramResponseSchema.parse({ success: true, data, meta: null }));
+    response
+      .status(201)
+      .json(
+        mealProgramResponseSchema.parse({
+          success: true,
+          data: {
+            ...data,
+            compatibility: await this.impact.programCompatibility(userId(request), data.id),
+          },
+          meta: null,
+        }),
+      );
   };
   list = async (request: Request, response: Response): Promise<void> => {
     const result = await this.service.list(
@@ -40,7 +55,12 @@ export class MealProgramController {
     response.status(200).json(
       mealProgramListResponseSchema.parse({
         success: true,
-        data: result.data,
+        data: await Promise.all(
+          result.data.map(async (program) => ({
+            ...program,
+            compatibility: await this.impact.programCompatibility(userId(request), program.id),
+          })),
+        ),
         meta: result.meta,
       }),
     );
@@ -50,7 +70,18 @@ export class MealProgramController {
       userId(request),
       getValidatedParams<{ id: string }>(request).id,
     );
-    response.status(200).json(mealProgramResponseSchema.parse({ success: true, data, meta: null }));
+    response
+      .status(200)
+      .json(
+        mealProgramResponseSchema.parse({
+          success: true,
+          data: {
+            ...data,
+            compatibility: await this.impact.programCompatibility(userId(request), data.id),
+          },
+          meta: null,
+        }),
+      );
   };
   patch = async (request: Request, response: Response): Promise<void> => {
     const data = await this.service.patch(
@@ -58,6 +89,17 @@ export class MealProgramController {
       getValidatedParams<{ id: string }>(request).id,
       getValidatedBody<PatchMealProgramInput>(request),
     );
-    response.status(200).json(mealProgramResponseSchema.parse({ success: true, data, meta: null }));
+    response
+      .status(200)
+      .json(
+        mealProgramResponseSchema.parse({
+          success: true,
+          data: {
+            ...data,
+            compatibility: await this.impact.programCompatibility(userId(request), data.id),
+          },
+          meta: null,
+        }),
+      );
   };
 }

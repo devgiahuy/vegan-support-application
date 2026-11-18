@@ -14,6 +14,7 @@ import { PlanHero } from '@/features/meal-plan/components/plan-hero';
 import { PlanNutritionTargets } from '@/features/meal-plan/components/plan-nutrition-targets';
 import { PlanSummary } from '@/features/meal-plan/components/plan-summary';
 import { PlanWarningsBanner } from '@/features/meal-plan/components/plan-warnings-banner';
+import { DietaryCompatibilityBanner } from '@/features/diet-preferences/components/dietary-compatibility-banner';
 import { SlotShoppingSheet } from '@/features/meal-plan/components/slot-shopping-sheet';
 import {
   useDeleteMealPlanMutation,
@@ -229,6 +230,8 @@ export default function MealPlanDetailScreen() {
         </View>
 
         <PlanHero plan={plan} />
+        <DietaryCompatibilityBanner compatibility={plan.compatibility}
+          repairHref={`/diet-repair?planIds=${encodeURIComponent(plan.id)}&revision=${plan.compatibility?.dietaryRevision ?? 0}` as Href} />
         {plan.userSummary ? <PlanSummary summary={plan.userSummary} /> : null}
         <PlanNutritionTargets targets={targets} />
         <PlanWarningsBanner warnings={plan.warnings} />
@@ -246,6 +249,7 @@ export default function MealPlanDetailScreen() {
               <MealSlotCard
                 key={slot.id}
                 slot={slot}
+                dietaryWarning={plan.compatibility?.items.find((item) => item.itemId === slot.id)?.reasonLabels.join('; ')}
                 disabled={busy}
                 onSwap={(item) => void swapSlot(item)}
                 onPick={setPickSlot}
