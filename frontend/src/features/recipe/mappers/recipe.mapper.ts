@@ -20,6 +20,7 @@ import {
 import type {
   RecipeDetailDto,
   RecipeIngredientDto,
+  RecipeStepDto,
   NutritionFactDto,
   RecipeUsageStatisticsDto,
   TraditionWarningDto,
@@ -98,21 +99,58 @@ export function stepsToBody(
 
 /**
  * Tách ngược `body` markdown thành danh sách bước (ngược với `stepsToBody`).
- * Backend không trả steps structured nên form sửa phải dựng lại từ `## Bước N`.
+ * Hỗ trợ các định dạng heading bước nấu:
+ * - `## Bước 1`
+ * - `## Bước 1: Sơ chế đậu hũ`
+ * - `## Bước 1 - Sơ chế đậu hũ`
+ * - `### Step 1`
  * Body không có heading được coi là một bước duy nhất.
  */
 export function bodyToSteps(
   body: string | undefined
-): { stepNumber: number; instruction: string }[] {
+): { stepNumber: number; instruction: string; title?: string }[] {
   const text = (body || '').trim();
   if (!text) return [];
-  const parts = text.split(/^##\s*Bước\s*\d+\s*$/m);
-  if (parts.length === 1) return [{ stepNumber: 1, instruction: text }];
-  return parts
-    .slice(1)
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map((instruction, idx) => ({ stepNumber: idx + 1, instruction }));
+
+  const stepHeaderRegex =
+    /^#{1,4}[ \t]*(?:Bước|Step)[ \t]*(\d+)(?:[ \t]*[:.\-][ \t]*(.*)|[ \t]+([^\r\n]+))?$/gim;
+
+  let match: RegExpExecArray | null;
+  const matches: { index: number; length: number; num?: number; title?: string }[] = [];
+
+  while ((match = stepHeaderRegex.exec(text)) !== null) {
+    const rawNum = match[1] ? parseInt(match[1], 10) : undefined;
+    const title = (match[2] || match[3] || '').trim();
+    matches.push({
+      index: match.index,
+      length: match[0].length,
+      num: rawNum,
+      title: title || undefined,
+    });
+  }
+
+  if (matches.length === 0) {
+    return [{ stepNumber: 1, instruction: text }];
+  }
+
+  const steps: { stepNumber: number; instruction: string; title?: string }[] = [];
+  for (let i = 0; i < matches.length; i++) {
+    const current = matches[i];
+    const next = matches[i + 1];
+    const content = text
+      .slice(current.index + current.length, next ? next.index : undefined)
+      .trim();
+
+    const stepObj: { stepNumber: number; instruction: string; title?: string } = {
+      stepNumber: Number.isFinite(current.num) && current.num! > 0 ? current.num! : i + 1,
+      instruction: content,
+    };
+    if (current.title) {
+      stepObj.title = current.title;
+    }
+    steps.push(stepObj);
+  }
+  return steps;
 }
 
 export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
@@ -169,8 +207,25 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       notes: '',
     }));
 
-    // Backend không trả steps structured — bước nấu nằm trong `revision.body`.
-    const steps: RecipeStep[] = [];
+    // Structured steps từ backend hoặc tách từ `revision.body` khi backend chỉ lưu markdown.
+    const rawSteps = safeArray<RecipeStepDto>(detail?.steps);
+    let steps: RecipeStep[] = rawSteps
+      .map((st, idx) => ({
+        stepNumber: typeof st.position === 'number' ? st.position + 1 : idx + 1,
+        instruction: safeString(st.instruction),
+        imageUrl: null,
+        durationMinutes: typeof st.durationMinutes === 'number' ? st.durationMinutes : undefined,
+      }))
+      .filter((st) => Boolean(st.instruction));
+
+    if (steps.length === 0 && body) {
+      steps = bodyToSteps(body).map((st) => ({
+        stepNumber: st.stepNumber,
+        instruction: st.instruction,
+        imageUrl: null,
+        ...(st.title ? { title: st.title } : {}),
+      }));
+    }
 
     const coverImageUrl = coverUrlFromMedia(
       pickField<PostMediaDto[]>(dto, ['media'], []),
@@ -315,7 +370,13 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       authorNutrition,
       ingredients,
       steps,
-      instructions: [],
+      instructions: steps.map((s) => ({
+        stepNumber: s.stepNumber,
+        instruction: s.instruction,
+        imageUrl: s.imageUrl,
+        ...(s.title ? { title: s.title } : {}),
+        ...(s.durationMinutes ? { durationMinutes: s.durationMinutes } : {}),
+      })),
       body,
       publishedAt,
       formattedPublishedAt: formatDate(publishedAt),

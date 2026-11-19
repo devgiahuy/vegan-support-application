@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { AuthGuard } from '@/components/shared/auth-guard';
 import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
@@ -213,23 +214,35 @@ function MealPlanDetailContent({ id }: { id: string }) {
           {/* 2. TÓM TẮT KẾ HOẠCH & BẢO TOÀN RÀNG BUỘC ĂN KIÊNG */}
           {plan.userSummary && (
             <div
-              className={`relative overflow-hidden rounded-2xl border p-5 shadow-2xs ${!plan.userSummary.hardConstraintsPreserved ? 'border-amber-500/40 bg-amber-500/5' : 'border-emerald-500/30 bg-emerald-500/10'}`}
+              className={cn(
+                'relative overflow-hidden rounded-xl border bg-white dark:bg-card px-3.5 py-3 shadow-2xs transition-all',
+                !plan.userSummary.hardConstraintsPreserved
+                  ? 'border-amber-300 dark:border-amber-800/60'
+                  : 'border-emerald-200/80 dark:border-emerald-900/40'
+              )}
             >
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 shadow-2xs mt-0.5">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 sm:gap-3">
+                <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                  <div
+                    className={cn(
+                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg mt-0.5',
+                      plan.userSummary.hardConstraintsPreserved
+                        ? 'bg-emerald-100/80 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400'
+                        : 'bg-amber-100/80 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400'
+                    )}
+                  >
                     {plan.userSummary.hardConstraintsPreserved ? (
-                      <ShieldCheck className="h-5 w-5" />
+                      <ShieldCheck className="h-4 w-4" />
                     ) : (
-                      <AlertTriangle className="h-5 w-5 text-amber-700" />
+                      <AlertTriangle className="h-4 w-4" />
                     )}
                   </div>
-                  <div className="min-w-0 space-y-1">
-                    <h3 className="text-sm sm:text-base font-bold text-foreground">
+                  <div className="min-w-0 space-y-0.5">
+                    <h3 className="text-xs sm:text-sm font-semibold text-foreground leading-snug">
                       {plan.userSummary.title || 'Tóm tắt kế hoạch thực đơn'}
                     </h3>
                     {plan.userSummary.hardViolations.length > 0 ? (
-                      <ul className="mt-2 space-y-2 text-xs sm:text-sm text-foreground/85 leading-relaxed">
+                      <ul className="mt-1 space-y-1 text-xs text-foreground/85 leading-relaxed">
                         {groupConstraintDetails(plan.userSummary.hardViolations).map((group) => (
                           <li key={JSON.stringify([group.name, group.details])}>
                             <span className="font-semibold">{group.name}</span>
@@ -242,7 +255,7 @@ function MealPlanDetailContent({ id }: { id: string }) {
                         ))}
                       </ul>
                     ) : plan.userSummary.detailLines.length > 1 ? (
-                      <ul className="list-disc space-y-1 pl-5 text-xs leading-relaxed text-foreground/85 sm:text-sm">
+                      <ul className="list-disc space-y-0.5 pl-4 text-xs leading-relaxed text-muted-foreground">
                         {plan.userSummary.detailLines.map((line, index) => (
                           <li key={`${index}-${line}`} className="break-words">
                             {line}
@@ -250,7 +263,7 @@ function MealPlanDetailContent({ id }: { id: string }) {
                         ))}
                       </ul>
                     ) : (
-                      <p className="whitespace-pre-line text-xs sm:text-sm text-foreground/85 leading-relaxed">
+                      <p className="whitespace-pre-line text-xs text-muted-foreground leading-relaxed">
                         {plan.userSummary.detailLines.join('\n')}
                       </p>
                     )}
@@ -258,17 +271,17 @@ function MealPlanDetailContent({ id }: { id: string }) {
                 </div>
 
                 {plan.userSummary.hardConstraintsPreserved && (
-                  <div className="inline-flex items-center gap-1.5 shrink-0 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-800 dark:text-emerald-300 shadow-2xs">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <div className="inline-flex items-center gap-1 shrink-0 rounded-full border border-emerald-500/25 bg-emerald-50/80 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300 shadow-2xs">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                     Bảo toàn ràng buộc ăn kiêng
                   </div>
                 )}
               </div>
 
               {plan.userSummary.suggestion && (
-                <div className="mt-3 flex items-start gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 p-2.5 text-xs text-amber-900 dark:text-amber-200">
-                  <Sparkles className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
-                  <span>{plan.userSummary.suggestion}</span>
+                <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-amber-200/60 bg-amber-50/50 px-2.5 py-1 text-[11px] sm:text-xs text-amber-800 dark:border-amber-800/40 dark:bg-amber-950/20 dark:text-amber-300">
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <span className="leading-snug">{plan.userSummary.suggestion}</span>
                 </div>
               )}
             </div>

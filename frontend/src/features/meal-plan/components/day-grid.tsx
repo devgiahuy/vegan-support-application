@@ -212,15 +212,19 @@ function SlotCard({
               <ShoppingCart className="size-4" /> Xem nguyên liệu cần mua
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>{slot.recipeTitle || slot.customMealName}</DialogTitle>
-              <DialogDescription>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden rounded-3xl border border-border/80 shadow-2xl bg-card">
+            <DialogHeader className="px-6 py-5 border-b border-border/60 shrink-0 space-y-1.5 bg-background pr-14 text-left">
+              <DialogTitle className="text-lg sm:text-xl font-bold tracking-tight text-foreground line-clamp-1">
+                {slot.recipeTitle || slot.customMealName}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground leading-relaxed">
                 {formatDayLabel(slot.date)} · {slot.mealTypeLabel}. Tồn kho được so sánh riêng cho
                 món này; các món khác có thể dùng chung nguyên liệu.
               </DialogDescription>
             </DialogHeader>
-            {shoppingOpen && <ShoppingGapView meals={[meal]} />}
+            <div className="flex-1 overflow-y-auto px-6 py-5 modal-scroll">
+              {shoppingOpen && <ShoppingGapView meals={[meal]} enablePagination={false} />}
+            </div>
           </DialogContent>
         </Dialog>
       )}
