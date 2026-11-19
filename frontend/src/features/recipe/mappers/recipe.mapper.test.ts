@@ -156,11 +156,44 @@ describe('RecipeMapper', () => {
     expect(model.ingredients?.[0].ingredientId).toBe('ing-tofu');
 
     expect(model.body).toContain('Cắt đậu và chiên vàng.');
+    expect(model.steps).toEqual([
+      { stepNumber: 1, instruction: 'Cắt đậu và chiên vàng.', imageUrl: null },
+    ]);
+    expect(model.instructions).toEqual([
+      { stepNumber: 1, instruction: 'Cắt đậu và chiên vàng.', imageUrl: null },
+    ]);
 
     // Legacy fields
     expect(model.image).toBe('https://example.com/tofu.jpg');
     expect(model.minutes).toBe(25);
     expect(model.kcal).toBe(250);
+  });
+
+  it('prefers structured detail.steps when provided by backend', () => {
+    const dto = backendRecipeDto();
+    dto.recipe = {
+      ...dto.recipe,
+      steps: [
+        {
+          id: 'step-1',
+          position: 0,
+          instruction: 'Sơ chế nguyên liệu',
+          durationMinutes: 5,
+        },
+        {
+          id: 'step-2',
+          position: 1,
+          instruction: 'Nấu chín',
+          durationMinutes: 15,
+        },
+      ],
+    } as unknown as RecipeDetailDto['recipe'];
+
+    const model = recipeMapper.toModel(dto);
+    expect(model.steps).toEqual([
+      { stepNumber: 1, instruction: 'Sơ chế nguyên liệu', imageUrl: null, durationMinutes: 5 },
+      { stepNumber: 2, instruction: 'Nấu chín', imageUrl: null, durationMinutes: 15 },
+    ]);
   });
 
   it('handles null dto and missing fields gracefully', () => {
@@ -496,6 +529,36 @@ describe('bodyToSteps', () => {
       { stepNumber: 2, instruction: 'Rưới sốt cà chua\nđảo đều.' },
     ];
     expect(bodyToSteps(stepsToBody(steps, ''))).toEqual(steps);
+  });
+
+  it('parses markdown body with ## Bước headings into steps (including CRLF and titles)', () => {
+    const markdown = [
+      '## Bước 1: Sơ chế đậu hũ',
+      'Để đậu hũ ráo nước, thấm nhẹ bề mặt và cắt miếng vừa ăn.',
+      '',
+      '## Bước 2',
+      'Áp chảo đậu hũ trên chảo chống dính đến khi các mặt vàng nhẹ.',
+      '',
+      '## Bước 3 - Hoàn thành',
+      'Rưới sốt Thái có sẵn và dùng nóng.',
+    ].join('\r\n');
+
+    expect(bodyToSteps(markdown)).toEqual([
+      {
+        stepNumber: 1,
+        instruction: 'Để đậu hũ ráo nước, thấm nhẹ bề mặt và cắt miếng vừa ăn.',
+        title: 'Sơ chế đậu hũ',
+      },
+      {
+        stepNumber: 2,
+        instruction: 'Áp chảo đậu hũ trên chảo chống dính đến khi các mặt vàng nhẹ.',
+      },
+      {
+        stepNumber: 3,
+        instruction: 'Rưới sốt Thái có sẵn và dùng nóng.',
+        title: 'Hoàn thành',
+      },
+    ]);
   });
 
   it('treats a body without step headings as one step and empty body as none', () => {

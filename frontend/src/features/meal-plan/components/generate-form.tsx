@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, Check, Sparkles } from 'lucide-react';
+import { AlertCircle, Check, Loader2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -195,9 +195,26 @@ export function GenerateForm({ recentPlans }: { recentPlans: MealPlan[] }) {
         </div>
       )}
 
-      <Button type="submit" disabled={generateMutation.isPending}>
-        <Sparkles data-icon="inline-start" />
-        {generateMutation.isPending ? 'Đang tạo thực đơn...' : 'Tạo thực đơn tuần'}
+      <Button
+        type="submit"
+        disabled={generateMutation.isPending}
+        aria-busy={generateMutation.isPending}
+      >
+        {generateMutation.isPending ? (
+          <>
+            <Loader2
+              data-icon="inline-start"
+              className="size-4 animate-spin motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+            Đang tạo thực đơn...
+          </>
+        ) : (
+          <>
+            <Sparkles data-icon="inline-start" className="size-4" />
+            Tạo thực đơn tuần
+          </>
+        )}
       </Button>
     </form>
   );

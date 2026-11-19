@@ -7,16 +7,19 @@ export function DietaryPlanNotice({
   compatibility,
   planIds = [],
   programId,
+  showTitle = true,
 }: {
   compatibility?: DietaryCompatibility;
   planIds?: string[];
   programId?: string;
+  showTitle?: boolean;
 }) {
   const router = useRouter();
   const counts = compatibilityCounts(compatibility);
   return (
     <DietImpactNotice
       {...counts}
+      showTitle={showTitle}
       onRepair={() => {
         if (planIds.length)
           router.push(

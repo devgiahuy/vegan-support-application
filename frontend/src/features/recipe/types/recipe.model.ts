@@ -47,6 +47,8 @@ export interface RecipeStep {
   stepNumber: number;
   instruction: string;
   imageUrl: string | null;
+  title?: string;
+  durationMinutes?: number;
 }
 
 export interface NutritionFact {

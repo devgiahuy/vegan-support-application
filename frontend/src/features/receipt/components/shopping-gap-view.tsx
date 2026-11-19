@@ -15,9 +15,14 @@ const PAGE_SIZE = 5;
 interface ShoppingGapViewProps {
   meals: SelectedMealInput[];
   className?: string;
+  enablePagination?: boolean;
 }
 
-export function ShoppingGapView({ meals, className = '' }: ShoppingGapViewProps) {
+export function ShoppingGapView({
+  meals,
+  className = '',
+  enablePagination = true,
+}: ShoppingGapViewProps) {
   const [filterTab, setFilterTab] = useState<'missing' | 'all' | 'ready'>('missing');
   const [missingPage, setMissingPage] = useState(1);
   const [readyPage, setReadyPage] = useState(1);
@@ -62,19 +67,22 @@ export function ShoppingGapView({ meals, className = '' }: ShoppingGapViewProps)
   }, [totalAllPages, allPage]);
 
   const paginatedMissingItems = React.useMemo(() => {
+    if (!enablePagination) return missingItems;
     const start = (missingPage - 1) * PAGE_SIZE;
     return missingItems.slice(start, start + PAGE_SIZE);
-  }, [missingItems, missingPage]);
+  }, [missingItems, missingPage, enablePagination]);
 
   const paginatedReadyItems = React.useMemo(() => {
+    if (!enablePagination) return readyItems;
     const start = (readyPage - 1) * PAGE_SIZE;
     return readyItems.slice(start, start + PAGE_SIZE);
-  }, [readyItems, readyPage]);
+  }, [readyItems, readyPage, enablePagination]);
 
   const paginatedAllItems = React.useMemo(() => {
+    if (!enablePagination) return items;
     const start = (allPage - 1) * PAGE_SIZE;
     return items.slice(start, start + PAGE_SIZE);
-  }, [items, allPage]);
+  }, [items, allPage, enablePagination]);
 
   if (meals.length === 0) {
     return (
@@ -198,15 +206,24 @@ export function ShoppingGapView({ meals, className = '' }: ShoppingGapViewProps)
         onValueChange={(val) => setFilterTab(val as 'missing' | 'all' | 'ready')}
         className="w-full space-y-4"
       >
-        <div className="flex items-center justify-between pb-1">
-          <TabsList className="bg-neutral-100 dark:bg-neutral-900 rounded-xl p-1">
-            <TabsTrigger value="missing" className="rounded-lg text-xs font-medium px-3">
+        <div className="sticky top-0 z-10 flex items-center justify-between py-1 bg-card/95 backdrop-blur-xs">
+          <TabsList className="bg-neutral-100 dark:bg-neutral-900 rounded-xl p-1 h-9">
+            <TabsTrigger
+              value="missing"
+              className="rounded-lg text-xs font-semibold px-3.5 data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-2xs transition-all"
+            >
               Cần mua thêm ({missingItems.length})
             </TabsTrigger>
-            <TabsTrigger value="ready" className="rounded-lg text-xs font-medium px-3">
+            <TabsTrigger
+              value="ready"
+              className="rounded-lg text-xs font-semibold px-3.5 data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-2xs transition-all"
+            >
               Đã có đủ ({readyItems.length})
             </TabsTrigger>
-            <TabsTrigger value="all" className="rounded-lg text-xs font-medium px-3">
+            <TabsTrigger
+              value="all"
+              className="rounded-lg text-xs font-semibold px-3.5 data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-2xs transition-all"
+            >
               Tất cả ({items.length})
             </TabsTrigger>
           </TabsList>
@@ -237,7 +254,7 @@ export function ShoppingGapView({ meals, className = '' }: ShoppingGapViewProps)
                 ))}
               </div>
 
-              {totalMissingPages > 1 && (
+              {enablePagination && totalMissingPages > 1 && (
                 <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-neutral-200 dark:border-neutral-800 text-xs text-muted-foreground">
                   <span>
                     Hiển thị {(missingPage - 1) * PAGE_SIZE + 1} -{' '}
@@ -274,7 +291,7 @@ export function ShoppingGapView({ meals, className = '' }: ShoppingGapViewProps)
                 ))}
               </div>
 
-              {totalReadyPages > 1 && (
+              {enablePagination && totalReadyPages > 1 && (
                 <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-neutral-200 dark:border-neutral-800 text-xs text-muted-foreground">
                   <span>
                     Hiển thị {(readyPage - 1) * PAGE_SIZE + 1} -{' '}
@@ -311,7 +328,7 @@ export function ShoppingGapView({ meals, className = '' }: ShoppingGapViewProps)
                 ))}
               </div>
 
-              {totalAllPages > 1 && (
+              {enablePagination && totalAllPages > 1 && (
                 <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-neutral-200 dark:border-neutral-800 text-xs text-muted-foreground">
                   <span>
                     Hiển thị {(allPage - 1) * PAGE_SIZE + 1} -{' '}

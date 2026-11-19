@@ -47,7 +47,11 @@ export function PlanCard({ plan, className }: PlanCardProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 p-4 pt-1 pb-3">
-        <DietaryPlanNotice compatibility={plan.compatibility} planIds={[plan.id]} />
+        <DietaryPlanNotice
+          compatibility={plan.compatibility}
+          planIds={[plan.id]}
+          showTitle={false}
+        />
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Flame className="size-3.5 text-orange-500" />
           Mục tiêu ~{plan.targetCalories} kcal/ngày
