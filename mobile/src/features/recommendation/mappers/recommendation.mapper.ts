@@ -13,6 +13,7 @@ const REASON_LABELS: Record<string, string> = {
   RECENT_SEARCH: 'Liên quan tìm kiếm gần đây',
   REPEATED_VIEW: 'Bạn xem lại nhiều lần',
   POPULAR: 'Được yêu thích',
+  HIGHLY_RATED: 'Đánh giá cao',
   RECENT_RECIPE: 'Món mới',
 };
 

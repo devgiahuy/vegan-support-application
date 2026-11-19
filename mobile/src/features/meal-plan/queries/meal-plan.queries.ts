@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getApiErrorCode } from '@/lib/api-error';
 import { mealPlanApi } from '../api/meal-plan.api';
 import type { GenerateMealPlanInput, ManualAddMealInput, MealPlanListQueryParams } from '../types/meal-plan.model';
 
@@ -60,9 +61,15 @@ export function useSwapMealItemMutation() {
       idempotencyKey: string;
     }) => mealPlanApi.swapItem(vars.planId, vars.itemId, vars.expectedVersion, vars.idempotencyKey),
     onSuccess: (plan) => {
-      queryClient.invalidateQueries({ queryKey: MEAL_PLAN_QUERY_KEYS.all });
       queryClient.setQueryData(MEAL_PLAN_QUERY_KEYS.detail(plan.id), plan);
+      queryClient.invalidateQueries({ queryKey: [...MEAL_PLAN_QUERY_KEYS.all, 'list'] });
+      queryClient.invalidateQueries({ queryKey: [...MEAL_PLAN_QUERY_KEYS.all, 'infinite'] });
       queryClient.invalidateQueries({ queryKey: ['meal-analysis'] });
+    },
+    onError: (err) => {
+      if (getApiErrorCode(err) === 'MEAL_PLAN_VERSION_CONFLICT') {
+        queryClient.invalidateQueries({ queryKey: MEAL_PLAN_QUERY_KEYS.all });
+      }
     },
   });
 }
@@ -74,10 +81,16 @@ export function useManualAddMealMutation() {
   return useMutation({
     mutationFn: (input: ManualAddMealInput) => mealPlanApi.manualAdd(input),
     onSuccess: (plan) => {
-      queryClient.invalidateQueries({ queryKey: MEAL_PLAN_QUERY_KEYS.all });
       queryClient.setQueryData(MEAL_PLAN_QUERY_KEYS.detail(plan.id), plan);
+      queryClient.invalidateQueries({ queryKey: [...MEAL_PLAN_QUERY_KEYS.all, 'list'] });
+      queryClient.invalidateQueries({ queryKey: [...MEAL_PLAN_QUERY_KEYS.all, 'infinite'] });
       // Phân tích cũ không còn khớp thực đơn mới.
       queryClient.invalidateQueries({ queryKey: ['meal-analysis'] });
+    },
+    onError: (err) => {
+      if (getApiErrorCode(err) === 'MEAL_PLAN_VERSION_CONFLICT') {
+        queryClient.invalidateQueries({ queryKey: MEAL_PLAN_QUERY_KEYS.all });
+      }
     },
   });
 }

@@ -1,7 +1,7 @@
 import { AllowanceNotice } from '@/features/billing/components/allowance-notice';
 import * as React from 'react';
 import { Alert, Pressable, Switch, Text, TextInput, View } from 'react-native';
-import { Link, type Href } from 'expo-router';
+import { Link, type Href, useRouter } from 'expo-router';
 import {
   Camera,
   ChevronDown,
@@ -96,12 +96,12 @@ function HeaderAction({
       accessibilityLabel={label}
       onPress={onPress}
       className={cn(
-        'min-h-[64px] flex-1 items-center justify-center gap-1.5 rounded-2xl border px-1.5 py-2 active:opacity-80',
+        'min-h-12 w-[48.5%] flex-row items-center justify-center gap-2 rounded-xl border px-3 py-2.5 active:opacity-80',
         active ? 'border-primary bg-primary/10' : 'border-input bg-card'
       )}
     >
-      <Icon size={18} color={active ? colors.primary : colors.foreground} />
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} className="text-[11px] font-semibold text-foreground">
+      <Icon size={16} color={active ? colors.primary : colors.foreground} />
+      <Text numberOfLines={1} className="text-xs font-semibold text-foreground">
         {label}
       </Text>
     </Pressable>
@@ -127,6 +127,7 @@ function CountBadge({ count, urgent }: { count: number | undefined; urgent: bool
 }
 
 export default function PantryScreen() {
+  const router = useRouter();
   const colors = useIconColors();
   const authenticated = useAuthStore((state) => state.isAuthenticated);
   const [tab, setTab] = React.useState<Tab>('all');
@@ -249,13 +250,10 @@ export default function PantryScreen() {
 
   return (
     <SiteScreen title="Tủ bếp gia đình" onRefresh={() => query.refetch()}>
-      <View className="gap-3.5 px-5 pt-4">
-        <View>
-          <Text className="text-2xl font-bold tracking-tight text-foreground">Tủ bếp gia đình</Text>
-          <Text className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Quản lý nguyên liệu hiện có, theo dõi hạn sử dụng và kiểm soát tồn kho.
-          </Text>
-        </View>
+      <View className="gap-3.5 px-5 pt-3.5">
+        <Text className="text-sm leading-relaxed text-muted-foreground">
+          Quản lý nguyên liệu hiện có, theo dõi hạn sử dụng và kiểm soát tồn kho.
+        </Text>
 
         <PrimaryButton
           label="Thêm nguyên liệu"
@@ -264,22 +262,28 @@ export default function PantryScreen() {
           onPress={() => setCreating(true)}
         />
 
-        <View className="flex-row gap-2">
+        <View className="flex-row flex-wrap justify-between gap-y-2.5">
           {SCANS_ENABLED ? (
             <>
-              <Link href={'/receipt-scan' as Href} asChild>
-                <HeaderAction label="Quét hóa đơn" icon={Receipt} onPress={() => undefined} />
-              </Link>
-              <Link href={'/fridge-scan' as Href} asChild>
-                <HeaderAction label="Quét tủ lạnh" icon={Camera} onPress={() => undefined} />
-              </Link>
+              <HeaderAction
+                label="Quét hóa đơn"
+                icon={Receipt}
+                onPress={() => router.push('/receipt-scan' as Href)}
+              />
+              <HeaderAction
+                label="Quét tủ lạnh"
+                icon={Camera}
+                onPress={() => router.push('/fridge-scan' as Href)}
+              />
             </>
           ) : null}
-          <Link href={'/shopping-preview' as Href} asChild>
-            <HeaderAction label="Cần mua" icon={ShoppingCart} onPress={() => undefined} />
-          </Link>
           <HeaderAction
-            label="Gộp trùng"
+            label="Danh sách cần mua"
+            icon={ShoppingCart}
+            onPress={() => router.push('/shopping-preview' as Href)}
+          />
+          <HeaderAction
+            label="Gộp nguyên liệu"
             icon={Merge}
             active={selectMode}
             onPress={() => (selectMode ? exitSelectMode() : setSelectMode(true))}

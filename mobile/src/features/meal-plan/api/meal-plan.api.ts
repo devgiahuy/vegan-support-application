@@ -36,6 +36,7 @@ export const mealPlanApi = {
 
   getPlanDetail: async (id: string): Promise<MealPlan> => {
     const res = await api.get<MealPlanResponseDto>(API_ENDPOINTS.MEAL_PLANS.DETAIL(id), {
+      timeout: GENERATE_MEAL_PLAN_TIMEOUT_MS,
       silent: true,
     });
     return mealPlanMapper.toDetailModel(res.data);
@@ -49,7 +50,8 @@ export const mealPlanApi = {
   ): Promise<MealPlan> => {
     const res = await api.patch<MealPlanResponseDto>(
       API_ENDPOINTS.MEAL_PLANS.SWAP(planId, itemId),
-      mealPlanMapper.toSwapDto(expectedVersion, idempotencyKey)
+      mealPlanMapper.toSwapDto(expectedVersion, idempotencyKey),
+      { timeout: GENERATE_MEAL_PLAN_TIMEOUT_MS, silent: true }
     );
     return mealPlanMapper.toDetailModel(res.data);
   },
@@ -58,7 +60,8 @@ export const mealPlanApi = {
   manualAdd: async (input: ManualAddMealInput): Promise<MealPlan> => {
     const res = await api.patch<MealPlanResponseDto>(
       API_ENDPOINTS.MEAL_PLANS.MANUAL_ADD(input.planId, input.itemId),
-      mealPlanMapper.toManualAddDto(input)
+      mealPlanMapper.toManualAddDto(input),
+      { timeout: GENERATE_MEAL_PLAN_TIMEOUT_MS, silent: true }
     );
     return mealPlanMapper.toDetailModel(res.data);
   },

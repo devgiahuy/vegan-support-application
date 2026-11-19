@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { ActivityIndicator, Alert, Pressable, Switch, Text, View } from 'react-native';
-import { Link, useLocalSearchParams, type Href } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Image } from 'expo-image';
 import {
   Activity,
@@ -28,7 +28,6 @@ import {
   Shield,
   ShieldCheck,
   ShoppingBag,
-  Sparkles,
   Store,
   Sun,
   Target,
@@ -48,6 +47,7 @@ import {
 } from '@/common/enums';
 import { FOOD_ALLOWANCE_OPTIONS } from '@/features/diet-preferences/components/food-allowance-switches';
 import { SiteScreen } from '@/components/layout/site-screen';
+import { FormSheet } from '@/components/shared/form-sheet';
 import { DropdownField, type DropdownOption } from '@/components/ui/dropdown-field';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextField } from '@/components/ui/text-field';
@@ -92,14 +92,15 @@ interface ProfileMenuEntry {
   icon: LucideIcon;
 }
 
-const GUEST_SUPPORT_ITEMS: ProfileMenuEntry[] = [
-  { href: '/food-data' as Href, icon: Database, title: 'Tra cứu dữ liệu thực phẩm', note: 'Dinh dưỡng 100g, kiêng kỵ và giữ chất chế biến.' },
-  { href: '/ai-knowledge' as Href, icon: Sparkles, title: 'Khám phá Tri thức AI', note: 'Câu trả lời AI do cộng đồng chia sẻ và thẩm định.' },
+const SUPPORT_SHEET_ITEMS: ProfileMenuEntry[] = [
   { href: '/help' as Href, icon: HelpCircle, title: 'Hướng dẫn sử dụng', note: 'Cách dùng thực đơn tuần, tủ bếp và bộ lọc an toàn.' },
-  { href: '/guidelines' as Href, icon: BookOpen, title: 'Quy chuẩn cộng đồng', note: 'Nguyên tắc đăng công thức, bài viết và đề xuất quán.' },
-  { href: '/about' as Href, icon: Info, title: 'Về VeggieConnect', note: 'Giới thiệu ứng dụng, phạm vi hỗ trợ và nguồn dữ liệu.' },
   { href: '/feedback' as Href, icon: MessageSquare, title: 'Gửi góp ý', note: 'Phản hồi trải nghiệm và báo lỗi ứng dụng.' },
   { href: '/contact' as Href, icon: Phone, title: 'Liên hệ', note: 'Kênh tiếp nhận hỗ trợ từ đội ngũ vận hành.' },
+];
+
+const LEGAL_SHEET_ITEMS: ProfileMenuEntry[] = [
+  { href: '/about' as Href, icon: Info, title: 'Về VeggieConnect', note: 'Giới thiệu ứng dụng, phạm vi hỗ trợ và nguồn dữ liệu.' },
+  { href: '/guidelines' as Href, icon: BookOpen, title: 'Quy chuẩn cộng đồng', note: 'Nguyên tắc đăng công thức, bài viết và đề xuất quán.' },
   { href: '/privacy' as Href, icon: Shield, title: 'Chính sách bảo mật', note: 'Cách lưu trữ và bảo vệ dữ liệu cá nhân.' },
   { href: '/terms' as Href, icon: FileText, title: 'Điều khoản sử dụng', note: 'Quy định sử dụng và lưu ý thông tin tham khảo.' },
 ];
@@ -257,7 +258,7 @@ export default function ProfileScreen() {
           <AppearanceSettingCard />
 
           <SectionTitle title="Tra cứu & Hỗ trợ" subtitle="Thông tin mở dùng ngay không cần đăng nhập." />
-          <MenuGroup items={GUEST_SUPPORT_ITEMS} />
+          <SupportAndLegalMenu includeFoodData />
           <View className="h-4" />
         </View>
       </SiteScreen>
@@ -327,7 +328,6 @@ export default function ProfileScreen() {
   const contributionItems: ProfileMenuEntry[] = [
     { href: '/my-content' as Href, icon: BookOpen, title: 'Bài viết của tôi', note: 'Công thức, cẩm nang, video đã đăng và trạng thái duyệt.' },
     { href: '/restaurants/mine' as Href, icon: Store, title: 'Quán chay tôi đề xuất', note: 'Theo dõi trạng thái duyệt các quán bạn đã gửi.' },
-    { href: '/ai-knowledge' as Href, icon: Sparkles, title: 'Khám phá Tri thức AI', note: 'Câu trả lời AI do cộng đồng chia sẻ và được thẩm định.' },
     { href: '/contributor-status' as Href, icon: BadgeCheck, title: 'Đóng góp', note: contributionNote },
     ...(displayProfile.user.role === UserRole.CONTRIBUTOR
       ? [{ href: '/contributor-dashboard' as Href, icon: ClipboardCheck, title: 'Bảng điều khiển Contributor', note: 'Hàng chờ kiểm duyệt, lối tắt đóng góp và quy chuẩn duyệt bài.' }]
@@ -338,8 +338,6 @@ export default function ProfileScreen() {
     { href: '/billing' as Href, icon: Package, title: 'Gói tiện ích', note: 'Mua thêm lượt AI và mở rộng ô lưu trữ tủ đồ ăn.' },
     { href: '/food-data' as Href, icon: Database, title: 'Tra cứu dữ liệu thực phẩm', note: 'Dinh dưỡng 100g, kiêng kỵ và giữ chất khi chế biến.' },
   ];
-
-  const supportItems: ProfileMenuEntry[] = GUEST_SUPPORT_ITEMS.slice(2);
 
   return (
     <SiteScreen onRefresh={() => refetch()}>
@@ -529,7 +527,7 @@ export default function ProfileScreen() {
             </View>
 
             <SectionTitle title="Hỗ trợ & Pháp lý" subtitle="Hướng dẫn, góp ý và thông tin quy định." />
-            <MenuGroup items={supportItems} />
+            <SupportAndLegalMenu />
 
             <SectionTitle title="Phiên đăng nhập" subtitle="Quản lý tài khoản trên thiết bị này." />
             <View className="overflow-hidden rounded-2xl border border-border bg-card">
@@ -559,9 +557,9 @@ export default function ProfileScreen() {
               <View className="mt-4 rounded-2xl border border-border bg-card p-4">
                 <Text className="text-lg font-bold text-foreground">Kết quả sức khỏe</Text>
                 <View className="mt-4 flex-row gap-2">
-                  <MetricCard label="BMI" value={health.bmi.toFixed(2)} note={health.bmiCategory} />
-                  <MetricCard label="BMR" value={health.bmr.toFixed(2)} note="kcal/ngày" />
-                  <MetricCard label="TDEE" value={health.tdee.toFixed(2)} note="kcal/ngày" />
+                  <MetricCard label="BMI" value={health.bmi.toFixed(1)} note={health.bmiCategory} />
+                  <MetricCard label="BMR" value={String(Math.round(health.bmr))} note="kcal/ngày" />
+                  <MetricCard label="TDEE" value={String(Math.round(health.tdee))} note="kcal/ngày" />
                 </View>
                 <View className="mt-4 gap-1.5">
                   <Text className="text-sm text-muted-foreground">
@@ -920,6 +918,123 @@ function MenuGroup({ items }: { items: ProfileMenuEntry[] }) {
   );
 }
 
+function SupportAndLegalMenu({ includeFoodData = false }: { includeFoodData?: boolean }) {
+  const router = useRouter();
+  const colors = useIconColors();
+  const [openSheet, setOpenSheet] = React.useState<'support' | 'legal' | null>(null);
+
+  const activeItems = openSheet === 'support' ? SUPPORT_SHEET_ITEMS : openSheet === 'legal' ? LEGAL_SHEET_ITEMS : [];
+  const activeTitle = openSheet === 'support' ? 'Trung tâm hỗ trợ' : 'Giới thiệu & Pháp lý';
+
+  const navigateFromSheet = (href: Href) => {
+    setOpenSheet(null);
+    router.push(href);
+  };
+
+  return (
+    <>
+      <View className="overflow-hidden rounded-2xl border border-border bg-card">
+        {includeFoodData ? (
+          <Link href={'/food-data' as Href} asChild>
+            <Pressable
+              accessibilityRole="link"
+              className="min-h-14 flex-row items-center gap-3 px-4 py-3.5 active:bg-muted">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <Database size={18} color={colors.primary} />
+              </View>
+              <View className="min-w-0 flex-1">
+                <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
+                  Tra cứu dữ liệu thực phẩm
+                </Text>
+                <Text numberOfLines={2} className="mt-0.5 text-xs text-muted-foreground">
+                  Dinh dưỡng 100g, kiêng kỵ và giữ chất chế biến.
+                </Text>
+              </View>
+              <ChevronRight size={16} color={colors.mutedForeground} />
+            </Pressable>
+          </Link>
+        ) : null}
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setOpenSheet('support')}
+          className={cn(
+            'min-h-14 flex-row items-center gap-3 px-4 py-3.5 active:bg-muted',
+            includeFoodData ? 'border-t border-border' : ''
+          )}>
+          <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+            <HelpCircle size={18} color={colors.primary} />
+          </View>
+          <View className="min-w-0 flex-1">
+            <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
+              Trung tâm hỗ trợ
+            </Text>
+            <Text numberOfLines={2} className="mt-0.5 text-xs text-muted-foreground">
+              Hướng dẫn sử dụng, gửi góp ý và liên hệ.
+            </Text>
+          </View>
+          <ChevronRight size={16} color={colors.mutedForeground} />
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setOpenSheet('legal')}
+          className="min-h-14 flex-row items-center gap-3 border-t border-border px-4 py-3.5 active:bg-muted">
+          <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+            <Shield size={18} color={colors.primary} />
+          </View>
+          <View className="min-w-0 flex-1">
+            <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
+              Giới thiệu & Pháp lý
+            </Text>
+            <Text numberOfLines={2} className="mt-0.5 text-xs text-muted-foreground">
+              Về VeggieConnect, quy chuẩn, bảo mật và điều khoản.
+            </Text>
+          </View>
+          <ChevronRight size={16} color={colors.mutedForeground} />
+        </Pressable>
+      </View>
+
+      {openSheet ? (
+        <FormSheet
+          title={activeTitle}
+          variant="bottom-sheet"
+          onClose={() => setOpenSheet(null)}
+        >
+          <View className="overflow-hidden rounded-2xl border border-border bg-card">
+            {activeItems.map((entry, index) => {
+              const Icon = entry.icon;
+              return (
+                <Pressable
+                  key={entry.title}
+                  accessibilityRole="button"
+                  onPress={() => navigateFromSheet(entry.href)}
+                  className={cn(
+                    'min-h-14 flex-row items-center gap-3 px-4 py-3.5 active:bg-muted',
+                    index > 0 ? 'border-t border-border' : ''
+                  )}>
+                  <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                    <Icon size={18} color={colors.primary} />
+                  </View>
+                  <View className="min-w-0 flex-1">
+                    <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
+                      {entry.title}
+                    </Text>
+                    <Text numberOfLines={2} className="mt-0.5 text-xs text-muted-foreground">
+                      {entry.note}
+                    </Text>
+                  </View>
+                  <ChevronRight size={16} color={colors.mutedForeground} />
+                </Pressable>
+              );
+            })}
+          </View>
+        </FormSheet>
+      ) : null}
+    </>
+  );
+}
+
 function SectionTitle({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <View className="mt-6 mb-3">
@@ -933,7 +1048,7 @@ function MetricCard({ label, value, note }: { label: string; value: string; note
   return (
     <View className="flex-1 items-center rounded-xl border border-border bg-muted p-3">
       <Text className="text-xs text-muted-foreground">{label}</Text>
-      <Text numberOfLines={1} adjustsFontSizeToFit className="text-xl font-bold text-primary">
+      <Text numberOfLines={1} adjustsFontSizeToFit className="mt-0.5 text-lg font-bold text-primary">
         {value}
       </Text>
       <Text numberOfLines={1} className="text-xs text-muted-foreground">
