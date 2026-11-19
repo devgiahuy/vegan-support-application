@@ -12,6 +12,7 @@ export function DietImpactNotice({
   pending = false,
   assessmentUnavailable = false,
   onRecheck,
+  showTitle = true,
 }: {
   affectedCount: number;
   unverifiedCount?: number;
@@ -19,17 +20,20 @@ export function DietImpactNotice({
   pending?: boolean;
   assessmentUnavailable?: boolean;
   onRecheck?: () => void;
+  showTitle?: boolean;
 }) {
   if (!assessmentUnavailable && affectedCount <= 0 && unverifiedCount <= 0) return null;
 
   return (
     <Alert>
       <AlertTriangle aria-hidden />
-      <AlertTitle className="text-balance">
-        {assessmentUnavailable
-          ? 'Chưa kiểm tra được ảnh hưởng lên thực đơn'
-          : 'Thực đơn cần được xem lại theo thiết lập ăn uống'}
-      </AlertTitle>
+      {showTitle && (
+        <AlertTitle className="text-balance">
+          {assessmentUnavailable
+            ? 'Chưa kiểm tra được ảnh hưởng lên thực đơn'
+            : 'Thực đơn cần được xem lại theo thiết lập ăn uống'}
+        </AlertTitle>
+      )}
       <AlertDescription className="flex flex-col gap-3">
         <p className="text-pretty">
           {assessmentUnavailable ? (

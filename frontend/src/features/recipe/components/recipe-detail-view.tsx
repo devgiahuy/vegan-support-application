@@ -16,15 +16,11 @@ import {
   Utensils,
   Lightbulb,
   MessageSquare,
-  Users,
   Leaf,
-  Plus,
-  Minus,
   Pencil,
   Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,6 +30,7 @@ import { NutritionFactsPanel } from '@/features/food-data/components/nutrition-f
 import { RecipeNutritionCard } from '@/features/recipe-nutrition/components/recipe-nutrition-card';
 import { RecipeCard } from './recipe-card';
 import { RecipeAllergenHighlight } from './recipe-allergen-highlight';
+import { bodyToSteps } from '../mappers/recipe.mapper';
 import type { Recipe } from '../types/recipe.model';
 import { VoteControl } from '@/components/shared/vote-control';
 import { CommentSection } from '@/components/shared/comment-section';
@@ -66,20 +63,10 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
   const isAuthor = authorDisplay.isCurrentUser;
   const { data: summary } = useCommunitySummaryQuery(recipe.id);
   const effectiveStatus = recipe.revisionStatus ?? recipe.status;
-  const [servings, setServings] = React.useState<number>(recipe.servings || 2);
-  const [checkedIngredients, setCheckedIngredients] = React.useState<string[]>([]);
   const [viewingNutritionIngredient, setViewingNutritionIngredient] = React.useState<{
     id?: string;
     name: string;
   } | null>(null);
-
-  // Tỷ lệ nhân khẩu phần
-
-  const toggleIngredient = (name: string) => {
-    setCheckedIngredients((prev) =>
-      prev.includes(name) ? prev.filter((i) => i !== name) : [...prev, name]
-    );
-  };
 
   const handleShare = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -96,6 +83,33 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
       },
     });
   };
+
+  const steps = React.useMemo(() => {
+    if (recipe.steps && recipe.steps.length > 0) {
+      return recipe.steps as Array<{
+        stepNumber: number;
+        title?: string;
+        desc?: string;
+        instruction?: string;
+        tip?: string;
+        durationMinutes?: number;
+      }>;
+    }
+    if (recipe.instructions && recipe.instructions.length > 0) {
+      return recipe.instructions;
+    }
+    if (recipe.body) {
+      return bodyToSteps(recipe.body) as Array<{
+        stepNumber: number;
+        title?: string;
+        desc?: string;
+        instruction?: string;
+        tip?: string;
+        durationMinutes?: number;
+      }>;
+    }
+    return [];
+  }, [recipe.steps, recipe.instructions, recipe.body]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 lg:px-6">
@@ -301,101 +315,56 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
           {/* CẢNH BÁO DỊ ỨNG NỔI BẬT */}
           <RecipeAllergenHighlight warnings={recipe.allergyWarnings} />
 
-          {/* INGREDIENTS CHECKLIST SECTION */}
+          {/* INGREDIENTS SECTION */}
           <Card className="border-border/60 shadow-sm overflow-hidden">
-            <CardHeader className="bg-muted/40 pb-4 border-b flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-xl font-bold flex items-center gap-2 text-foreground">
-                  <Utensils className="h-5 w-5 text-primary" /> Nguyên liệu cần chuẩn bị
-                </CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Tích chọn nguyên liệu bạn đã có sẵn trong bếp
-                </p>
-              </div>
-
-              {/* Servings calculator */}
-              <div className="flex items-center gap-2 bg-background border rounded-lg p-1 shadow-sm">
-                <span className="text-xs font-medium text-muted-foreground px-1.5 flex items-center gap-1">
-                  <Users className="h-3.5 w-3.5" /> Khẩu phần:
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 rounded"
-                  onClick={() => setServings(Math.max(1, servings - 1))}
-                >
-                  <Minus className="h-3 w-3" />
-                </Button>
-                <span className="text-xs font-bold w-4 text-center">{servings}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 rounded"
-                  onClick={() => setServings(servings + 1)}
-                >
-                  <Plus className="h-3 w-3" />
-                </Button>
-              </div>
+            <CardHeader className="bg-muted/40 pb-4 border-b">
+              <CardTitle className="text-xl font-bold flex items-center gap-2 text-foreground">
+                <Utensils className="h-5 w-5 text-primary" /> Nguyên liệu cần chuẩn bị
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Định lượng chuẩn cho {recipe.servings || 2} khẩu phần
+              </p>
             </CardHeader>
 
             <CardContent className="p-5 space-y-4">
               {recipe.ingredients && recipe.ingredients.length > 0 ? (
                 <div className="grid gap-2.5 sm:grid-cols-2">
-                  {recipe.ingredients.map((ing, idx) => {
-                    const isChecked = checkedIngredients.includes(ing.name);
-                    return (
-                      <div
-                        key={idx}
-                        onClick={() => toggleIngredient(ing.name)}
-                        className={cn(
-                          'flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all duration-150',
-                          isChecked
-                            ? 'bg-primary/5 border-primary/40 text-muted-foreground line-through'
-                            : 'bg-card border-border/70 hover:border-primary/40 hover:bg-muted/30'
-                        )}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div
-                            className={cn(
-                              'flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors',
-                              isChecked
-                                ? 'border-primary bg-primary text-primary-foreground'
-                                : 'border-muted-foreground/40'
-                            )}
-                          >
-                            {isChecked && <CheckCircle2 className="h-3.5 w-3.5" />}
-                          </div>
-                          <span className="text-sm font-medium text-foreground truncate">
-                            {ing.name}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                          <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                            {ing.amount}
-                          </span>
-                          {ing.ingredientId && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 rounded-full text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                              title={`Xem dinh dưỡng của ${ing.name}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setViewingNutritionIngredient({
-                                  id: ing.ingredientId || undefined,
-                                  name: ing.name,
-                                });
-                              }}
-                            >
-                              <Info className="h-3.5 w-3.5" />
-                              <span className="sr-only">Xem dinh dưỡng {ing.name}</span>
-                            </Button>
-                          )}
-                        </div>
+                  {recipe.ingredients.map((ing, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-3 rounded-xl border bg-card border-border/70 hover:bg-muted/20 transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0" />
+                        <span className="text-sm font-medium text-foreground truncate">
+                          {ing.name}
+                        </span>
                       </div>
-                    );
-                  })}
+                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                          {[ing.amount, 'unit' in ing ? ing.unit : ''].filter(Boolean).join(' ')}
+                        </span>
+                        {ing.ingredientId && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 rounded-full text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                            title={`Xem dinh dưỡng của ${ing.name}`}
+                            onClick={() => {
+                              setViewingNutritionIngredient({
+                                id: ing.ingredientId || undefined,
+                                name: ing.name,
+                              });
+                            }}
+                          >
+                            <Info className="h-3.5 w-3.5" />
+                            <span className="sr-only">Xem dinh dưỡng {ing.name}</span>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-4">
@@ -436,18 +405,8 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
             </h3>
 
             <div className="space-y-4">
-              {(recipe.instructions || recipe.steps) &&
-              (recipe.instructions || recipe.steps)!.length > 0 ? (
-                (
-                  (recipe.instructions || recipe.steps) as Array<{
-                    stepNumber: number;
-                    title?: string;
-                    desc?: string;
-                    instruction?: string;
-                    tip?: string;
-                    durationMinutes?: number;
-                  }>
-                ).map((step) => (
+              {steps.length > 0 ? (
+                steps.map((step) => (
                   <Card
                     key={step.stepNumber}
                     className="border-border/60 shadow-sm overflow-hidden"
@@ -470,7 +429,7 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
                       </div>
                     </CardHeader>
                     <CardContent className="px-5 pb-5 space-y-3">
-                      <p className="text-sm text-muted-foreground leading-relaxed">
+                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
                         {step.desc || step.instruction}
                       </p>
                       {step.tip && (
@@ -488,9 +447,24 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
               ) : recipe.body ? (
                 <Card className="border-border/60 shadow-sm">
                   <CardContent className="p-6">
-                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
-                      {recipe.body}
-                    </p>
+                    <div className="space-y-3 text-sm text-foreground leading-relaxed">
+                      {recipe.body.split(/\n{2,}/).map((block, idx) => {
+                        const trimmed = block.trim();
+                        if (trimmed.startsWith('## ') || trimmed.startsWith('### ')) {
+                          const headingText = trimmed.replace(/^#{2,3}\s+/, '');
+                          return (
+                            <h4 key={idx} className="font-bold text-base text-foreground pt-2">
+                              {headingText}
+                            </h4>
+                          );
+                        }
+                        return (
+                          <p key={idx} className="whitespace-pre-line text-muted-foreground">
+                            {trimmed}
+                          </p>
+                        );
+                      })}
+                    </div>
                   </CardContent>
                 </Card>
               ) : (

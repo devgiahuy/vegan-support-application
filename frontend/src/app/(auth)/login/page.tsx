@@ -115,14 +115,6 @@ export default function LoginPage() {
                 />
               </div>
 
-              <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="h-px flex-1 bg-border/70" />
-                <span className="font-medium text-[#718078] dark:text-neutral-400">
-                  Hoặc tiếp tục với
-                </span>
-                <span className="h-px flex-1 bg-border/70" />
-              </div>
-
               {/* <div className="flex justify-center">
                 <motion.div
                   className="w-full"
@@ -130,7 +122,7 @@ export default function LoginPage() {
                 >
                   <Button
                     variant="outline"
-                    className="h-12 w-full rounded-xl border-border/80 text-sm font-medium transition-colors hover:border-primary/40 hover:bg-primary/5"
+                    className="w-full h-12 text-sm font-medium transition-colors rounded-xl border-border/80 hover:border-primary/40 hover:bg-primary/5"
                     onClick={() => toast.info('Đăng nhập Google sẽ sớm khả dụng')}
                   >
                     Google ID
@@ -205,10 +197,10 @@ export default function LoginPage() {
                 <motion.div
                   initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm"
+                  className="p-3 mt-4 text-sm border rounded-xl border-primary/30 bg-primary/5"
                 >
                   <p className="flex items-center gap-1.5 font-semibold text-primary">
-                    <CheckCircle2 className="h-4 w-4" /> Email đã được gửi!
+                    <CheckCircle2 className="w-4 h-4" /> Email đã được gửi!
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Vui lòng kiểm tra hộp thư đến (và thư mục Spam). Liên kết có hiệu lực trong 15
@@ -238,7 +230,7 @@ export default function LoginPage() {
                       id="forgot-email"
                       type="email"
                       placeholder="vidu@veggieconnect.vn"
-                      className="h-12 rounded-xl pl-10 text-sm border-border/80 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary"
+                      className="h-12 pl-10 text-sm rounded-xl border-border/80 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary"
                       required
                     />
                   </div>
@@ -246,9 +238,9 @@ export default function LoginPage() {
                 <motion.div whileTap={shouldReduceMotion ? undefined : { scale: 0.99 }}>
                   <Button
                     type="submit"
-                    className="h-12 w-full gap-2 rounded-xl font-semibold bg-primary hover:bg-primary/95"
+                    className="w-full h-12 gap-2 font-semibold rounded-xl bg-primary hover:bg-primary/95"
                   >
-                    <Send className="h-4 w-4" /> Gửi liên kết khôi phục
+                    <Send className="w-4 h-4" /> Gửi liên kết khôi phục
                   </Button>
                 </motion.div>
               </form>

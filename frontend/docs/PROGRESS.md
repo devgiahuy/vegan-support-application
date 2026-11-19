@@ -1,5 +1,14 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Bổ sung loading spinner khi tạo thực đơn tuần — Updated 2026-11-19
+
+- **Thêm loading spinner vào nút tạo thực đơn:** Cập nhật `GenerateForm` (`src/features/meal-plan/components/generate-form.tsx`) để khi `generateMutation.isPending`, nút "Tạo thực đơn tuần" hiển thị biểu tượng xoay `<Loader2 className="size-4 animate-spin motion-reduce:animate-none" data-icon="inline-start" aria-hidden="true" />` cùng nhãn "Đang tạo thực đơn..." và thuộc tính `aria-busy="true"`, thay vì giữ icon Sparkles tĩnh.
+- **Kiểm chứng:** `npx tsc --noEmit` đạt 0 lỗi type; 48 tests thuộc `src/features/meal-plan/` pass; Next.js build đạt.
+
+## Quay lại đúng đơn sau thanh toán payOS — Updated 2026-11-19
+
+Đơn mới trên web quay về trang gói tiện ích với mã đơn. Bản app cài đặt iOS/Android mở lại màn hình để xem đơn từ cùng địa chỉ HTTPS và có nút xem trên web. Trình duyệt local, backend với payOS giả lập, bản dựng web và bundle mobile đã qua kiểm tra. Chưa phát hành thay đổi hoặc kiểm tra mở app trên thiết bị.
+
 ## Đã triển khai bốn tùy chọn và xử lý thực đơn — Updated 2026-11-19
 
 Backend, web và mobile đã bỏ kiểu ăn/truyền thống/setup lịch; dùng bốn toggle độc lập trứng/sữa/mật ong/ngũ vị tân áp mỗi ngày. Đổi profile có impact preview, hai lựa chọn thay hoặc giữ với cảnh báo bền vững, replacement preview/apply theo từng plan và linked DRAFT cho chương trình confirmed. Admin catalog dùng reviewed food groups có provenance; allergy/exclusion luôn ưu tiên. Hơn 20 plan chia nhóm rõ ràng ở cả clients.

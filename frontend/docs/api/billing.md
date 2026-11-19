@@ -62,13 +62,13 @@ Paginated owned payment history
 - Responses: `200` → BillingOrdersEnvelope, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse
 
 ## POST `/api/v1/billing/orders`
-Create idempotent package order; confirm displayed product version for new orders
+Create idempotent package order with web or mobile payOS return
 - Params: —
 - Request: `object`
 - Responses: `201` → BillingOrderEnvelope, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `423` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse
 
 ```json
-{"type":"object","required":["productId","idempotencyKey"],"properties":{"productId":{"type":"string"},"idempotencyKey":{"type":"string"},"expectedProductVersion":{"type":"integer"}},"additionalProperties":false}
+{"type":"object","required":["productId","idempotencyKey"],"properties":{"productId":{"type":"string"},"idempotencyKey":{"type":"string"},"expectedProductVersion":{"type":"integer"},"checkoutClient":{"type":"string","enum":["web","mobile"]}},"additionalProperties":false}
 ```
 
 ## GET `/api/v1/billing/orders/{id}`

@@ -1,32 +1,31 @@
 import * as React from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { Link, type Href, useLocalSearchParams } from 'expo-router';
-import { BadgeCheck, BookOpen, Plus, Search } from 'lucide-react-native';
+import { BadgeCheck, FileText, Plus, Search, X } from 'lucide-react-native';
 
+import { ExploreContentTabs } from '@/components/layout/explore-content-tabs';
 import { SiteScreen } from '@/components/layout/site-screen';
+import { EmptyState, ErrorState } from '@/components/shared/state-views';
+import { LoadMoreButton } from '@/components/shared/load-more-button';
+import { DropdownField } from '@/components/ui/dropdown-field';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { PostCard } from '@/features/post/components/post-card';
-import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { useInfiniteArticlesQuery } from '@/features/post/queries/post.queries';
 import { CategoryType } from '@/common/enums';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
-import { DropdownField } from '@/components/ui/dropdown-field';
 import { buildCategoryOptions } from '@/features/category/utils/category-options';
 import { useIconColors } from '@/lib/theme-colors';
 
 type SortOrder = 'newest' | 'oldest';
 
-/** Chỉ sắp xếp theo ngày xuất bản (dữ liệu thật). Lượt xem/vote chưa có từ backend nên không đưa vào. */
 const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
   { value: 'newest', label: 'Mới nhất' },
   { value: 'oldest', label: 'Cũ nhất' },
 ];
 
 /**
- * "Cẩm nang" — đồng bộ bố cục/nội dung `frontend/src/app/(site)/articles/page.tsx`
- * (hero banner, tìm kiếm, pill trường phái/chủ đề, grid bài viết, callout kiểm chứng).
- * Bộ lọc trường phái ăn chay hiện chỉ là placeholder UI giống bản gốc (backend chưa
- * có field `dietSchool` trên Article — xem `frontend/.../post.model.ts` phần Legacy).
+ * "Cẩm nang thực dưỡng chay" — tối ưu cho điện thoại:
+ * Thanh chuyển chuyên mục -> Tiêu đề + Viết bài / Bài của tôi -> Tìm kiếm & lọc -> Danh sách bài.
  */
 export default function ArticlesScreen() {
   const colors = useIconColors();
@@ -63,7 +62,8 @@ export default function ArticlesScreen() {
     );
     return list;
   }, [articlePages, sortOrder]);
-  const hasFilters = Boolean(categoryId || query);
+  const totalItems = articlePages?.pages[0]?.metadata?.totalItems ?? articles.length;
+  const hasFilters = Boolean(categoryId || query.trim());
   const categoryOptions = React.useMemo(() => buildCategoryOptions(categoryTree, 'Tất cả chủ đề'), [categoryTree]);
 
   const resetFilters = () => {
@@ -71,50 +71,48 @@ export default function ArticlesScreen() {
     setCategoryId(null);
   };
 
+  const headerAction = (
+    <Link href={'/articles/new' as Href} asChild>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Viết bài mới"
+        className="h-10 flex-row items-center gap-1 rounded-full bg-primary px-3.5 active:opacity-90">
+        <Plus size={15} color={colors.primaryForeground} />
+        <Text numberOfLines={1} style={{ flexShrink: 0 }} className="text-xs font-semibold text-primary-foreground">
+          Viết bài
+        </Text>
+      </Pressable>
+    </Link>
+  );
+
   return (
-    <SiteScreen>
-      <View className="gap-6 px-5 pt-4">
-        {/* Hero banner */}
-        <View className="rounded-3xl border border-primary/20 bg-primary/10 p-5">
-          <View className="flex-row items-center gap-1.5 self-start rounded-full bg-primary/20 px-2.5 py-1">
-            <BookOpen size={13} color={colors.primary} />
-            <Text className="text-xs font-semibold text-primary">Cẩm Nang Thực Dưỡng Chay</Text>
-          </View>
-          <Text className="mt-3 text-2xl font-extrabold tracking-tight text-foreground">
-            Kiến Thức & Kinh Nghiệm Ăn Chay Khoa Học
-          </Text>
-          <Text className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Tổng hợp các bài chia sẻ dinh dưỡng đã được Chuyên gia kiểm chứng, mẹo nấu nước dùng
-            thanh ngọt và nét đẹp văn hoá ăn chay tại Việt Nam.
-          </Text>
-          <View className="mt-4 gap-2.5">
-            <Link href={'/articles/new' as Href} asChild>
-              <PrimaryButton
-                label="Viết bài chia sẻ mới"
-                icon={<Plus size={16} color={colors.primaryForeground} />}
-              />
-            </Link>
-            <Link href={'/my-content' as Href} asChild>
-              <PrimaryButton label="Bài viết của tôi" variant="outline" />
-            </Link>
-          </View>
+    <SiteScreen onRefresh={() => refetchArticles()} headerRight={headerAction}>
+      <View className="gap-3 px-5 pt-3.5">
+        {/* Tìm kiếm có nút xóa nhanh ở đầu */}
+        <View className="h-12 flex-row items-center gap-2 rounded-2xl border border-input bg-card pl-3.5 pr-1.5">
+          <Search size={18} color={colors.primary} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Tìm bài viết, vitamin B12, mẹo hầm nấm..."
+            placeholderTextColor={colors.mutedForeground}
+            returnKeyType="search"
+            className="h-full flex-1 text-sm text-foreground"
+          />
+          {query.length > 0 ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Xóa từ khóa"
+              onPress={() => setQuery('')}
+              className="h-11 w-11 items-center justify-center rounded-full active:bg-muted">
+              <X size={16} color={colors.mutedForeground} />
+            </Pressable>
+          ) : null}
         </View>
 
-        {/* Search */}
-        <View className="flex-row items-center gap-2">
-          <View className="flex-1 flex-row items-center gap-2 rounded-2xl border border-input bg-card px-3.5">
-            <Search size={16} color={colors.mutedForeground} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Tìm bài viết, vitamin B12, mẹo hầm nấm..."
-              placeholderTextColor={colors.mutedForeground}
-              className="h-11 flex-1 text-sm text-foreground"
-            />
-          </View>
-        </View>
+        <ExploreContentTabs />
 
-        {/* Bộ lọc dạng popup đặt kề nhau: chủ đề · sắp xếp */}
+        {/* Bộ lọc chủ đề & sắp xếp */}
         <View className="flex-row gap-2">
           <DropdownField
             className="flex-[1.3]"
@@ -134,37 +132,56 @@ export default function ArticlesScreen() {
           />
         </View>
 
-        {/* Danh sách bài viết — 4 trạng thái */}
+        <View className="flex-row items-center justify-between gap-2">
+          <Text className="text-xs font-semibold text-muted-foreground">{totalItems} bài viết</Text>
+          <View className="flex-row items-center gap-3">
+            {hasFilters ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={resetFilters}
+                hitSlop={6}
+                className="min-h-8 flex-row items-center gap-1 px-1">
+                <X size={13} color={colors.primary} />
+                <Text className="text-xs font-semibold text-primary">Xóa lọc</Text>
+              </Pressable>
+            ) : null}
+            <Link href={'/my-content' as Href} asChild>
+              <Pressable
+                accessibilityRole="link"
+                hitSlop={6}
+                className="min-h-8 flex-row items-center gap-1 px-1">
+                <FileText size={13} color={colors.foreground} />
+                <Text className="text-xs font-semibold text-foreground">Bài của tôi</Text>
+              </Pressable>
+            </Link>
+          </View>
+        </View>
+
+        {/* Danh sách bài viết */}
         <View className="gap-4">
           {isArticlesLoading ? (
             [1, 2, 3].map((i) => <View key={i} className="h-64 rounded-2xl border border-border bg-muted" />)
           ) : isArticlesError ? (
-            <View className="items-center rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
-              <Text className="font-semibold text-destructive">Không thể tải danh sách bài viết.</Text>
-              <Text className="mt-1 text-center text-sm text-muted-foreground">
-                Đã có lỗi xảy ra trong quá trình nạp bài viết từ máy chủ.
-              </Text>
-              <View className="mt-4">
-                <PrimaryButton label="Thử lại" variant="outline" onPress={() => void refetchArticles()} />
-              </View>
-            </View>
+            <ErrorState
+              title="Không thể tải danh sách bài viết."
+              description="Đã có lỗi xảy ra khi kết nối máy chủ. Vui lòng thử lại."
+              onRetry={() => void refetchArticles()}
+            />
           ) : articles.length === 0 ? (
-            <View className="items-center rounded-2xl border border-dashed border-border p-8">
-              <Text className="text-lg font-bold text-foreground">Không tìm thấy bài viết phù hợp</Text>
-              <Text className="mt-1 text-center text-sm text-muted-foreground">
-                Hãy thử tìm bằng từ khoá khác hoặc xoá bộ lọc chủ đề để xem nhiều nội dung hơn.
-              </Text>
-              {hasFilters ? (
-                <View className="mt-4">
+            <EmptyState
+              title="Không tìm thấy bài viết phù hợp"
+              description="Hãy thử tìm bằng từ khóa khác hoặc xóa bộ lọc chủ đề."
+              action={
+                hasFilters ? (
                   <PrimaryButton label="Đặt lại tất cả bộ lọc" variant="outline" onPress={resetFilters} />
-                </View>
-              ) : null}
-            </View>
+                ) : undefined
+              }
+            />
           ) : (
             <>
               {articles.map((post) => (
                 <Link key={post.id} href={`/articles/${post.id}` as Href} asChild>
-                  <Pressable>
+                  <Pressable className="active:opacity-90">
                     <PostCard post={post} />
                   </Pressable>
                 </Link>
@@ -178,23 +195,22 @@ export default function ArticlesScreen() {
           )}
         </View>
 
-        {/* Expert verification callout */}
-        <View className="rounded-3xl border border-primary/20 bg-primary/5 p-5">
-          <View className="flex-row items-center gap-3.5">
-            <View className="h-11 w-11 items-center justify-center rounded-2xl bg-primary">
-              <BadgeCheck size={20} color={colors.primaryForeground} />
+        {/* Lối tắt đóng góp */}
+        <View className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+          <View className="flex-row items-center gap-3">
+            <View className="h-10 w-10 items-center justify-center rounded-xl bg-primary">
+              <BadgeCheck size={18} color={colors.primaryForeground} />
             </View>
             <View className="flex-1">
-              <Text className="font-bold text-foreground">Quy trình Kiểm chứng Dinh dưỡng</Text>
-              <Text className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Mọi bài viết về vi chất, phòng chống thiếu máu và thực dưỡng đều được thẩm định bởi
-                chuyên gia dinh dưỡng trước khi gắn nhãn Đã kiểm chứng.
+              <Text className="text-sm font-bold text-foreground">Tham gia đóng góp bài viết</Text>
+              <Text className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                Bài viết về vi chất và thực dưỡng được rà soát trước khi gắn nhãn thẩm định.
               </Text>
             </View>
           </View>
-          <View className="mt-4">
-              <Link href={'/contributor-status' as Href} asChild>
-              <PrimaryButton label="Tham gia đóng góp bài viết" variant="outline" />
+          <View className="mt-3">
+            <Link href={'/contributor-status' as Href} asChild>
+              <PrimaryButton label="Tìm hiểu chương trình đóng góp" variant="outline" />
             </Link>
           </View>
         </View>

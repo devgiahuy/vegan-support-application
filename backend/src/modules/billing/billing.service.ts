@@ -8,6 +8,7 @@ import type {
   AdminBillingAvailability,
   AdminBillingCreate,
   AdminBillingUpdate,
+  CreateBillingOrder,
 } from './billing.schemas.js';
 import {
   BillingProviders,
@@ -162,11 +163,7 @@ export class BillingService {
     });
   }
 
-  async create(
-    ownerId: string,
-    input: { productId: string; idempotencyKey: string; expectedProductVersion?: number },
-    ip: string,
-  ) {
+  async create(ownerId: string, input: CreateBillingOrder, ip: string) {
     this.ensureEnabled();
     if (!this.providers.configured)
       throw paymentError(
@@ -230,6 +227,7 @@ export class BillingService {
           pantrySlots: product.pantrySlots,
           durationMonths: product.durationMonths ?? null,
           provider: this.config.billing.provider,
+          checkoutClient: input.checkoutClient ?? 'web',
           providerOrderCode: String(randomInt(1, 2 ** 48 - 1)),
           providerLinkId: null,
           providerCheckoutUrl: null,

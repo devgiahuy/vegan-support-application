@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import api from '@/lib/axios';
 import { MealPlanGoal } from '@/common/enums';
-import { mealPlanApi } from './meal-plan.api';
+import { GENERATE_MEAL_PLAN_TIMEOUT_MS, mealPlanApi } from './meal-plan.api';
 
 describe('meal plan API response mapping', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -44,8 +44,15 @@ describe('meal plan API response mapping', () => {
       deleted: true,
     });
 
-    expect(postSpy.mock.calls[0]?.[2]).toEqual({ silent: true });
+    expect(postSpy.mock.calls[0]?.[2]).toEqual({
+      silent: true,
+      timeout: GENERATE_MEAL_PLAN_TIMEOUT_MS,
+    });
     expect(patchSpy.mock.calls[0]?.[2]).toEqual({ silent: true });
     expect(deleteSpy.mock.calls[0]?.[1]).toMatchObject({ silent: true });
+  });
+
+  it('configures extended timeout (60s) for meal plan generation', () => {
+    expect(GENERATE_MEAL_PLAN_TIMEOUT_MS).toBe(60_000);
   });
 });

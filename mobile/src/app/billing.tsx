@@ -1,7 +1,8 @@
 import { createChatIdempotencyKey } from '@/features/chat/utils/idempotency';
 import * as React from 'react';
-import { AppState, Pressable, Text, View } from 'react-native';
-import { Link, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
+import { AppState, Platform, Pressable, Text, View } from 'react-native';
+import { Link, router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
 import { useQueryClient } from '@tanstack/react-query';
 import { SiteScreen } from '@/components/layout/site-screen';
@@ -32,6 +33,8 @@ import { useIconColors } from '@/lib/theme-colors';
 
 /** Số dòng "Biến động quyền lợi" hiện sẵn; phần còn lại nằm sau nút "Xem thêm". */
 const LEDGER_PREVIEW_COUNT = 3;
+const nativeCheckout =
+  Platform.OS !== 'web' && Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
 
 function openCheckout(url: string) {
   // Expo web opens in the current tab, so an async order request cannot lose
@@ -212,16 +215,24 @@ export default function BillingScreen() {
   const authenticated = useAuthStore((state) => state.isAuthenticated);
   const client = useQueryClient();
   const params = useLocalSearchParams<{ orderId?: string }>();
-  const initialId =
-    typeof params.orderId === 'string' && /^[a-f0-9-]{36}$/i.test(params.orderId)
+  const selectedId =
+    typeof params.orderId === 'string' &&
+    /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(params.orderId)
       ? params.orderId
       : '';
-  const [selectedId, setSelectedId] = React.useState(initialId);
+  const [billingTab, setBillingTab] = React.useState<'CATALOG' | 'ORDERS'>(
+    selectedId ? 'ORDERS' : 'CATALOG'
+  );
+  const [seenOrderId, setSeenOrderId] = React.useState(selectedId);
+  if (seenOrderId !== selectedId) {
+    setSeenOrderId(selectedId);
+    if (selectedId) setBillingTab('ORDERS');
+  }
   const [page, setPage] = React.useState(1);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const intents = React.useRef(new Map<string, string>());
   const awaitingCheckoutId = React.useRef<string | null>(null);
-  const checkingCheckout = React.useRef(false);
+  const checkoutOpen = React.useRef(false);
   const [checkoutNotice, setCheckoutNotice] = React.useState<BillingCheckFeedback | null>(null);
   const catalog = useBillingCatalogQuery();
   const allowances = useEntitlementsQuery();
@@ -250,10 +261,12 @@ export default function BillingScreen() {
         productId,
         idempotencyKey: key,
         expectedProductVersion: product.version,
+        ...(nativeCheckout ? { checkoutClient: 'mobile' } : {}),
       });
       intents.current.delete(productId);
-      setSelectedId(order.id);
-      await continueCheckout(order);
+      setBillingTab('ORDERS');
+      if (order.checkoutUrl) await continueCheckout(order);
+      else router.setParams({ orderId: order.id });
     } catch (error) {
       if (getApiErrorCode(error) === 'BILLING_PRODUCT_CHANGED' || getApiErrorCode(error) === 'BILLING_PRODUCT_UNAVAILABLE') {
         intents.current.delete(productId);
@@ -262,29 +275,31 @@ export default function BillingScreen() {
       setActionError(billingErrorMessage(error));
     }
   }
-  /**
-   * Mở trang payOS; khi người dùng đóng trình duyệt thì tự hỏi payOS trạng thái đơn để không phải bấm
-   * "Kiểm tra thanh toán". App cũng tự kiểm tra lại khi quay về foreground (xem effect AppState bên dưới).
-   */
   async function continueCheckout(order: BillingOrder) {
-    if (!order.checkoutUrl) return;
+    if (!order.checkoutUrl || checkoutOpen.current) return;
+    router.setParams({ orderId: order.id });
     setCheckoutNotice(null);
-    awaitingCheckoutId.current = order.id;
+    checkoutOpen.current = true;
     try {
-      await openCheckout(order.checkoutUrl);
+      if (nativeCheckout) {
+        const callbackUrl = 'mobile://billing?orderId=' + encodeURIComponent(order.id);
+        await WebBrowser.openAuthSessionAsync(order.checkoutUrl, callbackUrl, { createTask: false });
+      } else {
+        if (Platform.OS === 'android') awaitingCheckoutId.current = order.id;
+        const result = await openCheckout(order.checkoutUrl);
+        if (result.type === 'opened') return;
+      }
+      await checkAfterCheckout(order.id);
     } catch {
-      // Không mở được trình duyệt: vẫn kiểm tra xem đơn đã được thanh toán chưa.
+      awaitingCheckoutId.current = null;
+      setActionError('Không mở được trang thanh toán. Bạn có thể mở lại từ đơn hàng.');
+    } finally {
+      checkoutOpen.current = false;
     }
-    await checkAfterCheckout(order.id, false);
   }
-  async function checkAfterCheckout(id: string, silentWhenPending: boolean) {
-    // Kiểm tra im lặng nhường chỗ cho lần đang chạy; lần sau khi đóng trình duyệt luôn phải báo kết quả.
-    if (silentWhenPending && checkingCheckout.current) return;
-    checkingCheckout.current = true;
+  async function checkAfterCheckout(id: string) {
     try {
       const result = await reconcile.mutateAsync(id);
-      if (result.status !== 'PENDING') awaitingCheckoutId.current = null;
-      if (silentWhenPending && result.status === 'PENDING') return;
       setCheckoutNotice({
         message: billingCheckMessage(result),
         checkedAtLabel: billingCheckTime(),
@@ -292,23 +307,24 @@ export default function BillingScreen() {
         status: result.status,
       });
     } catch (error) {
-      if (silentWhenPending) return;
       setCheckoutNotice({
         message: billingErrorMessage(error),
         checkedAtLabel: billingCheckTime(),
         isError: true,
       });
-    } finally {
-      checkingCheckout.current = false;
     }
   }
   const checkAfterCheckoutRef = React.useRef(checkAfterCheckout);
   checkAfterCheckoutRef.current = checkAfterCheckout;
-  // Người dùng có thể sang app ngân hàng rồi quay lại app: đơn đang chờ thì kiểm tra lại, im lặng nếu vẫn chờ.
+  // Expo Go Android mở Custom Tab mà không đợi trình duyệt đóng.
   React.useEffect(() => {
+    if (nativeCheckout || Platform.OS !== 'android') return;
     const subscription = AppState.addEventListener('change', (state) => {
       const id = awaitingCheckoutId.current;
-      if (state === 'active' && id) void checkAfterCheckoutRef.current(id, true);
+      if (state === 'active' && id) {
+        awaitingCheckoutId.current = null;
+        void checkAfterCheckoutRef.current(id);
+      }
     });
     return () => subscription.remove();
   }, []);
@@ -319,12 +335,24 @@ export default function BillingScreen() {
   const loading = catalog.isLoading || allowances.isLoading;
   const error = catalog.error ?? allowances.error;
   return (
-    <SiteScreen>
-      <View className="gap-6 px-4 pb-10 pt-5">
-        <View className="gap-2">
-          <Text className="text-sm font-semibold text-primary">Gói tiện ích VeggieConnect</Text>
-          <Text className="text-3xl font-bold text-foreground">Thêm lượt, chủ động hơn</Text>
-          <Text className="text-sm leading-6 text-muted-foreground">
+    <SiteScreen
+      title="Gói tiện ích"
+      onRefresh={
+        authenticated
+          ? () =>
+              Promise.all([
+                catalog.refetch(),
+                allowances.refetch(),
+                history.refetch(),
+                selectedId ? selected.refetch() : Promise.resolve(),
+              ])
+          : undefined
+      }>
+      <View className="gap-5 px-4 pb-8 pt-4">
+        <View className="gap-1.5">
+          <Text className="text-xs font-semibold uppercase tracking-wide text-primary">Gói tiện ích VeggieConnect</Text>
+          <Text className="text-2xl font-bold text-foreground">Thêm lượt, chủ động hơn</Text>
+          <Text className="text-sm leading-5 text-muted-foreground">
             Mỗi ngày có 3 lượt chat, 1 lượt quét tủ lạnh và 1 lượt quét hóa đơn miễn phí. Gói lẻ mua một lần, cộng dồn vào tài khoản; combo tiện ích theo thời hạn cấp lượt mỗi
             chu kỳ. Không tự gia hạn, không tăng dung lượng ảnh lưu trữ.
           </Text>
@@ -347,7 +375,9 @@ export default function BillingScreen() {
                 có sandbox riêng. Chỉ cộng lượt sau khi xác nhận đã nhận đủ tiền.
               </Text>
               <Text className="text-xs text-muted-foreground">
-                Sau thanh toán, đóng trình duyệt và quay lại ứng dụng để xem quyền lợi.
+                {nativeCheckout
+                  ? 'Sau thanh toán, quay lại ứng dụng để xem trạng thái đơn hàng.'
+                  : 'Sau thanh toán, đóng trang payOS và quay lại ứng dụng để xem quyền lợi.'}
               </Text>
             </View>
             {loading ? (
@@ -423,156 +453,205 @@ export default function BillingScreen() {
                 </Text>
               </View>
             )}
-            {selectedId && (
-              <View className="gap-3">
-                <Text className="text-xl font-semibold text-foreground">Đơn hàng đang xem</Text>
-                {selected.isLoading ? (
-                  <LoadingState message="Đang kiểm tra đơn…" />
-                ) : selected.isError ? (
-                  <Text accessibilityRole="alert" className="text-destructive">
-                    {billingErrorMessage(selected.error)}
-                  </Text>
-                ) : (
-                  selected.data && (
-                    <OrderCard
-                      order={selected.data}
-                      refresh={refresh}
-                      busy={reconcile.isPending}
-                      onContinue={(order) => void continueCheckout(order)}
-                    />
-                  )
-                )}
+            <View className="flex-row gap-2">
+              {(
+                [
+                  { key: 'CATALOG', label: 'Mua gói tiện ích' },
+                  { key: 'ORDERS', label: 'Đơn hàng & Lịch sử' },
+                ] as const
+              ).map((item) => {
+                const active = billingTab === item.key;
+                return (
+                  <Pressable
+                    key={item.key}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: active }}
+                    onPress={() => setBillingTab(item.key)}
+                    className={cn(
+                      'min-h-11 flex-1 items-center justify-center rounded-xl border px-3',
+                      active ? 'border-primary bg-primary/10' : 'border-border bg-card'
+                    )}>
+                    <Text
+                      numberOfLines={1}
+                      className={cn('text-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {billingTab === 'CATALOG' ? (
+              <View className="gap-5">
+                {catalog.data && catalog.data.durationPlans.length > 0 ? (
+                  <DurationPlans
+                    plans={catalog.data.durationPlans}
+                    enabled={catalog.data.enabled}
+                    purchasingId={purchase.isPending ? purchase.variables?.productId : undefined}
+                    anyPurchasing={purchase.isPending}
+                    onBuy={(productId) => void buy(productId)}
+                  />
+                ) : null}
+                <View className="gap-4">
+                  <Text className="text-xl font-semibold text-foreground">Gói lẻ mua thêm</Text>
+                  {catalog.data?.products.length === 0 && (
+                    <Text className="text-sm text-muted-foreground">Chưa có gói đang mở bán.</Text>
+                  )}
+                  {catalog.data?.oneTimeProducts.map((product) => (
+                    <View
+                      key={product.id}
+                      className="gap-3.5 rounded-2xl border border-border bg-card p-4"
+                    >
+                      <Text className="text-lg font-semibold text-foreground">{product.name}</Text>
+                      <Text className="text-sm text-muted-foreground">{product.description}</Text>
+                      <Text className="text-2xl font-bold text-primary">{product.priceLabel}</Text>
+                      <View className="gap-1">
+                        {product.benefitLabels.map((label) => (
+                          <Text key={label} className="text-sm text-foreground">
+                            • {label}
+                          </Text>
+                        ))}
+                      </View>
+                      <Text className="text-xs text-muted-foreground">
+                        Cộng dồn · Không hết hạn trong bản demo
+                      </Text>
+                      <PrimaryButton
+                        label={
+                          purchase.isPending && purchase.variables?.productId === product.id
+                            ? 'Đang tạo đơn…'
+                            : 'Thanh toán qua payOS'
+                        }
+                        icon={<QrCode size={18} color={colors.primaryForeground} />}
+                        iconPosition="left"
+                        loading={purchase.isPending && purchase.variables?.productId === product.id}
+                        disabled={!catalog.data?.enabled || !product.canBuy || purchase.isPending}
+                        onPress={() => void buy(product.id)}
+                      />
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : (
+              <View className="gap-5">
+                {selectedId ? (
+                  <View className="gap-3">
+                    <Text className="text-xl font-semibold text-foreground">Đơn hàng đang xem</Text>
+                    {selected.isLoading ? (
+                      <LoadingState message="Đang kiểm tra đơn…" />
+                    ) : selected.isError ? (
+                      <Text accessibilityRole="alert" className="text-destructive">
+                        {billingErrorMessage(selected.error)}
+                      </Text>
+                    ) : (
+                      selected.data && (
+                        <OrderCard
+                          order={selected.data}
+                          refresh={refresh}
+                          busy={reconcile.isPending}
+                          onContinue={(order) => void continueCheckout(order)}
+                        />
+                      )
+                    )}
+                  </View>
+                ) : null}
+
+                <View className="gap-3">
+                  <Text className="text-xl font-semibold text-foreground">Lịch sử mua gói</Text>
+                  {history.isLoading ? (
+                    <LoadingState message="Đang tải lịch sử…" />
+                  ) : history.isError ? (
+                    <View className="gap-3">
+                      <Text accessibilityRole="alert" className="text-destructive">
+                        {billingErrorMessage(history.error)}
+                      </Text>
+                      <PrimaryButton
+                        label="Tải lại lịch sử"
+                        variant="outline"
+                        onPress={() => void history.refetch()}
+                      />
+                    </View>
+                  ) : history.data?.items.length === 0 ? (
+                    <View className="gap-3 rounded-2xl border border-dashed border-border p-4">
+                      <Text className="text-sm text-muted-foreground">
+                        Bạn chưa mua gói nào. Chọn gói phù hợp trong mục Mua gói tiện ích.
+                      </Text>
+                      <PrimaryButton
+                        label="Xem gói tiện ích"
+                        variant="outline"
+                        onPress={() => setBillingTab('CATALOG')}
+                      />
+                    </View>
+                  ) : (
+                    history.data?.items.map((order) => (
+                      <OrderCard
+                        key={order.id}
+                        order={order}
+                        refresh={refresh}
+                        busy={reconcile.isPending}
+                        onContinue={(item) => void continueCheckout(item)}
+                      />
+                    ))
+                  )}
+                  {history.data && history.data.totalPages > 1 && (
+                    <View className="flex-row gap-2">
+                      <PrimaryButton
+                        label="Trang trước"
+                        variant="outline"
+                        className="flex-1"
+                        disabled={page <= 1}
+                        onPress={() => setPage((value) => value - 1)}
+                      />
+                      <PrimaryButton
+                        label="Trang sau"
+                        variant="outline"
+                        className="flex-1"
+                        disabled={page >= history.data.totalPages}
+                        onPress={() => setPage((value) => value + 1)}
+                      />
+                    </View>
+                  )}
+                </View>
+
+                <View className="gap-3">
+                  <Text className="text-xl font-semibold text-foreground">Biến động quyền lợi</Text>
+                  {allowances.data?.ledger.length === 0 && (
+                    <Text className="text-sm text-muted-foreground">Chưa có biến động.</Text>
+                  )}
+                  {ledgerView.visible.map((entry) => (
+                    <View
+                      key={entry.id}
+                      className="flex-row items-center justify-between gap-3 border-b border-border py-3"
+                    >
+                      <View className="flex-1">
+                        <Text className="text-sm text-foreground">
+                          {entry.featureLabel} · {entry.reasonLabel}
+                        </Text>
+                        <Text className="text-xs text-muted-foreground">{entry.createdAtLabel}</Text>
+                      </View>
+                      <Text
+                        className={cn(
+                          'font-semibold',
+                          entry.delta > 0
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : entry.delta < 0
+                              ? 'text-rose-600 dark:text-rose-400'
+                              : 'text-muted-foreground'
+                        )}
+                      >
+                        {entry.deltaLabel}
+                      </Text>
+                    </View>
+                  ))}
+                  <ShowMoreButton
+                    collapsible={ledgerView.collapsible}
+                    expanded={ledgerView.expanded}
+                    hiddenCount={ledgerView.hiddenCount}
+                    onPress={ledgerView.toggle}
+                  />
+                </View>
               </View>
             )}
-            {catalog.data && catalog.data.durationPlans.length > 0 ? (
-              <DurationPlans
-                plans={catalog.data.durationPlans}
-                enabled={catalog.data.enabled}
-                purchasingId={purchase.isPending ? purchase.variables?.productId : undefined}
-                anyPurchasing={purchase.isPending}
-                onBuy={(productId) => void buy(productId)}
-              />
-            ) : null}
-            <View className="gap-4">
-              <Text className="text-2xl font-semibold text-foreground">Gói lẻ mua thêm</Text>
-              {catalog.data?.products.length === 0 && (
-                <Text className="text-muted-foreground">Chưa có gói đang mở bán.</Text>
-              )}
-              {catalog.data?.oneTimeProducts.map((product) => (
-                <View
-                  key={product.id}
-                  className="gap-4 rounded-xl border border-border bg-card p-5"
-                >
-                  <Text className="text-lg font-semibold text-foreground">{product.name}</Text>
-                  <Text className="text-sm text-muted-foreground">{product.description}</Text>
-                  <Text className="text-2xl font-bold text-primary">{product.priceLabel}</Text>
-                  {product.benefitLabels.map((label) => (
-                    <Text key={label} className="text-sm text-foreground">
-                      {label}
-                    </Text>
-                  ))}
-                  <Text className="text-xs text-muted-foreground">
-                    Cộng dồn · Không hết hạn trong bản demo
-                  </Text>
-                  <PrimaryButton
-                    label={
-                      purchase.isPending && purchase.variables?.productId === product.id
-                        ? 'Đang tạo đơn…'
-                        : 'Thanh toán qua payOS'
-                    }
-                    icon={<QrCode size={18} color={colors.primaryForeground} />}
-                    iconPosition="left"
-                    loading={purchase.isPending && purchase.variables?.productId === product.id}
-                    disabled={!catalog.data?.enabled || !product.canBuy || purchase.isPending}
-                    onPress={() => void buy(product.id)}
-                  />
-                </View>
-              ))}
-            </View>
-            <View className="gap-3">
-              <Text className="text-xl font-semibold text-foreground">Lịch sử mua gói</Text>
-              {history.isLoading ? (
-                <LoadingState message="Đang tải lịch sử…" />
-              ) : history.isError ? (
-                <View className="gap-3">
-                  <Text accessibilityRole="alert" className="text-destructive">
-                    {billingErrorMessage(history.error)}
-                  </Text>
-                  <PrimaryButton
-                    label="Tải lại lịch sử"
-                    variant="outline"
-                    onPress={() => void history.refetch()}
-                  />
-                </View>
-              ) : history.data?.items.length === 0 ? (
-                <Text className="text-muted-foreground">
-                  Bạn chưa mua gói nào. Chọn gói phù hợp ở phía trên.
-                </Text>
-              ) : (
-                history.data?.items.map((order) => (
-                  <OrderCard
-                    key={order.id}
-                    order={order}
-                    refresh={refresh}
-                    busy={reconcile.isPending}
-                    onContinue={(item) => void continueCheckout(item)}
-                  />
-                ))
-              )}
-              {history.data && history.data.totalPages > 1 && (
-                <View className="gap-2">
-                  <PrimaryButton
-                    label="Trang trước"
-                    variant="outline"
-                    disabled={page <= 1}
-                    onPress={() => setPage((value) => value - 1)}
-                  />
-                  <PrimaryButton
-                    label="Trang sau"
-                    variant="outline"
-                    disabled={page >= history.data.totalPages}
-                    onPress={() => setPage((value) => value + 1)}
-                  />
-                </View>
-              )}
-            </View>
-            <View className="gap-3">
-              <Text className="text-xl font-semibold text-foreground">Biến động quyền lợi</Text>
-              {allowances.data?.ledger.length === 0 && (
-                <Text className="text-muted-foreground">Chưa có biến động.</Text>
-              )}
-              {ledgerView.visible.map((entry) => (
-                <View
-                  key={entry.id}
-                  className="flex-row items-center justify-between gap-3 border-b border-border py-3"
-                >
-                  <View className="flex-1">
-                    <Text className="text-sm text-foreground">
-                      {entry.featureLabel} · {entry.reasonLabel}
-                    </Text>
-                    <Text className="text-xs text-muted-foreground">{entry.createdAtLabel}</Text>
-                  </View>
-                  <Text
-                    className={cn(
-                      'font-semibold',
-                      entry.delta > 0
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : entry.delta < 0
-                          ? 'text-rose-600 dark:text-rose-400'
-                          : 'text-muted-foreground'
-                    )}
-                  >
-                    {entry.deltaLabel}
-                  </Text>
-                </View>
-              ))}
-              <ShowMoreButton
-                collapsible={ledgerView.collapsible}
-                expanded={ledgerView.expanded}
-                hiddenCount={ledgerView.hiddenCount}
-                onPress={ledgerView.toggle}
-              />
-            </View>
+
             <View className="flex-row gap-2">
               <Link href={'/pantry' as Href} asChild>
                 <PrimaryButton label="Mở tủ đồ ăn" variant="outline" className="flex-1" />

@@ -121,7 +121,9 @@ export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z
     {
       method: 'post' as const,
       path: '/billing/orders',
-      summary: 'Create idempotent package order; confirm displayed product version for new orders',
+      summary: 'Create idempotent package order with web or mobile payOS return',
+      description:
+        'Confirm the displayed product version for new orders. checkoutClient defaults to web; mobile adds returnTo=app to the configured billing URL. An idempotent retry retains the original return destination.',
       response: schemas.order,
       request: { body: { content: json(createBillingOrderSchema) } },
     },
@@ -137,6 +139,7 @@ export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z
       path: '/billing/orders/{id}/reconcile',
       summary:
         'Recover same payOS checkout if needed, verify query and settle once; 30-second throttle',
+      description: 'Checkout recovery uses the original order’s return destination.',
       response: schemas.order,
       request: { params: billingIdSchema },
     },
@@ -144,6 +147,7 @@ export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z
     registry.registerPath({
       method: operation.method,
       summary: operation.summary,
+      ...('description' in operation ? { description: operation.description } : {}),
       ...(operation.request ? { request: operation.request } : {}),
       path: '/api/v1' + operation.path,
       tags: ['Billing'],

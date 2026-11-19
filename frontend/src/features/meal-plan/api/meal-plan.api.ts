@@ -15,6 +15,13 @@ import type {
 import { mealPlanMapper } from '../mappers/meal-plan.mapper';
 
 /**
+ * Timeout riêng cho request tạo / tạo lại thực đơn tuần (mặc định axios là 15s).
+ * Quá trình generate giải bài toán xếp 21 bữa, xếp hạng công thức và phân tích dinh dưỡng
+ * nên cần thời gian phản hồi lâu hơn.
+ */
+export const GENERATE_MEAL_PLAN_TIMEOUT_MS = 60_000;
+
+/**
  * Consumer 5 endpoint meal-plan đã `READY`.
  * Đọc data và metadata từ response envelope trước khi gọi mapper.
  */
@@ -25,7 +32,8 @@ export const mealPlanApi = {
       MEAL_PLANS_ENDPOINTS.GENERATE,
       mealPlanMapper.toGenerateDto(input),
       // Hook tự toast theo mã lỗi; tránh toast trùng từ interceptor.
-      { silent: true }
+      // Timeout 60s cho quá trình sinh thực đơn 21 bữa + phân tích dinh dưỡng.
+      { silent: true, timeout: GENERATE_MEAL_PLAN_TIMEOUT_MS }
     );
     return mealPlanMapper.toDetailModel(res.data?.data);
   },

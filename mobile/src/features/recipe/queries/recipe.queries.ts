@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getNextPageNumber } from '@/lib/pagination';
+import { useAuthStore } from '@/store/useAuthStore';
 import {
   recipeApi,
   type CreateRecipeInput,
@@ -10,7 +11,8 @@ import {
 export const RECIPE_QUERY_KEYS = {
   all: ['recipes'] as const,
   list: (params?: RecipeQueryParams) => [...RECIPE_QUERY_KEYS.all, 'list', params] as const,
-  detail: (idOrSlug: string) => [...RECIPE_QUERY_KEYS.all, 'detail', idOrSlug] as const,
+  detail: (idOrSlug: string, viewerId?: string) =>
+    [...RECIPE_QUERY_KEYS.all, 'detail', idOrSlug, viewerId ?? 'guest'] as const,
 };
 
 export const useRecipesQuery = (params?: RecipeQueryParams) => {
@@ -35,8 +37,9 @@ export const useInfiniteRecipesQuery = (
 };
 
 export const useRecipeDetailQuery = (idOrSlug: string) => {
+  const viewerId = useAuthStore((state) => (state.isAuthenticated ? state.user?.id : undefined));
   return useQuery({
-    queryKey: RECIPE_QUERY_KEYS.detail(idOrSlug),
+    queryKey: RECIPE_QUERY_KEYS.detail(idOrSlug, viewerId),
     queryFn: () => recipeApi.getRecipeDetail(idOrSlug),
     enabled: idOrSlug.length > 0,
   });

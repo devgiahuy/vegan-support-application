@@ -41,6 +41,18 @@ export interface RecipeUsageStatisticsDto {
   limitation?: string;
 }
 
+export interface RecipeStepDto {
+  id?: string;
+  position?: number;
+  instruction?: string;
+  cookingMethodId?: string | null;
+  cookingMethodCode?: string | null;
+  cookingMethodName?: string | null;
+  durationMinutes?: number | null;
+  temperatureCelsius?: number | null;
+  affectedIngredientPositions?: number[];
+}
+
 export interface RecipeEligibilityReasonDto {
   code?: string;
   ingredientNames?: string[];
@@ -68,6 +80,7 @@ export interface RecipeDetailDto extends BasePostDto {
     traditionWarnings?: TraditionWarningDto[];
     dietCompatibilities?: DietCompatibilityDto[];
     ingredients?: RecipeIngredientDto[];
+    steps?: RecipeStepDto[];
     statistics?: RecipeUsageStatisticsDto | null;
     /** Chỉ có khi list với `eligibility=INELIGIBLE`. */
     eligibility?: RecipeEligibilityDto | null;

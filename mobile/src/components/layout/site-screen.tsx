@@ -8,8 +8,7 @@ import { SiteFooter } from './site-footer';
 
 /**
  * Khung trang dùng chung (Header cố định trên cùng + nội dung cuộn, Footer tuỳ chọn
- * ở cuối). Dùng cho mọi trang chính (Trang chủ, Khám phá món, Cẩm nang...).
- * Footer chỉ hiện ở Trang chủ — các màn khác không truyền `showFooter` nên mặc định ẩn.
+ * ở cuối). Dùng cho mọi trang chính và trang phụ.
  */
 export function SiteScreen({
   children,
@@ -19,6 +18,8 @@ export function SiteScreen({
   onRefresh,
   contentClassName,
   maintainContentPosition = false,
+  title,
+  headerRight,
 }: {
   children: React.ReactNode;
   fab?: React.ReactNode;
@@ -34,6 +35,10 @@ export function SiteScreen({
    * Chỉ có tác dụng khi các khối của trang là con trực tiếp của ScrollView (không bọc trong một View duy nhất).
    */
   maintainContentPosition?: boolean;
+  /** Tiêu đề hiển thị ở header khi là màn hình con hoặc cần đặt tiêu đề cụ thể. */
+  title?: string;
+  /** Nút thao tác phụ ở góc phải header (dành cho màn hình con). */
+  headerRight?: React.ReactNode;
 }) {
   const colors = useIconColors();
   const { keyboardHeight, scrollProps } = useKeyboardAwareScroll(scrollRef);
@@ -51,18 +56,21 @@ export function SiteScreen({
 
   return (
     <View className="flex-1 bg-background">
-      <SiteHeader />
+      <SiteHeader title={title} headerRight={headerRight} />
       <ScrollView
         {...scrollProps}
         className="flex-1"
         refreshControl={
           onRefresh ? (
-            <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={colors.primary} colors={[colors.primary]} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void handleRefresh()}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
           ) : undefined
         }
-        // pb-10: chừa chỗ cho nút "Thêm" nổi lên (-mt-6) ở giữa thanh tab dưới đáy,
-        // tránh đè lên nội dung cuối trang khi kéo hết cỡ (mọi màn dùng chung thanh tab).
-        contentContainerClassName={cn('grow', showFooter ? '' : 'pb-10', contentClassName)}
+        contentContainerClassName={cn('grow', showFooter ? '' : 'pb-6', contentClassName)}
         maintainVisibleContentPosition={maintainContentPosition ? { minIndexForVisible: 0 } : undefined}
         keyboardShouldPersistTaps="handled">
         {children}

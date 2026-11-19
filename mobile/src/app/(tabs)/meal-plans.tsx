@@ -10,9 +10,6 @@ import {
   ChevronRight,
   Plus,
   Sparkles,
-  Target,
-  Utensils,
-  Warehouse,
 } from 'lucide-react-native';
 
 import { MealPlanGoal } from '@/common/enums';
@@ -42,7 +39,7 @@ function LoginRequiredCard() {
 
   return (
     <View className="items-center rounded-2xl border border-dashed border-border p-7">
-      <CalendarDays size={20} color={colors.primary} />
+      <CalendarDays size={22} color={colors.primary} />
       <Text className="mt-2 text-center font-semibold text-foreground">Cần đăng nhập</Text>
       <Text className="mt-1 text-center text-sm text-muted-foreground">
         Thực đơn là dữ liệu cá nhân, cần tài khoản để áp dụng hồ sơ sức khỏe và luật ăn chay của bạn.
@@ -57,9 +54,9 @@ function LoginRequiredCard() {
 }
 
 /**
- * "Kế hoạch bữa ăn" — đồng bộ `frontend/src/app/(site)/meal-plans/page.tsx`: form tạo thực đơn tuần
- * (tuần bắt đầu, mục tiêu, tạo lại từ phiên bản cũ) + các phiên bản gần đây, lối tắt tới Món ăn của tôi
- * và Lộ trình nhiều tuần.
+ * "Kế hoạch bữa ăn" — tối ưu cho điện thoại:
+ * Form tạo thực đơn tuần (nút tuần 44dp, mục tiêu rõ ràng) -> Lưới 2x2 lối tắt công cụ bếp
+ * -> Phiên bản thực đơn gần đây.
  */
 export default function MealPlansScreen() {
   const colors = useIconColors();
@@ -93,17 +90,11 @@ export default function MealPlansScreen() {
   };
 
   return (
-    <SiteScreen>
-      <View className="gap-5 px-5 pt-4">
-        <View>
-          <View className="flex-row items-center gap-2">
-            <CalendarDays size={18} color={colors.primary} />
-            <Text className="text-2xl font-bold tracking-tight text-foreground">Kế hoạch bữa ăn</Text>
-          </View>
-          <Text className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Tạo thực đơn chay 7 ngày theo mục tiêu, đúng luật ăn, dị ứng và hồ sơ sức khỏe của bạn.
-          </Text>
-        </View>
+    <SiteScreen onRefresh={isAuthenticated ? () => refetch() : undefined}>
+      <View className="gap-4 px-5 pt-3.5">
+        <Text className="text-sm leading-relaxed text-muted-foreground">
+          Tạo thực đơn chay 7 ngày theo mục tiêu, đúng thiết lập ăn uống và hồ sơ sức khỏe của bạn.
+        </Text>
 
         <View className="rounded-2xl border border-border bg-card p-4">
           <Text className="text-base font-bold text-foreground">Tạo thực đơn mới</Text>
@@ -115,7 +106,7 @@ export default function MealPlansScreen() {
                 <Text className="text-sm text-destructive">{formError}</Text>
                 {getApiErrorCode(generateMutation.error) === 'HEALTH_PROFILE_INCOMPLETE' ? (
                   <Link href={'/profile' as Href} asChild>
-                    <Pressable>
+                    <Pressable className="min-h-10 justify-center">
                       <Text className="mt-1 text-sm font-semibold text-primary underline">Tới hồ sơ sức khỏe</Text>
                     </Pressable>
                   </Link>
@@ -124,35 +115,40 @@ export default function MealPlansScreen() {
             </View>
           ) : null}
 
-
-          <View className="mt-4 flex-row items-center justify-between">
-            <Text className="text-sm font-semibold text-foreground">Tuần bắt đầu (Thứ hai)</Text>
-            <View className="flex-row items-center gap-2">
+          <View className="mt-4 flex-row items-center justify-between gap-2">
+            <Text className="flex-1 text-sm font-semibold text-foreground">Tuần bắt đầu (Thứ 2)</Text>
+            <View className="flex-row items-center gap-1.5">
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Tuần trước"
                 onPress={() => setWeekStart((current) => shiftWeek(current, -1))}
-                className="h-9 w-9 items-center justify-center rounded-full bg-muted">
-                <ChevronLeft size={16} color={colors.foreground} />
+                className="h-11 w-11 items-center justify-center rounded-full bg-muted active:opacity-80">
+                <ChevronLeft size={18} color={colors.foreground} />
               </Pressable>
               <Text className="min-w-24 text-center text-sm font-semibold text-foreground">{weekStart}</Text>
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Tuần sau"
                 onPress={() => setWeekStart((current) => shiftWeek(current, 1))}
-                className="h-9 w-9 items-center justify-center rounded-full bg-muted">
-                <ChevronRight size={16} color={colors.foreground} />
+                className="h-11 w-11 items-center justify-center rounded-full bg-muted active:opacity-80">
+                <ChevronRight size={18} color={colors.foreground} />
               </Pressable>
             </View>
           </View>
 
           <Text className="mt-4 text-sm font-semibold text-foreground">Mục tiêu</Text>
-          <View className="mt-2 gap-2">
+          <View className="mt-2 gap-2" accessibilityRole="radiogroup">
             {GOALS.map((item) => {
               const selected = goal === item.value;
               return (
                 <Pressable
                   key={item.value}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
                   onPress={() => setGoal(item.value)}
                   className={cn(
-                    'flex-row items-center justify-between rounded-xl border p-3',
-                    selected ? 'border-primary bg-primary/10' : 'border-border bg-background'
+                    'min-h-12 flex-row items-center justify-between rounded-xl border p-3',
+                    selected ? 'border-primary bg-primary/10' : 'border-border bg-background active:bg-muted/40'
                   )}>
                   <View className="flex-1">
                     <Text className={cn('text-sm font-semibold', selected ? 'text-primary' : 'text-foreground')}>
@@ -202,34 +198,12 @@ export default function MealPlansScreen() {
           </View>
         </View>
 
-        <View className="flex-row gap-2">
-          <Link href={'/custom-meals' as Href} asChild>
-            <Pressable className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border border-input py-2.5">
-              <Utensils size={14} color={colors.primary} />
-              <Text className="text-xs font-semibold text-foreground">Món ăn của tôi</Text>
-            </Pressable>
-          </Link>
-          <Link href={'/meal-programs' as Href} asChild>
-            <Pressable className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border border-input py-2.5">
-              <Target size={14} color={colors.primary} />
-              <Text className="text-xs font-semibold text-foreground">Lộ trình nhiều tuần</Text>
-            </Pressable>
-          </Link>
-        </View>
-
-        <Link href={'/pantry' as Href} asChild>
-          <Pressable className="flex-row items-center justify-center gap-1.5 rounded-xl border border-input py-2.5">
-            <Warehouse size={14} color={colors.primary} />
-            <Text className="text-xs font-semibold text-foreground">Tủ bếp</Text>
-          </Pressable>
-        </Link>
-
         <View className="gap-3">
           <View className="flex-row items-center justify-between">
             <Text className="text-lg font-bold text-foreground">Phiên bản gần đây</Text>
             {plans.length > 0 ? (
               <Link href={'/meal-plans/saved' as Href} asChild>
-                <Pressable className="flex-row items-center gap-1">
+                <Pressable accessibilityRole="link" className="min-h-11 flex-row items-center gap-1 px-1">
                   <Text className="text-xs font-semibold text-primary">Xem tất cả</Text>
                   <ArrowRight size={13} color={colors.primary} />
                 </Pressable>

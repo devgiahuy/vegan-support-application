@@ -8,17 +8,13 @@ import {
   Bookmark,
   Share2,
   BadgeCheck,
-  Sparkles,
   Home,
   ChevronRight,
-  ShieldCheck,
   Calendar,
   Tag,
-  Lightbulb,
   AlertTriangle,
   Pencil,
   Trash2,
-  ArrowLeft,
   CheckCircle2,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -28,7 +24,7 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { VoteControl } from '@/components/shared/vote-control';
 import { SafeImage } from '@/components/shared/safe-image';
@@ -41,6 +37,7 @@ import { ReviewStatusBanner } from '@/features/review/components/review-status-b
 import { ReviewHistoryDialog } from '@/features/review/components/review-history-dialog';
 import { PostCard } from './post-card';
 import { DeletePostDialog } from './delete-post-dialog';
+import { ArticleMarkdown } from './article-markdown';
 import type { Post, Article } from '../types/post.model';
 
 interface PostDetailViewProps {
@@ -106,130 +103,6 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
       : dietSchool === 'DAO_GIAO'
         ? 'Chay Đạo giáo'
         : 'Thuần chay';
-
-  // Render markdown cơ bản thành các block UI bắt mắt
-  const renderMarkdownContent = (md: string) => {
-    return md.split('\n\n').map((block, idx) => {
-      const trimmed = block.trim();
-      if (trimmed.startsWith('## ')) {
-        return (
-          <h2
-            key={idx}
-            className="text-xl sm:text-2xl font-bold text-foreground mt-8 mb-3 scroll-mt-20 flex items-center gap-2"
-          >
-            <span className="h-2 w-2 rounded-full bg-primary" />
-            {trimmed.replace(/^## /, '')}
-          </h2>
-        );
-      }
-      if (trimmed.startsWith('### ')) {
-        return (
-          <h3 key={idx} className="text-lg sm:text-xl font-semibold text-foreground mt-6 mb-2">
-            {trimmed.replace(/^### /, '')}
-          </h3>
-        );
-      }
-      if (trimmed.startsWith('> [!TIP]')) {
-        return (
-          <div
-            key={idx}
-            className="my-5 rounded-2xl border-l-4 border-emerald-500 bg-emerald-500/10 p-5 shadow-sm"
-          >
-            <div className="flex items-center gap-2 font-bold text-emerald-600 dark:text-emerald-400 text-sm mb-1.5">
-              <Lightbulb className="h-5 w-5" /> Lời Khuyên Dinh Dưỡng Từ Chuyên Gia
-            </div>
-            <p className="text-sm sm:text-base text-foreground leading-relaxed">
-              {trimmed.replace(/^> \[!TIP\]\s*/, '').replace(/^> /gm, '')}
-            </p>
-          </div>
-        );
-      }
-      if (trimmed.startsWith('> ')) {
-        return (
-          <blockquote
-            key={idx}
-            className="my-6 border-l-4 border-primary pl-5 italic text-muted-foreground bg-primary/5 py-4 rounded-r-2xl font-medium text-base sm:text-lg"
-          >
-            {trimmed.replace(/^> /gm, '')}
-          </blockquote>
-        );
-      }
-      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-        const items = trimmed.split('\n');
-        return (
-          <ul
-            key={idx}
-            className="list-disc list-inside space-y-2 my-4 text-base leading-relaxed text-muted-foreground pl-2"
-          >
-            {items.map((it, i) => {
-              const text = it.replace(/^[-*]\s*/, '');
-              // Hỗ trợ in đậm **...**
-              const parts = text.split(/(\*\*.*?\*\*)/g);
-              return (
-                <li key={i}>
-                  {parts.map((part, pIdx) => {
-                    if (part.startsWith('**') && part.endsWith('**')) {
-                      return (
-                        <strong key={pIdx} className="font-semibold text-foreground">
-                          {part.slice(2, -2)}
-                        </strong>
-                      );
-                    }
-                    return part;
-                  })}
-                </li>
-              );
-            })}
-          </ul>
-        );
-      }
-      if (/^\d+\.\s/.test(trimmed)) {
-        const items = trimmed.split('\n');
-        return (
-          <ol
-            key={idx}
-            className="list-decimal list-inside space-y-2 my-4 text-base leading-relaxed text-muted-foreground pl-2"
-          >
-            {items.map((it, i) => {
-              const text = it.replace(/^\d+\.\s*/, '');
-              const parts = text.split(/(\*\*.*?\*\*)/g);
-              return (
-                <li key={i}>
-                  {parts.map((part, pIdx) => {
-                    if (part.startsWith('**') && part.endsWith('**')) {
-                      return (
-                        <strong key={pIdx} className="font-semibold text-foreground">
-                          {part.slice(2, -2)}
-                        </strong>
-                      );
-                    }
-                    return part;
-                  })}
-                </li>
-              );
-            })}
-          </ol>
-        );
-      }
-
-      // Format bold text trong đoạn văn
-      const parts = trimmed.split(/(\*\*.*?\*\*)/g);
-      return (
-        <p key={idx} className="text-base sm:text-lg leading-relaxed text-muted-foreground my-4">
-          {parts.map((part, pIdx) => {
-            if (part.startsWith('**') && part.endsWith('**')) {
-              return (
-                <strong key={pIdx} className="font-semibold text-foreground">
-                  {part.slice(2, -2)}
-                </strong>
-              );
-            }
-            return part;
-          })}
-        </p>
-      );
-    });
-  };
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 lg:px-6 space-y-8">
@@ -471,9 +344,7 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
           </div>
 
           {/* Article Markdown Body */}
-          <div className="prose prose-slate dark:prose-invert max-w-none">
-            {renderMarkdownContent(contentMarkdown)}
-          </div>
+          <ArticleMarkdown content={contentMarkdown} />
 
           {/* Tags */}
           {post.tags && post.tags.length > 0 && (
