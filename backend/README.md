@@ -127,13 +127,16 @@ Update the payOS webhook
 registration whenever the public URL changes. Changes to `.env` require container
 recreation with `up -d`; `restart` does not reload Compose environment values.
 
-New payOS checkout links return the browser directly to `BILLING_RETURN_URL`, with the
-local order ID appended. Set it to the frontend billing page reachable from the paying
-device: `localhost` refers to that device, so use a reachable frontend URL for phones.
-The ngrok backend tunnel remains necessary for the webhook, but its free browser warning
-no longer interrupts new checkout returns. Previously created links retain their original
-return URL; click **Visit Site** if the warning appears, or open the billing page and check
-the order there. Return parameters never confirm payment; backend verification does.
+Set `BILLING_RETURN_URL` to the web app's billing page (for example
+`https://your-web-app.example/billing`), reachable from the paying device. New web
+checkouts return there with the local `orderId`. Installed iOS/Android checkouts send
+`checkoutClient: "mobile"` so the same HTTPS page can open the app and offer a web fallback.
+Expo Go and mobile web use the web return. Previously created links retain their original
+return URL. Return parameters never confirm payment; backend verification does.
+
+Deploy the updated web return page and run `npm run prisma:push` on the updated backend
+before releasing the mobile client that sends `checkoutClient`. The new order field is
+optional in MongoDB; old orders and seed catalog data need no update.
 
 For an API running on the host, set `NGROK_UPSTREAM=http://host.docker.internal:4000`
 and start only the tunnel with `docker compose --profile webhook up -d --no-deps ngrok`.

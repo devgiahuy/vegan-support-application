@@ -1,5 +1,10 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-19] — Điều hướng payOS sau thanh toán
+
+- Xác nhận VPS trả 303 tới Vercel với mã đơn. Thêm đích web/mobile tùy chọn cho đơn mới, giữ đích khi retry và khôi phục checkout. Thêm trang mở app và web fallback từ `/billing`, đồng thời giữ đúng mã đơn khi mobile nhận liên kết.
+- Mongo provisioning trên DB thử nghiệm, backend lint/typecheck/build/OpenAPI và acceptance payOS giả lập đạt. Web build, 922 test và Chrome smoke đạt. Mobile typecheck/lint, 166 test và bundle iOS/Android đạt. Chưa kiểm tra mở app trên thiết bị hoặc phát hành thay đổi.
+
 ## [2026-11-19] — Khôi phục đăng nhập mobile trên Device Hub qua ngrok
 
 - Backend/MongoDB đã dừng; mobile thiếu .env và bundle cũ không gửi request tới ngrok mới. Khởi động dev services, cấu hình HTTPS backend /api/v1 trong mobile/.env ignored, chạy Metro tunnel/clear và mở URL Expo mới trong Device Hub.

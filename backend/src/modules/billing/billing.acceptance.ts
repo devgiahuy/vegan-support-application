@@ -45,6 +45,7 @@ assert(
 // Controlled payOS transport; never contacts the merchant API or transfers money.
 const originalFetch = globalThis.fetch;
 const links = new Map<number, PaymentLink>();
+const checkoutReturns = new Map<number, URL>();
 let ambiguousCreate = false;
 let tamperQuery = false;
 let unavailableQuery = false;
@@ -106,6 +107,7 @@ globalThis.fetch = async (input, init) => {
     );
     assert.match(returnUrl.searchParams.get('orderId') ?? '', /^[a-f0-9-]{36}$/i);
     assert.equal(body.cancelUrl, body.returnUrl);
+    checkoutReturns.set(body.orderCode, returnUrl);
     assert.equal(
       body.signature,
       signedData({
@@ -221,12 +223,17 @@ const request = (path: string, method = 'GET', body?: unknown, access = token) =
   });
 const balance = async () =>
   billingEnvelope(entitlementSchema).parse(await (await request('/entitlements/me')).json()).data;
-const createOrder = async (productId: string, key = randomUUID()) =>
+const createOrder = async (
+  productId: string,
+  key = randomUUID(),
+  checkoutClient?: 'web' | 'mobile',
+) =>
   billingEnvelope(billingOrderSchema).parse(
     await (
       await request('/billing/orders', 'POST', {
         productId,
         idempotencyKey: key,
+        checkoutClient,
         expectedProductVersion: (
           await db.billingProduct.findUniqueOrThrow({ where: { id: productId } })
         ).version,
@@ -336,7 +343,10 @@ try {
   const before = await balance();
   const key = randomUUID();
   const order = await createOrder('combo-1m', key);
-  assert.equal((await createOrder('combo-1m', key)).id, order.id);
+  assert.equal((await createOrder('combo-1m', key, 'mobile')).id, order.id);
+  const webReturn = checkoutReturns.get((await providerLink(order.id)).orderCode);
+  assert.equal(webReturn?.searchParams.get('orderId'), order.id);
+  assert.equal(webReturn?.searchParams.has('returnTo'), false);
   assert.equal(order.durationMonths, 1);
   assert.equal(
     (await request('/billing/orders', 'POST', { productId: 'chat-100', idempotencyKey: key }))
@@ -964,8 +974,12 @@ try {
     400,
   );
   assert.deepEqual(await balance(), sampleBalance);
-  const pending = await createOrder('receipt-10');
+  const pending = await createOrder('receipt-10', randomUUID(), 'mobile');
   const pendingBeforeRecovery = await billing.owned(user.id, pending.id);
+  const pendingCode = Number(pendingBeforeRecovery.providerOrderCode);
+  const mobileReturn = checkoutReturns.get(pendingCode);
+  assert.equal(mobileReturn?.searchParams.get('orderId'), pending.id);
+  assert.equal(mobileReturn?.searchParams.get('returnTo'), 'app');
   const linkCount = links.size;
   await db.paymentOrder.update({
     where: { id: pending.id },
@@ -981,6 +995,8 @@ try {
     pendingBeforeRecovery.providerOrderCode,
   );
   assert.equal(links.size, linkCount);
+  assert.equal(checkoutReturns.get(pendingCode)?.href, mobileReturn?.href);
+  console.info('PASS web and mobile return destinations survive retries and checkout recovery');
   assert.equal(
     (await request('/billing/orders/' + pending.id + '/reconcile', 'POST', {})).status,
     429,
