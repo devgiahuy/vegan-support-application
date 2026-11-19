@@ -410,7 +410,7 @@ export class BillingService {
   }
 
   private ensureEnabled(): void {
-    if (!this.config.billing.enabled || this.config.nodeEnv === 'production')
-      throw paymentError('BILLING_DISABLED', 'Thanh toán demo chưa được bật trên máy chủ.', 503);
+    if (!this.config.billing.enabled)
+      throw paymentError('BILLING_DISABLED', 'Thanh toán chưa được bật trên máy chủ.', 503);
   }
 }

@@ -1,5 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
+import type { AuditQuery } from './admin-audit.schemas.js';
+import { listAdminAuditLogs } from './admin-audit.service.js';
 import type {
   RevenueGranularity,
   RevenueQuery,
@@ -83,6 +85,10 @@ function chatOutcome(status: string | null | undefined): Outcome {
 
 export class AdminInsightsService {
   constructor(private readonly db: PrismaClient) {}
+
+  audit(query: AuditQuery) {
+    return listAdminAuditLogs(this.db, query);
+  }
 
   async revenue(query: RevenueQuery) {
     const { from, to } = statsWindow(query);

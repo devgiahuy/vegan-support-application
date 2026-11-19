@@ -1,5 +1,6 @@
 import type { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import type { z } from '../../common/validation/zod.js';
+import { auditPageSchema, auditQuerySchema } from './admin-audit.schemas.js';
 import {
   revenueQuerySchema,
   revenueStatsEnvelopeSchema,
@@ -13,6 +14,7 @@ const json = (schema: z.ZodTypeAny) => ({ 'application/json': { schema } });
 export function registerAdminInsightsOpenApi(registry: OpenAPIRegistry, error: z.ZodTypeAny): void {
   const revenue = registry.register('AdminBillingRevenueResponse', revenueStatsEnvelopeSchema);
   const usage = registry.register('AdminAiUsageTraceResponse', usageTracePageSchema);
+  const audit = registry.register('AdminAuditPageResponse', auditPageSchema);
   const errors = {
     401: { description: 'Authentication required', content: json(error) },
     403: { description: 'Administrator role required', content: json(error) },
@@ -21,6 +23,23 @@ export function registerAdminInsightsOpenApi(registry: OpenAPIRegistry, error: z
       content: json(error),
     },
   };
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/admin/logs',
+    tags: ['Admin Insights'],
+    operationId: 'listAdminAuditLogs',
+    summary: 'Read the recent administrative and automated moderation audit timeline',
+    description:
+      'Newest first. Pass nextCursor to read older entries. Includes recorded moderation, AI flags and controls, restaurant decisions and edits, billing catalog changes and storage adjustments. Only event metadata and actor display names are returned.',
+    security,
+    request: { query: auditQuerySchema },
+    responses: {
+      200: { description: 'Audit log page and optional continuation token', content: json(audit) },
+      401: errors[401],
+      403: errors[403],
+      400: { description: 'Invalid cursor, limit or query parameter', content: json(error) },
+    },
+  });
   registry.registerPath({
     method: 'get',
     path: '/api/v1/admin/billing/revenue',

@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Kết nối tab Nhật ký hệ thống — Updated 2026-11-19
+
+Tab quản trị đọc sáu nguồn nhật ký đã lưu qua API có phân trang. Kiểm tra qua trình duyệt với tài khoản Admin đã xác nhận bảng, nút xem nhật ký cũ hơn, trạng thái trống và thử lại khi lỗi.
+
 ## Bổ sung loading spinner khi tạo thực đơn tuần — Updated 2026-11-19
 
 - **Thêm loading spinner vào nút tạo thực đơn:** Cập nhật `GenerateForm` (`src/features/meal-plan/components/generate-form.tsx`) để khi `generateMutation.isPending`, nút "Tạo thực đơn tuần" hiển thị biểu tượng xoay `<Loader2 className="size-4 animate-spin motion-reduce:animate-none" data-icon="inline-start" aria-hidden="true" />` cùng nhãn "Đang tạo thực đơn..." và thuộc tính `aria-busy="true"`, thay vì giữ icon Sparkles tĩnh.

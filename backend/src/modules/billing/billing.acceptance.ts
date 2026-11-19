@@ -1042,16 +1042,57 @@ try {
   console.info(
     'PASS signed SDK create/query/webhook, underpayment, overpayment, replay, unknown sample, provider errors, cooldown, ambiguous create recovery and legacy read-only history',
   );
-  assert.throws(() =>
-    loadConfig({
-      ...process.env,
-      NODE_ENV: 'production',
-      BILLING_ENABLED: 'true',
-      VISION_ENABLED: 'false',
-      RECEIPT_ENABLED: 'false',
-    }),
+  const productionEnvironment = {
+    ...process.env,
+    NODE_ENV: 'production',
+    BILLING_ENABLED: 'true',
+    BILLING_PUBLIC_URL: 'https://billing.example.test',
+    BILLING_RETURN_URL: 'https://app.example.test/billing',
+    PAYOS_CLIENT_ID: 'acceptance-fixture-client',
+    PAYOS_API_KEY: 'acceptance-fixture-key',
+    PAYOS_CHECKSUM_KEY: 'acceptance-only-checksum-key',
+    VISION_ENABLED: 'false',
+    RECEIPT_ENABLED: 'false',
+  };
+  const productionConfig = loadConfig(productionEnvironment);
+  assert.equal(productionConfig.cookieSecure, true);
+  const productionBilling = new BillingService(
+    db,
+    new EntitlementService(db, productionConfig),
+    productionConfig,
   );
-  console.info('PASS payOS fixtures and production rollout guard');
+  assert.equal((await productionBilling.products()).enabled, true);
+  const ledgerCount = await db.entitlementLedger.count();
+  await productionBilling.webhook({ ...signed, data: unknown, signature: signedData(unknown) });
+  assert.equal(await db.entitlementLedger.count(), ledgerCount);
+  await assert.rejects(
+    productionBilling.webhook({ ...signed, data: { ...unknown, amount: 123456 } }),
+    expectCode('BILLING_SIGNATURE_INVALID'),
+  );
+  for (const key of ['PAYOS_CLIENT_ID', 'PAYOS_API_KEY', 'PAYOS_CHECKSUM_KEY']) {
+    assert.throws(() => loadConfig({ ...productionEnvironment, [key]: '' }));
+  }
+  for (const key of ['BILLING_PUBLIC_URL', 'BILLING_RETURN_URL']) {
+    assert.throws(() => loadConfig({ ...productionEnvironment, [key]: 'http://example.test' }));
+  }
+  const disabledProduction = loadConfig({
+    ...productionEnvironment,
+    BILLING_ENABLED: 'false',
+    PAYOS_CLIENT_ID: '',
+    PAYOS_API_KEY: '',
+    PAYOS_CHECKSUM_KEY: '',
+  });
+  const disabledProductionBilling = new BillingService(
+    db,
+    new EntitlementService(db, disabledProduction),
+    disabledProduction,
+  );
+  assert.equal((await disabledProductionBilling.products()).enabled, false);
+  await assert.rejects(
+    disabledProductionBilling.webhook({ ...signed, data: unknown, signature: signedData(unknown) }),
+    expectCode('BILLING_DISABLED'),
+  );
+  console.info('PASS production opt-in, HTTPS/credential guards, signed samples and disabled billing');
   console.info(
     'Billing acceptance complete. payOS transport was mocked; no external merchant request or real transfer occurred.',
   );

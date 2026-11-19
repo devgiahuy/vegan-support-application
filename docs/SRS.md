@@ -1,8 +1,8 @@
 # Software Requirements Specification — Vegan Support Application
 
-**Version:** 1.11
+**Version:** 1.13
 
-**Updated:** 2026-11-19
+**Updated:** 2026-11-20
 
 **Status:** Approved product baseline
 
@@ -110,6 +110,7 @@ User-approved 2026-11-16 recipe detail warning: show an allergy warning only for
 - Recipe, handbook, and video content follows draft → submitted → approved/rejected publication review.
 - AI moderation and user reports create review signals, never automatic hard deletion.
 - Administrators record decisions and reasons in an audit trail.
+- Administrators can view a paginated system audit timeline of recorded administrative actions and automated moderation flags. The timeline shows event metadata without exposing free-text reasons, private source content, or snapshots.
 - Removed or rejected content can be handled through the documented state machine without destroying required evidence.
 
 ### FR-05 Food and nutrient knowledge base
@@ -216,7 +217,7 @@ User-approved 2026-11-16 recipe detail warning: show an allergy warning only for
 - All undeleted Pantry records count toward capacity, including zero-quantity records. Manual creation and both confirmation flows enforce the same transactional cap. Over-limit existing data remains readable, editable and deletable; no automatic deletion occurs.
 - Only verified server-side settlement grants snapshotted benefits, once. Browser return URLs cannot grant allowances. Purchases never modify roles or bypass dietary rules, consent, provider controls or confirmation.
 - New payOS checkouts return to the same order in the web or installed app that created the checkout. The native return offers a link to the same order on the web if the browser cannot open the app.
-- User-authorized provider conversion (2026-10-14) uses payOS exclusively for new purchases. payOS has no independent sandbox and checkout transfers real money; the development application must disclose this. Missing merchant credentials disable checkout without a simulation fallback. Application production rollout, recurring subscriptions, automatic refunds and mobile-store distribution remain deferred.
+- User-authorized provider conversion (2026-10-14) uses payOS exclusively for new purchases. payOS has no independent sandbox and checkout transfers real money; the development application must disclose this. Missing merchant credentials disable checkout without a simulation fallback. Production activation is user-approved on 2026-11-19: billing remains opt-in, requires all three merchant credentials and HTTPS public/return URLs, and retains signed webhook/query verification, ownership, snapshots and once-only grants. Recurring subscriptions, automatic refunds and mobile-store distribution remain deferred.
 - Historical VNPAY/local simulation orders and existing balances remain readable with original provider identity. Their old settlement/checkout routes are removed. Partial payments remain pending; only a verified fully paid provider order grants the fixed package once. Extra transferred money does not add package benefits or trigger automatic refunds.
 - Admin catalog management (requested 2026-11-10, implementation in progress): an administrator can create, view, edit, withdraw and reactivate packages offered to members, including price and supported allowance options. Changes apply to future orders; existing orders and subscriptions retain their purchased snapshots. New orders require confirmation of the displayed product version; existing idempotent order retries remain recoverable.
 
@@ -263,4 +264,4 @@ User-approved 2026-11-16 recipe detail warning: show an allergy warning only for
 
 ## 9. Post-MVP roadmap
 
-All deferred requirements, including wearable integration, automatic video summarization, broader religious traditions, certificate verification, production payments, formal DMCA operations, advanced moderation, and mature AI evaluation, are retained in `docs/ROADMAP_PHASE_2.md`.
+All deferred requirements, including wearable integration, automatic video summarization, broader religious traditions, certificate verification, broader commercial billing, formal DMCA operations, advanced moderation, and mature AI evaluation, are retained in `docs/ROADMAP_PHASE_2.md`.

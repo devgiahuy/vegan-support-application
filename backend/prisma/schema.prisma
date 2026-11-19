@@ -58,6 +58,7 @@ model BillingProductAudit {
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@index([productId, createdAt])
+  @@index([createdAt, id])
   @@map("billing_product_audits")
 }
 
@@ -977,6 +978,7 @@ model RestaurantAudit {
   actor            User       @relation("RestaurantAuditActor", fields: [actorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([restaurantId, createdAt])
+  @@index([createdAt, id])
   @@map("restaurant_audit")
 }
 
@@ -1700,6 +1702,7 @@ model AiFlag {
 
   @@index([status, riskLevel, createdAt])
   @@index([postRevisionId, status])
+  @@index([createdAt, id])
   @@map("ai_flags")
 }
 
@@ -1720,6 +1723,7 @@ model ModerationAction {
   @@index([targetType, targetId, createdAt])
   @@index([actorId, createdAt])
   @@index([decision, createdAt])
+  @@index([createdAt, id])
   @@map("moderation_actions")
 }
 
@@ -2159,6 +2163,7 @@ model AiCapabilityControlAudit {
   createdAt        DateTime @default(now()) @map("created_at")
 
   @@index([capability, provider, createdAt])
+  @@index([createdAt, id])
   @@map("ai_capability_control_audit")
 }
 
@@ -2589,6 +2594,7 @@ model StorageAdjustment {
   @@unique([actorId, idempotencyKey])
   @@index([userId, createdAt, id])
   @@index([actorId, createdAt])
+  @@index([createdAt, id])
   @@map("storage_adjustments")
 }
 

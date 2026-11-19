@@ -1,5 +1,10 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-19] — Kết nối nhật ký thao tác hệ thống
+
+- Thay thông báo giữ chỗ bằng bảng phân trang, hiển thị thời gian, người thực hiện, thao tác và đối tượng. Nguồn dữ liệu là sáu loại sự kiện đã lưu. API chỉ cho Admin đọc và lọc trường nhạy cảm.
+- Đồng bộ OpenAPI và tài liệu tích hợp. Lint/typecheck/build backend, provisioning sáu chỉ mục Mongo, HTTP smoke quyền và phân trang, lint theo phạm vi/typecheck/build web và 935 test đạt. Chromium đăng nhập Admin, mở tab qua menu, đọc đủ hai trang và kiểm tra trạng thái trống/lỗi tại 390px.
+
 ## [2026-11-19] — Bổ sung hiển thị Chất xơ (Fiber) vào bảng phân tích dinh dưỡng nấu nướng (/recipes/:id)
 
 - **Yêu cầu:** Bảng phân tích dinh dưỡng ở trang `/recipes/:id` đang hiển thị thiếu chất xơ, kiểm tra và fix.

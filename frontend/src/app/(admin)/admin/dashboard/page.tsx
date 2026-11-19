@@ -10,16 +10,11 @@ import {
   FolderTree,
   Leaf,
   ScrollText,
-  Hourglass,
   RefreshCw,
   ShieldAlert,
-  Download,
-  Search,
-  Plus,
   Flag,
   UserCog,
   MessagesSquare,
-  UserCheck,
   Store,
   Bot,
   Database,
@@ -32,20 +27,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { toast } from 'sonner';
 import { AuthGuard } from '@/components/shared/auth-guard';
-import { EmptyState } from '@/components/shared/empty-state';
 import { UserRole } from '@/common/enums';
 import { CategoryManager } from '@/features/admin-catalog/components/category-manager';
 import { IngredientManager } from '@/features/admin-catalog/components/ingredient-manager';
@@ -72,6 +56,7 @@ import {
 } from '@/features/ai-governance';
 import { AiVerificationTable } from '@/features/ai-artifacts';
 import { AiUsageTraceTable, RevenueStatsPanel } from '@/features/admin-insights';
+import { AdminAuditPanel } from '@/features/admin-insights/components/admin-audit-panel';
 import { AdminContentManager } from '@/features/admin-content/components/admin-content-manager';
 import { AdminBillingCatalog } from '@/features/billing/components/admin-billing-catalog';
 
@@ -133,12 +118,11 @@ function parseTabParam(value: string | null): Tab {
 function AdminDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [tab, setTab] = React.useState<Tab>(() => parseTabParam(searchParams.get('tab')));
+  const tab = parseTabParam(searchParams.get('tab'));
   const shouldReduceMotion = useReducedMotion();
 
   const handleTabChange = React.useCallback(
     (newTab: Tab) => {
-      setTab(newTab);
       const params = new URLSearchParams(searchParams.toString());
       params.set('tab', newTab);
       router.replace(`/admin/dashboard?${params.toString()}`, { scroll: false });
@@ -272,13 +256,6 @@ function AdminDashboardContent() {
     toast.success('Đã làm mới dữ liệu');
   };
 
-  React.useEffect(() => {
-    const tabParam = searchParams.get('tab');
-    if (tabParam) {
-      setTab(parseTabParam(tabParam));
-    }
-  }, [searchParams]);
-
   const tabs: { id: Tab; label: string; icon: React.ElementType; badge?: string }[] = [
     { id: 'queue', label: 'Kiểm duyệt', icon: ClipboardCheck },
     { id: 'content', label: 'Quản lý nội dung', icon: Newspaper },
@@ -295,7 +272,7 @@ function AdminDashboardContent() {
     { id: 'categories', label: 'Cây danh mục', icon: FolderTree },
     { id: 'ingredients', label: 'Nguyên liệu', icon: Leaf },
     { id: 'food-data', label: 'Dữ liệu dinh dưỡng', icon: Database },
-    { id: 'logs', label: 'Audit logs', icon: ScrollText },
+    { id: 'logs', label: 'Nhật ký hệ thống', icon: ScrollText },
   ];
 
   return (
@@ -518,27 +495,7 @@ function AdminDashboardContent() {
               </div>
             )}
 
-            {/* TAB: LOGS */}
-            {tab === 'logs' && (
-              <Card>
-                <CardContent className="p-5">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <h2 className="font-semibold">Nhật ký thao tác hệ thống (Audit Logs)</h2>
-                      <p className="text-xs text-muted-foreground">
-                        Lịch sử hành động quản trị viên và bot giám sát tự động.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <EmptyState
-                      title="Chưa có API Audit Logs"
-                      description="Backend hiện tại chưa cung cấp endpoint cho Nhật ký thao tác hệ thống (/api/v1/admin/logs)."
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {tab === 'logs' && <AdminAuditPanel />}
           </motion.div>
         </AnimatePresence>
       </div>

@@ -147,7 +147,10 @@ export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z
     registry.registerPath({
       method: operation.method,
       summary: operation.summary,
-      ...('description' in operation ? { description: operation.description } : {}),
+      description: [
+        'Purchases are opt-in via BILLING_ENABLED, including production. Production activation requires all three payOS merchant credentials and HTTPS public/return URLs. Payment settlement always requires verified provider evidence.',
+        'description' in operation ? operation.description : undefined,
+      ].filter(Boolean).join(' '),
       ...(operation.request ? { request: operation.request } : {}),
       path: '/api/v1' + operation.path,
       tags: ['Billing'],
@@ -167,7 +170,7 @@ export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z
     tags: ['Billing'],
     summary: 'Verify signed payOS notification and authoritative payment query; grant once',
     description:
-      'Channel confirmation samples may omit the unsigned success envelope field. Data and signature remain required; verified unknown samples are acknowledged without granting benefits.',
+      'Requires BILLING_ENABLED, including on production deployments with configured merchant credentials and HTTPS URLs. Channel confirmation samples may omit the unsigned success envelope field. Data and signature remain required; verified unknown samples are acknowledged without granting benefits. Disabled billing returns BILLING_DISABLED (503); invalid signatures are rejected.',
     security: [],
     request: { body: { content: json(payosWebhookSchema) } },
     responses: {
