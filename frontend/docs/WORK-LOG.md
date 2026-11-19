@@ -1,5 +1,13 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-19] — Production payOS/ngrok và mật khẩu seed trên VPS
+
+- **Quyết định:** Người dùng chấp thuận payOS trên production, yêu cầu mật khẩu mọi tài khoản seed là12345678 và dừng kiểm thử payOS thêm sau acceptance.
+- **Code:** Production opt-in giữ BILLING_ENABLED, yêu cầu3 merchant keys và HTTPS public/return URLs; bỏ environment-only rejection trong service/provider. Signature/query/ownership/idempotency/snapshot/grant-once giữ nguyên, Secure cookies vẫn bật. OpenAPI/canonical docs/roadmap/guide đồng bộ; không đổi DTO/route/schema hoặc thêm test infrastructure.
+- **Kiểm chứng:** Backend lint/typecheck/build/OpenAPI/sync và existing billing acceptance đạt, gồm production key/HTTPS guards, signed unknown samples, replay, missing credentials, disabled billing và grant-once. Mongo engine local cũ gặp WiredTiger assertion; acceptance được chạy thành công trên Mongo replica set QA riêng27038/database billing_production_20261119. Không tác động database VPS trong acceptance.
+- **Triển khai:** VPS giữ Ubuntu20.04 theo yêu cầu; image linux/amd64 vps-89ac87b, NODE_ENVproduction/BILLING_ENABLEDtrue/keys đủ. IP HTTPS và ngrok health200; không chạy thêm PayOS probes, merchant registration, tạo order hoặc chuyển tiền sau khi người dùng dừng kiểm thử. Frontend Vercel vẫn cần cấu hình/redeploy riêng.
+- **Seed:** Reset đúng18 seed identities và exact scenario aliases bằng PasswordService; revoke refresh sessions seed cũ, giữ scenario statuses. SEED_MEMBER_PASSWORD/SEED_ADMIN_PASSWORD trên VPS, template và bootstrap scripts dùng12345678; tài khoản tự đăng ký ngoài seed không thuộc cập nhật. Không đưa merchant/SSH credentials vào Git.
+
 ## [2026-11-19] — Khôi phục đăng nhập mobile trên Device Hub qua ngrok
 
 - Backend/MongoDB đã dừng; mobile thiếu .env và bundle cũ không gửi request tới ngrok mới. Khởi động dev services, cấu hình HTTPS backend /api/v1 trong mobile/.env ignored, chạy Metro tunnel/clear và mở URL Expo mới trong Device Hub.

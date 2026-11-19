@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## payOS production và cấu hình VPS — Updated 2026-11-19
+
+Production payOS opt-in đã triển khai theo phê duyệt người dùng, giữ đủ merchant credentials/HTTPS/signature/settlement guards. Backend gates/OpenAPI/existing acceptance đạt; health qua IP/ngrok và cấu hình runtime đạt. Người dùng dừng các kiểm thử PayOS tiếp theo; không chạy giao dịch thật hoặc đăng ký merchant webhook tự động.18 seed accounts trên VPS dùng12345678 theo yêu cầu. Không đổi consumer DTO hoặc % scaffold; Vercel configuration/redeployment vẫn là bước riêng.
+
 ## Đã triển khai bốn tùy chọn và xử lý thực đơn — Updated 2026-11-19
 
 Backend, web và mobile đã bỏ kiểu ăn/truyền thống/setup lịch; dùng bốn toggle độc lập trứng/sữa/mật ong/ngũ vị tân áp mỗi ngày. Đổi profile có impact preview, hai lựa chọn thay hoặc giữ với cảnh báo bền vững, replacement preview/apply theo từng plan và linked DRAFT cho chương trình confirmed. Admin catalog dùng reviewed food groups có provenance; allergy/exclusion luôn ưu tiên. Hơn 20 plan chia nhóm rõ ràng ở cả clients.
