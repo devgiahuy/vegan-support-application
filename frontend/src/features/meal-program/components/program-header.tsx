@@ -82,6 +82,7 @@ export const ProgramHeader: React.FC<ProgramHeaderProps> = ({
           {program.status === 'DRAFT' && (
             <Button
               onClick={onOpenConfirmDialog}
+              disabled={program.compatibility?.status === 'NEEDS_REVIEW'}
               className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
             >
               <CheckCircle2 className="w-4 h-4 mr-2" />

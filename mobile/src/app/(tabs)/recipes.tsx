@@ -243,6 +243,11 @@ export default function RecipesScreen() {
                   </Text>
                 </View>
               ) : null}
+              {constraints.foodGroups.length > 0 ? (
+                <View className="rounded-full bg-muted px-2.5 py-1">
+                  <Text className="text-xs text-foreground">Đang áp dụng {constraints.foodGroups.length} giới hạn nhóm thực phẩm</Text>
+                </View>
+              ) : null}
               {constraints.allergyCount > 0 ? (
                 <View className="rounded-full bg-muted px-2.5 py-1">
                   <Text className="text-xs text-foreground">Tránh {constraints.allergyCount} chất dị ứng</Text>

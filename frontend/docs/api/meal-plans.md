@@ -229,6 +229,7 @@ Thêm recipe hoặc private custom meal vào slot
       "items": {
         "type": "object",
         "required": [
+          "compatibility",
           "id",
           "weekStart",
           "goal",
@@ -250,6 +251,10 @@ Thêm recipe hoặc private custom meal vào slot
           "updatedAt"
         ],
         "properties": {
+          "compatibility": {
+            "type": "object",
+            "_truncated": true
+          },
           "id": {
             "type": "string",
             "_truncated": true
@@ -333,13 +338,6 @@ Thêm recipe hoặc private custom meal vào slot
             "_truncated": true
           }
         },
-        "additionalProperties": false
-      }
-    },
-    "meta": {
-      "type": "object",
-      "required": [
-        "page",
   …(truncated — xem api-catalog.json)
 ```
 
@@ -362,6 +360,7 @@ Thêm recipe hoặc private custom meal vào slot
     "data": {
       "type": "object",
       "required": [
+        "compatibility",
         "id",
         "weekStart",
         "goal",
@@ -389,6 +388,39 @@ Thêm recipe hoặc private custom meal vào slot
         "estimatedNutritionTargets"
       ],
       "properties": {
+        "compatibility": {
+          "type": "object",
+          "required": [
+            "status",
+            "dietaryRevision",
+            "assessedFrom",
+            "affectedMealCount",
+            "items"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "_truncated": true
+            },
+            "dietaryRevision": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "assessedFrom": {
+              "type": "string",
+              "_truncated": true
+            },
+            "affectedMealCount": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "items": {
+              "type": "array",
+              "_truncated": true
+            }
+          },
+          "additionalProperties": false
+        },
         "id": {
           "type": "string",
           "format": "uuid"
@@ -446,41 +478,7 @@ Thêm recipe hoặc private custom meal vào slot
             "status",
             "title",
             "detail",
-            "suggestion",
-            "hardConstraintsPreserved"
-          ],
-          "properties": {
-            "status": {
-              "type": "string",
-              "_truncated": true
-            },
-            "title": {
-              "type": "string",
-              "_truncated": true
-            },
-            "detail": {
-              "type": "string",
-              "_truncated": true
-            },
-            "suggestion": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "_truncated": true
-            },
-            "hardConstraintsPreserved": {
-              "type": "boolean",
-              "_truncated": true
-            },
-            "hardViolations": {
-              "type": "array",
-              "_truncated": true
-            }
-          },
-          "additionalProperties": false
-        },
-        "nutritionDat
+            "
   …(truncated — xem api-catalog.json)
 ```
 

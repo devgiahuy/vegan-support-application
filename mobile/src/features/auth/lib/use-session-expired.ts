@@ -14,7 +14,7 @@ const PROTECTED_PREFIXES = [
   '/meal-plans',
   '/meal-programs',
   '/diet-preferences',
-  '/diet-schedule',
+  '/diet-repair',
   '/fridge-scan',
   '/receipt-scan',
   '/shopping-preview',

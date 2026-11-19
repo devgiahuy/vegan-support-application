@@ -345,7 +345,7 @@ describe('RecipeMapper', () => {
         dietPattern: 'VEGAN',
         allergyCount: 2,
         ingredientExclusionCount: 1,
-        traditions: ['BUDDHIST'],
+        foodGroups: ['EGG'],
         forDate: '2026-09-17',
       },
     });
@@ -356,7 +356,7 @@ describe('RecipeMapper', () => {
     expect(pagination.metadata.appliedConstraints?.dietPattern).toBe('VEGAN');
     expect(pagination.metadata.appliedConstraints?.allergyCount).toBe(2);
     expect(pagination.metadata.appliedConstraints?.ingredientExclusionCount).toBe(1);
-    expect(pagination.metadata.appliedConstraints?.traditions).toEqual(['BUDDHIST']);
+    expect(pagination.metadata.appliedConstraints?.foodGroups).toEqual(['EGG']);
   });
 
   it('maps eligibility reasons only when backend returns them', () => {

@@ -116,15 +116,53 @@ describe('PantryMapper Unit Tests', () => {
       expect(model.expiryBadgeLabel).toContain('Đã quá hạn');
     });
 
-    it('calculates expiry status correctly for items expiring soon (<= 3 days)', () => {
+    it('calculates expiry status correctly for items with 1 day remaining (ALERT - red tag, expiring soon)', () => {
+      const today = new Date();
+      today.setHours(12, 0, 0, 0);
+      const in1Day = new Date(today);
+      in1Day.setDate(today.getDate() + 1);
+      const expiresAt = in1Day.toISOString().split('T')[0];
+
+      const dto: PantryItemDto = {
+        id: 'item-alert',
+        ingredient: { id: 'ing-alert', name: 'Đậu phụ non' },
+        unmatchedText: null,
+        quantity: 1,
+        unit: 'hộp',
+        conversion: {
+          status: 'UNKNOWN',
+          normalizedGrams: null,
+          source: 'TEST',
+          version: '1',
+          confidence: 1,
+        },
+        source: 'MANUAL',
+        confidence: 1,
+        confirmationStatus: 'CONFIRMED',
+        purchasedAt: null,
+        openedAt: null,
+        expiresAt,
+        freshnessNote: null,
+        version: 1,
+      };
+
+      const model = pantryMapper.toModel(dto);
+      expect(model.expiryStatus).toBe('ALERT');
+      expect(model.expiryBadgeVariant).toBe('destructive');
+      expect(model.expiryBadgeLabel).toContain('Cảnh báo khẩn');
+      expect(model.daysRemaining).toBe(1);
+    });
+
+    it('calculates expiry status correctly for items expiring soon (<= 3 days - WARNING, yellow tag)', () => {
       const today = new Date();
       today.setHours(12, 0, 0, 0);
       const in2Days = new Date(today);
       in2Days.setDate(today.getDate() + 2);
-      const expiresAt = in2Days.toISOString().split('T')[0];
+      const in3Days = new Date(today);
+      in3Days.setDate(today.getDate() + 3);
 
-      const dto: PantryItemDto = {
-        id: 'item-warning',
+      const dto2Days: PantryItemDto = {
+        id: 'item-warning-2',
         ingredient: { id: 'ing-3', name: 'Nấm rơm' },
         unmatchedText: null,
         quantity: 200,
@@ -141,33 +179,46 @@ describe('PantryMapper Unit Tests', () => {
         confirmationStatus: 'CONFIRMED',
         purchasedAt: null,
         openedAt: null,
-        expiresAt,
+        expiresAt: in2Days.toISOString().split('T')[0],
         freshnessNote: null,
         version: 1,
       };
 
-      const model = pantryMapper.toModel(dto);
-      expect(model.expiryStatus).toBe('WARNING');
-      expect(model.expiryBadgeVariant).toBe('secondary');
-      expect(model.daysRemaining).toBe(2);
+      const model2 = pantryMapper.toModel(dto2Days);
+      expect(model2.expiryStatus).toBe('WARNING');
+      expect(model2.expiryBadgeVariant).toBe('warning');
+      expect(model2.expiryBadgeLabel).toBe('Còn 2 ngày');
+      expect(model2.daysRemaining).toBe(2);
+
+      const dto3Days: PantryItemDto = {
+        ...dto2Days,
+        id: 'item-warning-3',
+        expiresAt: in3Days.toISOString().split('T')[0],
+      };
+      const model3 = pantryMapper.toModel(dto3Days);
+      expect(model3.expiryStatus).toBe('WARNING');
+      expect(model3.expiryBadgeVariant).toBe('warning');
+      expect(model3.expiryBadgeLabel).toBe('Còn 3 ngày');
+      expect(model3.daysRemaining).toBe(3);
     });
 
-    it('calculates expiry status correctly for safe items (> 3 days)', () => {
+    it('calculates expiry status correctly for safe items (> 3 days - SAFE, green tag)', () => {
       const today = new Date();
       today.setHours(12, 0, 0, 0);
+      const in4Days = new Date(today);
+      in4Days.setDate(today.getDate() + 4);
       const in10Days = new Date(today);
       in10Days.setDate(today.getDate() + 10);
-      const expiresAt = in10Days.toISOString().split('T')[0];
 
-      const dto: PantryItemDto = {
-        id: 'item-safe',
-        ingredient: { id: 'ing-4', name: 'Gạo lứt' },
+      const dto4Days: PantryItemDto = {
+        id: 'item-safe-4',
+        ingredient: { id: 'ing-4', name: 'Bông cải xanh' },
         unmatchedText: null,
-        quantity: 5,
-        unit: 'kg',
+        quantity: 1,
+        unit: 'cây',
         conversion: {
-          status: 'EXACT',
-          normalizedGrams: 5000,
+          status: 'APPROXIMATE',
+          normalizedGrams: 350,
           source: 'TEST',
           version: '1',
           confidence: 1,
@@ -177,15 +228,27 @@ describe('PantryMapper Unit Tests', () => {
         confirmationStatus: 'CONFIRMED',
         purchasedAt: null,
         openedAt: null,
-        expiresAt,
+        expiresAt: in4Days.toISOString().split('T')[0],
         freshnessNote: null,
         version: 1,
       };
 
-      const model = pantryMapper.toModel(dto);
-      expect(model.expiryStatus).toBe('SAFE');
-      expect(model.expiryBadgeVariant).toBe('default');
-      expect(model.daysRemaining).toBe(10);
+      const model4 = pantryMapper.toModel(dto4Days);
+      expect(model4.expiryStatus).toBe('SAFE');
+      expect(model4.expiryBadgeVariant).toBe('default');
+      expect(model4.expiryBadgeLabel).toBe('Còn 4 ngày');
+      expect(model4.daysRemaining).toBe(4);
+
+      const dto10Days: PantryItemDto = {
+        ...dto4Days,
+        id: 'item-safe-10',
+        expiresAt: in10Days.toISOString().split('T')[0],
+      };
+      const model10 = pantryMapper.toModel(dto10Days);
+      expect(model10.expiryStatus).toBe('SAFE');
+      expect(model10.expiryBadgeVariant).toBe('default');
+      expect(model10.expiryBadgeLabel).toBe('Còn 10 ngày');
+      expect(model10.daysRemaining).toBe(10);
     });
   });
 

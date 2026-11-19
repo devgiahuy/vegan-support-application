@@ -3,12 +3,9 @@ import {
   AllergySeverity,
   ContributorApplicationSource,
   ContributorApprovalBasis,
-  DietPattern,
   HealthDataSource,
   HealthSex,
-  PracticeSchedule,
   Role,
-  Tradition,
   UserStatus,
   type Prisma,
 } from '@prisma/client';
@@ -32,9 +29,10 @@ export interface UserSeedDefinition {
     dataSource?: HealthDataSource;
   };
   dietPreference?: {
-    dietPattern: DietPattern;
-    practiceSchedule: PracticeSchedule;
-    tradition: Tradition;
+    allowEggs: boolean;
+    allowDairy: boolean;
+    allowHoney: boolean;
+    allowFivePungent: boolean;
   };
   allergies?: Array<{
     allergenCode: string;
@@ -177,9 +175,10 @@ export const userDefinitions: readonly UserSeedDefinition[] = [
       dataSource: HealthDataSource.MANUAL,
     },
     dietPreference: {
-      dietPattern: DietPattern.VEGAN,
-      practiceSchedule: PracticeSchedule.PERMANENT,
-      tradition: Tradition.NONE,
+      allowEggs: false,
+      allowDairy: false,
+      allowHoney: false,
+      allowFivePungent: true,
     },
     allergies: [
       { allergenCode: 'PEANUT', label: 'Đậu phộng (lạc)', severity: AllergySeverity.MODERATE },
@@ -209,9 +208,10 @@ export const userDefinitions: readonly UserSeedDefinition[] = [
       dataSource: HealthDataSource.MANUAL,
     },
     dietPreference: {
-      dietPattern: DietPattern.VEGAN,
-      practiceSchedule: PracticeSchedule.PERIODIC,
-      tradition: Tradition.BUDDHIST,
+      allowEggs: false,
+      allowDairy: false,
+      allowHoney: false,
+      allowFivePungent: false,
     },
     exclusions: [
       {
@@ -247,9 +247,10 @@ export const userDefinitions: readonly UserSeedDefinition[] = [
       dataSource: HealthDataSource.MANUAL,
     },
     dietPreference: {
-      dietPattern: DietPattern.VEGAN,
-      practiceSchedule: PracticeSchedule.PERMANENT,
-      tradition: Tradition.NONE,
+      allowEggs: false,
+      allowDairy: false,
+      allowHoney: false,
+      allowFivePungent: true,
     },
     allergies: [
       { allergenCode: 'GLUTEN', label: 'Gluten (Lúa mì)', severity: AllergySeverity.SEVERE },

@@ -53,7 +53,7 @@ export default function RootLayout() {
           <Stack.Screen name="search" />
           <Stack.Screen name="contributor-status" />
           <Stack.Screen name="diet-preferences" />
-          <Stack.Screen name="diet-schedule" />
+          <Stack.Screen name="diet-repair" />
           <Stack.Screen name="my-content" />
           <Stack.Screen name="food-data" />
           <Stack.Screen name="(auth)/login" options={{ presentation: 'modal' }} />

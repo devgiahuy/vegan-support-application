@@ -1,46 +1,38 @@
-import { BaseMapper, pickField, safeArray, safeBoolean, safeEnum, safeNumber, safeString } from '@/lib/mapper';
-import { DietPattern, PracticeSchedule, Tradition } from '@/common/enums';
-import type { DietRulePreviewItemDto, DietRulePreviewResponseDto } from '../types/diet-preferences.dto';
-import type { DietRulePreview, DietRulePreviewItem } from '../types/diet-preferences.model';
+import { BaseMapper, pickField, safeArray, safeBoolean, safeNumber, safeString } from '@/lib/mapper';
+import { toDietSummary } from '@/features/profile/mappers/profile.mapper';
+import { dietImpactMapper } from './diet-impact.mapper';
+import type { DietPreferenceDto, DietPreferenceResponseDto, DietRulePreviewResponseDto, SaveDietPreferencesRequestDto } from '../types/diet-preferences.dto';
+import type { DietPreferenceSummary } from '@/features/profile/types/profile.model';
+import type { DietRulePreview, SaveDietPreferencesInput, SavedDietPreferences } from '../types/diet-preferences.model';
 
-export class DietPreferencesMapper extends BaseMapper<DietRulePreviewItemDto, DietRulePreviewItem> {
-  toModel(dto: DietRulePreviewItemDto | null | undefined): DietRulePreviewItem {
-    return {
-      id: safeString(pickField(dto, ['id'], '')),
-      code: safeString(pickField(dto, ['code'], '')),
-      label: safeString(pickField(dto, ['label'], 'Quy tắc')),
-      description: safeString(pickField(dto, ['description'], '')),
-      defaultEnabled: safeBoolean(pickField(dto, ['defaultEnabled'], true)),
-      hardConstraint: safeBoolean(pickField(dto, ['hardConstraint'], false)),
-      source: safeString(pickField(dto, ['source'], '')),
-      version: safeNumber(pickField(dto, ['version'], 1)),
-    };
+export class DietPreferencesMapper extends BaseMapper<DietPreferenceDto, DietPreferenceSummary | null> {
+  toModel(dto: DietPreferenceDto | null | undefined): DietPreferenceSummary | null {
+    return toDietSummary(dto);
   }
-
   toPreviewModel(dto: DietRulePreviewResponseDto | null | undefined): DietRulePreview {
-    const data = pickField<DietRulePreviewResponseDto['data']>(dto, ['data'], null);
-    const selection = pickField<NonNullable<DietRulePreviewResponseDto['data']>['selection']>(
-      data,
-      ['selection'],
-      undefined
-    );
-    return {
-      ruleSetVersion: safeNumber(pickField(data, ['ruleSetVersion'], 1)),
-      selection: {
-        dietPattern: safeEnum(pickField(selection, ['dietPattern'], DietPattern.VEGAN), DietPattern, DietPattern.VEGAN),
-        practiceSchedule: safeEnum(
-          pickField(selection, ['practiceSchedule'], PracticeSchedule.PERMANENT),
-          PracticeSchedule,
-          PracticeSchedule.PERMANENT
-        ),
-        tradition: safeEnum(pickField(selection, ['tradition'], Tradition.NONE), Tradition, Tradition.NONE),
-      },
-      rules: safeArray<DietRulePreviewItemDto | null, DietRulePreviewItem>(
-        pickField(data, ['rules'], []),
-        (item) => this.toModel(item)
-      ).filter((item) => item.id.length > 0),
-    };
+    const data = dto?.data;
+    return { policyVersion: safeNumber(data?.policyVersion, 1),
+      selection: { allowEggs: safeBoolean(data?.selection?.allowEggs), allowDairy: safeBoolean(data?.selection?.allowDairy),
+        allowHoney: safeBoolean(data?.selection?.allowHoney), allowFivePungent: safeBoolean(data?.selection?.allowFivePungent) },
+      constraints: safeArray<NonNullable<NonNullable<typeof data>['constraints']>[number]>(data?.constraints).map((item) => ({
+        code: safeString(item.code), label: safeString(item.label), allowed: safeBoolean(item.allowed),
+      })) };
+  }
+  toSaveDto(input: SaveDietPreferencesInput): SaveDietPreferencesRequestDto {
+    return { allowEggs: input.allowEggs, allowDairy: input.allowDairy, allowHoney: input.allowHoney, allowFivePungent: input.allowFivePungent,
+      policyVersion: input.policyVersion, expectedDietaryRevision: input.expectedDietaryRevision,
+      allergies: input.allergies.map((item) => ({ allergenCode: item.allergenCode, label: item.label || undefined, severity: item.severity })),
+      ...(input.ingredientAllergies !== undefined ? { ingredientAllergies: input.ingredientAllergies.map((item) => ({ ingredientId: item.ingredientId, severity: item.severity })) } : {}),
+      ingredientExclusions: input.ingredientExclusions.map((item) => ({
+        ...(item.ingredientId ? { ingredientId: item.ingredientId } : {}), ingredientName: item.ingredientName.trim(),
+        ...(item.reason?.trim() ? { reason: item.reason.trim() } : {}),
+      })) };
+  }
+  toSavedModel(dto: DietPreferenceResponseDto): SavedDietPreferences {
+    const preference = toDietSummary(dto.data);
+    if (!preference) throw new Error('Phản hồi thiết lập ăn uống không hợp lệ. Hãy tải lại hồ sơ để kiểm tra trạng thái đã lưu.');
+    return { preference, impact: dto.data?.impact ? dietImpactMapper.toModel(dto.data.impact) : null,
+      impactUnavailable: safeBoolean(pickField(dto.data, ['impactUnavailable'], false)) || !dto.data?.impact };
   }
 }
-
 export const dietPreferencesMapper = new DietPreferencesMapper();

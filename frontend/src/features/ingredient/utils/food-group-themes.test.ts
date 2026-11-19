@@ -9,6 +9,9 @@ import type { Ingredient } from '../types/ingredient.model';
 
 function createMockIngredient(id: string, canonicalName: string, foodGroup: FoodGroup): Ingredient {
   return {
+    dietaryGroups: [],
+    dietaryClassificationVersion: 0,
+    dietaryReviewed: false,
     compositionStatus: 'UNKNOWN',
     compositionStatusLabel: 'Cấu tạo chưa rõ',
     id,

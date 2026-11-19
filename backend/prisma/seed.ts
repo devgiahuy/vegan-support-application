@@ -1,3 +1,4 @@
+import { normalizeAllergyCatalog } from './seed-data/composition.data.js';
 import { createPrismaClient } from '../src/database/client.js';
 import { seedBillingProducts } from '../src/modules/billing/billing.catalog.js';
 import 'dotenv/config';
@@ -14,7 +15,6 @@ import {
   ContributorApprovalBasis,
   ContributorDecisionType,
   DietPattern,
-  DietRuleSource,
   FoodGroup,
   EvidenceGrade,
   FoodDataProvider,
@@ -36,7 +36,6 @@ import {
   PostRevisionStatus,
   PostStatus,
   PostType,
-  PracticeSchedule,
   RecipeDifficulty,
   RestaurantSource,
   RestaurantStatus,
@@ -708,47 +707,6 @@ async function seedFoodData(adminId: string): Promise<void> {
   }
 }
 
-const dietRuleDefinitions = [
-  {
-    code: 'DIET_VEGAN_EXCLUDE_ANIMAL_PRODUCTS',
-    label: 'Loại trừ sản phẩm có nguồn gốc động vật',
-    description: 'Quy tắc bắt buộc của lựa chọn VEGAN trong ứng dụng.',
-    source: DietRuleSource.DIET_PATTERN,
-    dietPattern: DietPattern.VEGAN,
-    defaultEnabled: true,
-    hardConstraint: true,
-  },
-  {
-    code: 'DIET_LACTO_OVO_EXCLUDE_MEAT_AND_FISH',
-    label: 'Loại trừ thịt và cá',
-    description: 'Quy tắc bắt buộc của lựa chọn LACTO_OVO; sữa và trứng vẫn được phép.',
-    source: DietRuleSource.DIET_PATTERN,
-    dietPattern: DietPattern.LACTO_OVO,
-    defaultEnabled: true,
-    hardConstraint: true,
-  },
-  {
-    code: 'TRADITION_BUDDHIST_EXCLUDE_FIVE_PUNGENT_ROOTS',
-    label: 'Tùy chọn tránh ngũ vị tân',
-    description:
-      'Quy tắc thực hành tùy chọn do người dùng tự bật; không đại diện cho mọi người theo truyền thống Phật giáo.',
-    source: DietRuleSource.TRADITION,
-    tradition: Tradition.BUDDHIST,
-    defaultEnabled: false,
-    hardConstraint: true,
-  },
-  {
-    code: 'TRADITION_CHRISTIAN_FASTING_EXCLUDE_ANIMAL_PRODUCTS',
-    label: 'Tùy chọn kiêng sản phẩm động vật trong ngày thực hành',
-    description:
-      'Quy tắc thực hành tùy chọn do người dùng tự bật; không đại diện cho mọi người theo truyền thống Kitô giáo.',
-    source: DietRuleSource.TRADITION,
-    tradition: Tradition.CHRISTIAN,
-    defaultEnabled: false,
-    hardConstraint: true,
-  },
-] as const;
-
 const seedEnvironment = z
   .object({
     SEED_MEMBER_EMAIL: z.string().email().default('member@example.com'),
@@ -804,18 +762,6 @@ async function main(): Promise<void> {
           status: UserStatus.ACTIVE,
         },
       }),
-      ...dietRuleDefinitions.map((definition) =>
-        transaction.dietRuleDefinition.upsert({
-          where: {
-            code_ruleSetVersion: {
-              code: definition.code,
-              ruleSetVersion: dietRuleSetVersion,
-            },
-          },
-          update: { ...definition, active: true },
-          create: { ...definition, ruleSetVersion: dietRuleSetVersion, active: true },
-        }),
-      ),
     ]),
   );
 
@@ -926,6 +872,7 @@ async function main(): Promise<void> {
     where: { email: seedEnvironment.SEED_ADMIN_EMAIL.toLowerCase() },
   });
   await seedFoodData(admin.id);
+  await normalizeAllergyCatalog(prisma, admin.id);
   const contributorSeedDefinitions = [
     {
       applicationId: '70000000-0000-4000-8000-000000000001',
@@ -1629,15 +1576,6 @@ async function main(): Promise<void> {
   const nextMonday = new Date();
   nextMonday.setUTCHours(0, 0, 0, 0);
   nextMonday.setUTCDate(nextMonday.getUTCDate() + ((8 - nextMonday.getUTCDay()) % 7 || 7));
-  const buddhistRule = await prisma.dietRuleDefinition.findUniqueOrThrow({
-    where: {
-      code_ruleSetVersion: {
-        code: 'TRADITION_BUDDHIST_EXCLUDE_FIVE_PUNGENT_ROOTS',
-        ruleSetVersion: dietRuleSetVersion,
-      },
-    },
-  });
-
   await prisma.$transaction(async (transaction) => {
     for (const userId of [member.id, constraintsMember.id, periodicMember.id]) {
       await transaction.healthProfile.upsert({
@@ -1648,63 +1586,22 @@ async function main(): Promise<void> {
     }
     await transaction.healthProfile.deleteMany({ where: { userId: admin.id } });
 
-    for (const userId of [member.id, constraintsMember.id]) {
+    for (const userId of [member.id, constraintsMember.id, periodicMember.id]) {
+      const selection = {
+        allowEggs: false,
+        allowDairy: false,
+        allowHoney: false,
+        allowFivePungent: userId !== periodicMember.id,
+        policyVersion: 1,
+        dietaryRevision: 1,
+        confirmedAt: new Date(),
+      };
       await transaction.dietPreference.upsert({
         where: { userId },
-        update: {
-          dietPattern: DietPattern.VEGAN,
-          practiceSchedule: PracticeSchedule.PERMANENT,
-          tradition: Tradition.NONE,
-          ruleSetVersion: dietRuleSetVersion,
-          confirmedAt: new Date(),
-        },
-        create: {
-          userId,
-          dietPattern: DietPattern.VEGAN,
-          practiceSchedule: PracticeSchedule.PERMANENT,
-          tradition: Tradition.NONE,
-          ruleSetVersion: dietRuleSetVersion,
-          confirmedAt: new Date(),
-        },
+        update: selection,
+        create: { userId, ...selection },
       });
     }
-    await transaction.dietPreference.upsert({
-      where: { userId: periodicMember.id },
-      update: {
-        dietPattern: DietPattern.VEGAN,
-        practiceSchedule: PracticeSchedule.PERIODIC,
-        tradition: Tradition.BUDDHIST,
-        ruleSetVersion: dietRuleSetVersion,
-        confirmedAt: new Date(),
-      },
-      create: {
-        userId: periodicMember.id,
-        dietPattern: DietPattern.VEGAN,
-        practiceSchedule: PracticeSchedule.PERIODIC,
-        tradition: Tradition.BUDDHIST,
-        ruleSetVersion: dietRuleSetVersion,
-        confirmedAt: new Date(),
-      },
-    });
-    await transaction.dietPreferenceRule.upsert({
-      where: {
-        userId_ruleDefinitionId: {
-          userId: periodicMember.id,
-          ruleDefinitionId: buddhistRule.id,
-        },
-      },
-      update: { enabled: true, source: DietRuleSource.TRADITION },
-      create: {
-        userId: periodicMember.id,
-        ruleDefinitionId: buddhistRule.id,
-        enabled: true,
-        source: DietRuleSource.TRADITION,
-      },
-    });
-    await transaction.dietScheduleDate.deleteMany({ where: { userId: periodicMember.id } });
-    await transaction.dietScheduleDate.create({
-      data: { userId: periodicMember.id, date: nextMonday, enabled: true },
-    });
 
     await transaction.userAllergy.deleteMany({ where: { userId: constraintsMember.id } });
     await transaction.userAllergy.create({
@@ -2364,7 +2261,7 @@ async function main(): Promise<void> {
   // crossings. Seed does not invent review outcomes or expose fixture users'
   // private data through a synthetic notification.
   console.info(
-    `Seeded local Member, unified Contributors with all three approval bases, Admin, storage policy/accounting, pantry inventory, fridge-vision, receipt and restaurant fake fixtures, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
+    `Seeded local Member, unified Contributors with all three approval bases, Admin, storage policy/accounting, pantry inventory, fridge-vision, receipt and restaurant fake fixtures, dietary policy v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
   );
 }
 

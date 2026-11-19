@@ -108,7 +108,7 @@ export default function NewMealProgramScreen() {
       router.replace(`/meal-programs/${created.id}` as Href);
     } catch (error) {
       const code = getApiErrorCode(error);
-      setNeedsProfile(code === 'HEALTH_PROFILE_INCOMPLETE' || code === 'DIET_SCHEDULE_REQUIRED');
+      setNeedsProfile(code === 'HEALTH_PROFILE_INCOMPLETE');
       setErrorMessage(getMealProgramErrorMessage(error));
     }
   };

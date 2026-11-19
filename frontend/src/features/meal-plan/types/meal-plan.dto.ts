@@ -1,3 +1,4 @@
+import type { CompatibilityDto } from '@/features/diet-preferences/types/diet-impact.dto';
 /**
  * DTO thực đơn tuần: generate/list/detail/swap/delete.
  * Theo `docs/api/meal-plans.md` (sync OpenAPI 2026-09-16).
@@ -157,6 +158,7 @@ export interface ShoppingListItemDto {
 
 /** Thực đơn tuần thô (detail đầy đủ slots + shoppingList). */
 export interface MealPlanDto {
+  compatibility?: CompatibilityDto;
   id?: string;
   weekStart?: string;
   week_start?: string;

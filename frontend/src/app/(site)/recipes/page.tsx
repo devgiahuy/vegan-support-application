@@ -1,4 +1,5 @@
 'use client';
+import { dietaryGroupLabel } from '@/features/ingredient/constants/dietary-groups';
 
 import * as React from 'react';
 import Link from 'next/link';
@@ -300,7 +301,7 @@ export default function RecipeDiscoveryPage() {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-semibold text-foreground text-sm">
-                        Bộ lọc an toàn tài khoản:
+                        Bộ lọc theo thiết lập ăn uống:
                       </span>
                       {recipesPagination.metadata.appliedConstraints.dietPattern && (
                         <Badge
@@ -312,6 +313,11 @@ export default function RecipeDiscoveryPage() {
                           )}
                         </Badge>
                       )}
+                      {recipesPagination.metadata.appliedConstraints.foodGroups?.map((group) => (
+                        <Badge key={group} variant="outline" className="text-xs">
+                          Kiêng {dietaryGroupLabel(group).toLowerCase()}
+                        </Badge>
+                      ))}
                       {recipesPagination.metadata.appliedConstraints.allergyCount > 0 && (
                         <Badge variant="secondary" className="text-xs">
                           Tránh {recipesPagination.metadata.appliedConstraints.allergyCount} chất dị

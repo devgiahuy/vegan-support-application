@@ -595,7 +595,8 @@ Generate an editable recipe draft from ingredient names and optional basic infor
             "dietPattern",
             "allergyCount",
             "ingredientExclusionCount",
-            "traditions",
+            "foodGroups",
+            "dietaryRevision",
             "forDate"
           ],
           "properties": {
@@ -618,8 +619,15 @@ Generate an editable recipe draft from ingredient names and optional basic infor
               "type": "integer",
               "_truncated": true
             },
-            "traditions": {
+            "foodGroups": {
               "type": "array",
+              "_truncated": true
+            },
+            "dietaryRevision": {
+              "type": [
+                "integer",
+                "null"
+              ],
               "_truncated": true
             },
             "forDate": {
@@ -843,7 +851,8 @@ Generate an editable recipe draft from ingredient names and optional basic infor
             "dietPattern",
             "allergyCount",
             "ingredientExclusionCount",
-            "traditions",
+            "foodGroups",
+            "dietaryRevision",
             "forDate"
           ],
           "properties": {
@@ -866,8 +875,15 @@ Generate an editable recipe draft from ingredient names and optional basic infor
               "type": "integer",
               "_truncated": true
             },
-            "traditions": {
+            "foodGroups": {
               "type": "array",
+              "_truncated": true
+            },
+            "dietaryRevision": {
+              "type": [
+                "integer",
+                "null"
+              ],
               "_truncated": true
             },
             "forDate": {

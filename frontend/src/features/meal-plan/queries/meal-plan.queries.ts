@@ -52,12 +52,6 @@ export function useGenerateMealPlanMutation() {
     },
     onError: (err: unknown) => {
       const code = getApiErrorCode(err);
-      if (code === 'DIET_SCHEDULE_REQUIRED') {
-        toast.error('Cần chọn ngày chay trong tuần', {
-          description: 'Bạn đang theo chế độ chay kỳ. Hãy bổ sung ngày chay ở hồ sơ rồi tạo lại.',
-        });
-        return;
-      }
       if (code === 'HEALTH_PROFILE_INCOMPLETE') {
         toast.error('Chưa đủ dữ liệu sức khỏe', {
           description: 'Hãy cập nhật hồ sơ sức khỏe ở trang cá nhân trước khi tạo thực đơn.',

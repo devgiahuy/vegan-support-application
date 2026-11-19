@@ -1,4 +1,4 @@
-import { BaseMapper, pickField, safeNumber, safeString, safeEnum } from '@/lib/mapper';
+import { BaseMapper, pickField, safeNumber, safeString } from '@/lib/mapper';
 import { formatDate } from '@/lib/utils';
 import type { PaginationResult } from '@/types/api';
 import type {
@@ -9,10 +9,6 @@ import type {
   UpdatePantryItemReqDto,
   CreatePantryAdjustmentReqDto,
   MergePantryItemsReqDto,
-  PantryItemSourceDto,
-  PantryConfirmationStatusDto,
-  PantryConversionStatusDto,
-  PantryAdjustmentTypeDto,
   PantryListEnvelopeDto,
 } from '../types/pantry.dto';
 
@@ -170,10 +166,20 @@ export class PantryMapper extends BaseMapper<PantryItemDto, PantryItem> {
     backendDays?: number | null
   ): {
     status: ExpiryStatus;
-    variant: 'default' | 'secondary' | 'destructive' | 'outline';
+    variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'warning';
     label: string;
     daysRemaining: number | null;
   } {
+    // Khi số ngày còn lại >= 4, luôn hiển thị tag màu xanh (SAFE)
+    if (backendDays !== null && backendDays !== undefined && backendDays >= 4) {
+      return {
+        status: 'SAFE',
+        variant: 'default',
+        label: `Còn ${backendDays} ngày`,
+        daysRemaining: backendDays,
+      };
+    }
+
     if (backendStatus) {
       if (backendStatus === 'EXPIRED') {
         return {
@@ -202,7 +208,7 @@ export class PantryMapper extends BaseMapper<PantryItemDto, PantryItem> {
       if (backendStatus === 'WARNING') {
         return {
           status: 'WARNING',
-          variant: 'secondary',
+          variant: 'warning',
           label: `Còn ${backendDays ?? 0} ngày`,
           daysRemaining: backendDays ?? null,
         };
@@ -244,11 +250,19 @@ export class PantryMapper extends BaseMapper<PantryItemDto, PantryItem> {
           daysRemaining: diffDays,
         };
       }
+      if (diffDays <= 1) {
+        return {
+          status: 'ALERT',
+          variant: 'destructive',
+          label: diffDays === 0 ? 'Hết hạn hôm nay' : 'Còn 1 ngày (Cảnh báo khẩn)',
+          daysRemaining: diffDays,
+        };
+      }
       if (diffDays <= 3) {
         return {
           status: 'WARNING',
-          variant: 'secondary',
-          label: diffDays === 0 ? 'Hết hạn hôm nay' : `Còn ${diffDays} ngày`,
+          variant: 'warning',
+          label: `Còn ${diffDays} ngày`,
           daysRemaining: diffDays,
         };
       }

@@ -56,12 +56,6 @@ export interface RecipeSubmitFailure {
   message: string;
 }
 
-export interface TraditionWarning {
-  tradition: string;
-  warningCode: string;
-  label: string;
-}
-
 export interface DietCompatibility {
   dietPattern: string;
   compatible: boolean;
@@ -121,7 +115,8 @@ export interface Recipe {
   formattedPublishedAt: string;
   description: string;
   allergenCodes: string[];
-  traditionWarnings: TraditionWarning[];
+  dietaryGroups: string[];
+  dietaryGroupLabels: string[];
   dietCompatibilities: DietCompatibility[];
   /** null khi BE không trả (danh sách mặc định chỉ có món phù hợp). */
   eligibility: RecipeEligibility | null;
@@ -137,7 +132,8 @@ export interface AppliedSearchConstraints {
   dietPattern: string | null;
   allergyCount: number;
   ingredientExclusionCount: number;
-  traditions: string[];
+  foodGroups: string[];
+  dietaryRevision: number | null;
   forDate: string;
 }
 

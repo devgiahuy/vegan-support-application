@@ -1,4 +1,5 @@
 'use client';
+import { DietaryPlanNotice } from '@/features/diet-preferences/components/dietary-plan-notice';
 
 import React from 'react';
 import Link from 'next/link';
@@ -63,6 +64,7 @@ export const ProgramCard: React.FC<ProgramCardProps> = ({ program }) => {
       </CardHeader>
 
       <CardContent className="p-4 pt-1 flex-1 flex flex-col justify-end space-y-3">
+        <DietaryPlanNotice compatibility={program.compatibility} programId={program.id} />
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-muted-foreground/80" />

@@ -47,6 +47,11 @@ export class IngredientMapper extends BaseMapper<IngredientDto, Ingredient> {
       FoodGroup.OTHER
     );
     return {
+      dietaryGroups: safeArray<unknown>(pickField(dto, ['dietaryGroups'], []))
+        .map((value) => safeString(value))
+        .filter(Boolean),
+      dietaryClassificationVersion: safeNumber(pickField(dto, ['dietaryClassificationVersion'], 0)),
+      dietaryReviewed: Boolean(dto?.dietaryEvidence?.reviewedAt),
       compositionStatus:
         dto?.compositionStatus === 'COMPLETE' || dto?.compositionStatus === 'PARTIAL'
           ? dto.compositionStatus

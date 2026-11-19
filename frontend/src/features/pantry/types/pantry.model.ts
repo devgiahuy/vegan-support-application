@@ -46,7 +46,7 @@ export interface PantryItem {
   backendExpiryStatus?: BackendExpiryStatus | null;
   daysUntilExpiry?: number | null;
   expiryStatusAsOf?: string | null;
-  expiryBadgeVariant: 'default' | 'secondary' | 'destructive' | 'outline';
+  expiryBadgeVariant: 'default' | 'secondary' | 'destructive' | 'outline' | 'warning';
   expiryBadgeLabel: string;
   daysRemaining: number | null;
 }

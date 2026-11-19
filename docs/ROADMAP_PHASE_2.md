@@ -64,9 +64,9 @@ This file preserves post-MVP product directions so they are not lost while backe
 - Store source/version for seasonality calendars and permit location granularity controls.
 - Make regional relevance a ranking signal after dietary/allergy constraints.
 
-### R2-07 Expanded dietary traditions and rule catalog
+### R2-07 Optional tradition guidance and expanded food-rule catalog
 
-- Add traditions beyond MVP Buddhist and Christian support after domain review.
+- The approved 2026-11-18 MVP profile uses direct daily food allowances without religious/calendar setup. Future optional tradition guidance needs separate approval/domain review and must not override explicit food choices.
 - Model fasting periods, allowed times, denominations/sects, personal observance, and regional variations without stereotyping.
 - Research Buddhist subtraditions often described as Northern/Mahayana and Southern/Theravada, including optional pungent-spice rules, instead of assuming one universal Buddhist diet.
 - Research Christian denomination/fasting variations and possible future Islamic dietary/fasting support with qualified domain reviewers.

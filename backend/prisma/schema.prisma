@@ -260,20 +260,10 @@ enum DietPattern {
   LACTO_OVO
 }
 
-enum PracticeSchedule {
-  PERMANENT
-  PERIODIC
-}
-
 enum Tradition {
   NONE
   BUDDHIST
   CHRISTIAN
-}
-
-enum DietRuleSource {
-  DIET_PATTERN
-  TRADITION
 }
 
 enum AllergySeverity {
@@ -817,8 +807,6 @@ model User {
   madeContributorDecisions       ContributorDecision[]       @relation("ContributorDecisionActor")
   healthProfile                  HealthProfile?
   dietPreference                 DietPreference?
-  dietPreferenceRules            DietPreferenceRule[]
-  dietScheduleDates              DietScheduleDate[]
   allergies                      UserAllergy[]
   ingredientAllergies            UserIngredientAllergy[]
   ingredientExclusions           UserIngredientExclusion[]
@@ -1043,40 +1031,53 @@ enum IngredientCompositionKind {
   COMPOUND
 }
 
+enum DietaryFoodGroup {
+  MEAT
+  FISH_SEAFOOD
+  EGG
+  DAIRY
+  HONEY
+  FIVE_PUNGENT
+  OTHER_ANIMAL
+}
+
 model Ingredient {
-  compositionStatus     IngredientCompositionStatus   @default(UNKNOWN) @map("composition_status")
-  compositionKind       IngredientCompositionKind     @default(UNSPECIFIED) @map("composition_kind")
-  compositionEvidence   Json?                         @map("composition_evidence")
-  compositionVersion    Int                           @default(0) @map("composition_version")
-  components            IngredientComponent[]         @relation("CompositionParent")
-  componentOf           IngredientComponent[]         @relation("CompositionChild")
-  compositionAudits     IngredientCompositionAudit[]
-  referenceVersion      Int                           @default(0) @map("reference_version")
-  id                    String                        @id @default(uuid()) @map("_id")
-  canonicalName         String                        @map("canonical_name")
-  normalizedName        String                        @unique @map("normalized_name")
-  foodGroup             FoodGroup                     @map("food_group")
-  status                CatalogStatus                 @default(ACTIVE)
-  createdAt             DateTime                      @default(now()) @map("created_at")
-  updatedAt             DateTime                      @updatedAt @map("updated_at")
-  aliases               IngredientAlias[]
-  allergens             IngredientAllergen[]
-  dietCompatibilities   IngredientDietCompatibility[]
-  traditionWarnings     IngredientTraditionWarning[]
-  userExclusions        UserIngredientExclusion[]
-  userAllergies         UserIngredientAllergy[]
-  recipeIngredients     RecipeIngredient[]
-  mealPlanShoppingItems MealPlanShoppingItem[]
-  foodProfiles          IngredientFoodProfile[]
-  intakeGuidelines      IngredientIntakeGuideline[]
-  cookingYieldFactors   CookingYieldFactor[]
-  interactionRulesA     IngredientInteractionRule[]   @relation("InteractionIngredientA")
-  interactionRulesB     IngredientInteractionRule[]   @relation("InteractionIngredientB")
-  nutritionLines        RecipeNutritionEstimateLine[]
-  customMealIngredients CustomMealIngredient[]
-  pantryItems           PantryItem[]
-  recognitionCandidates RecognitionCandidate[]
-  receiptCandidates     ReceiptCandidate[]
+  dietaryGroups                DietaryFoodGroup[]            @default([]) @map("dietary_groups")
+  dietaryEvidence              Json?                         @map("dietary_evidence")
+  dietaryClassificationVersion Int                           @default(0) @map("dietary_classification_version")
+  compositionStatus            IngredientCompositionStatus   @default(UNKNOWN) @map("composition_status")
+  compositionKind              IngredientCompositionKind     @default(UNSPECIFIED) @map("composition_kind")
+  compositionEvidence          Json?                         @map("composition_evidence")
+  compositionVersion           Int                           @default(0) @map("composition_version")
+  components                   IngredientComponent[]         @relation("CompositionParent")
+  componentOf                  IngredientComponent[]         @relation("CompositionChild")
+  compositionAudits            IngredientCompositionAudit[]
+  referenceVersion             Int                           @default(0) @map("reference_version")
+  id                           String                        @id @default(uuid()) @map("_id")
+  canonicalName                String                        @map("canonical_name")
+  normalizedName               String                        @unique @map("normalized_name")
+  foodGroup                    FoodGroup                     @map("food_group")
+  status                       CatalogStatus                 @default(ACTIVE)
+  createdAt                    DateTime                      @default(now()) @map("created_at")
+  updatedAt                    DateTime                      @updatedAt @map("updated_at")
+  aliases                      IngredientAlias[]
+  allergens                    IngredientAllergen[]
+  dietCompatibilities          IngredientDietCompatibility[]
+  traditionWarnings            IngredientTraditionWarning[]
+  userExclusions               UserIngredientExclusion[]
+  userAllergies                UserIngredientAllergy[]
+  recipeIngredients            RecipeIngredient[]
+  mealPlanShoppingItems        MealPlanShoppingItem[]
+  foodProfiles                 IngredientFoodProfile[]
+  intakeGuidelines             IngredientIntakeGuideline[]
+  cookingYieldFactors          CookingYieldFactor[]
+  interactionRulesA            IngredientInteractionRule[]   @relation("InteractionIngredientA")
+  interactionRulesB            IngredientInteractionRule[]   @relation("InteractionIngredientB")
+  nutritionLines               RecipeNutritionEstimateLine[]
+  customMealIngredients        CustomMealIngredient[]
+  pantryItems                  PantryItem[]
+  recognitionCandidates        RecognitionCandidate[]
+  receiptCandidates            ReceiptCandidate[]
 
   @@index([status, foodGroup, canonicalName])
   @@map("ingredients")
@@ -1820,6 +1821,9 @@ model MealAnalysis {
 }
 
 model MealProgram {
+  sourceProgramId      String?               @map("source_program_id")
+  effectiveFrom        DateTime?             @map("effective_from")
+  replacedByProgramId  String?               @map("replaced_by_program_id")
   referenceVersion     Int                   @default(0) @map("reference_version")
   lockVersion          Int                   @default(0) @map("lock_version")
   id                   String                @id @default(uuid()) @map("_id")
@@ -2185,6 +2189,7 @@ model AiRateLimitBucket {
 }
 
 model RecipeDetail {
+  dietaryGroups       Json             @default("[]") @map("dietary_groups")
   referenceVersion    Int              @default(0) @map("reference_version")
   revisionId          String           @id @map("_id")
   servings            Int
@@ -3122,72 +3127,20 @@ model HealthProfile {
 }
 
 model DietPreference {
-  referenceVersion Int              @default(0) @map("reference_version")
-  userId           String           @id @map("_id")
-  dietPattern      DietPattern      @map("diet_pattern")
-  practiceSchedule PracticeSchedule @map("practice_schedule")
-  tradition        Tradition
-  ruleSetVersion   Int              @map("rule_set_version")
-  confirmedAt      DateTime         @map("confirmed_at")
-  createdAt        DateTime         @default(now()) @map("created_at")
-  updatedAt        DateTime         @updatedAt @map("updated_at")
-  user             User             @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@map("diet_preferences")
-}
-
-model DietRuleDefinition {
-  referenceVersion Int                  @default(0) @map("reference_version")
-  id               String               @id @default(uuid()) @map("_id")
-  code             String
-  label            String
-  description      String
-  source           DietRuleSource
-  dietPattern      DietPattern?         @map("diet_pattern")
-  tradition        Tradition?
-  defaultEnabled   Boolean              @default(true) @map("default_enabled")
-  hardConstraint   Boolean              @default(true) @map("hard_constraint")
-  ruleSetVersion   Int                  @map("rule_set_version")
-  active           Boolean              @default(true)
-  createdAt        DateTime             @default(now()) @map("created_at")
-  updatedAt        DateTime             @updatedAt @map("updated_at")
-  preferenceRules  DietPreferenceRule[]
-
-  @@unique([code, ruleSetVersion])
-  @@index([ruleSetVersion, active])
-  @@map("diet_rule_definitions")
-}
-
-model DietPreferenceRule {
-  referenceVersion Int                @default(0) @map("reference_version")
-  id               String             @id @default(uuid()) @map("_id")
-  userId           String             @map("user_id")
-  ruleDefinitionId String             @map("rule_definition_id")
-  enabled          Boolean
-  source           DietRuleSource
-  createdAt        DateTime           @default(now()) @map("created_at")
-  updatedAt        DateTime           @updatedAt @map("updated_at")
-  user             User               @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  ruleDefinition   DietRuleDefinition @relation(fields: [ruleDefinitionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@unique([userId, ruleDefinitionId])
-  @@index([userId, enabled])
-  @@map("diet_preference_rules")
-}
-
-model DietScheduleDate {
   referenceVersion Int      @default(0) @map("reference_version")
-  id               String   @id @default(uuid()) @map("_id")
-  userId           String   @map("user_id")
-  date             DateTime
-  enabled          Boolean  @default(true)
+  userId           String   @id @map("_id")
+  allowEggs        Boolean  @map("allow_eggs")
+  allowDairy       Boolean  @map("allow_dairy")
+  allowHoney       Boolean  @map("allow_honey")
+  allowFivePungent Boolean  @map("allow_five_pungent")
+  policyVersion    Int      @default(1) @map("policy_version")
+  dietaryRevision  Int      @default(1) @map("dietary_revision")
+  confirmedAt      DateTime @map("confirmed_at")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
   user             User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@unique([userId, date])
-  @@index([userId, enabled, date])
-  @@map("diet_schedule_dates")
+  @@map("diet_preferences")
 }
 
 model UserAllergy {
@@ -3320,4 +3273,19 @@ model CustomMealTag {
   @@unique([customMealId, normalizedTag])
   @@index([normalizedTag])
   @@map("custom_meal_tags")
+}
+
+model DietaryRepairProposal {
+  referenceVersion Int       @default(0) @map("reference_version")
+  id               String    @id @default(uuid()) @map("_id")
+  userId           String    @map("user_id")
+  payload          Json
+  expiresAt        DateTime  @map("expires_at")
+  applyKey         String?   @map("apply_key")
+  result           Json?
+  appliedAt        DateTime? @map("applied_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, expiresAt])
+  @@map("dietary_repair_proposals")
 }

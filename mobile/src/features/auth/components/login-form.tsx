@@ -7,7 +7,12 @@ import { TextField } from '@/components/ui/text-field';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useLoginMutation } from '../queries/auth.queries';
 import { loginSchema, type LoginFormValues } from '../schemas/auth.schema';
-import { getApiErrorCode, getApiErrorFields } from '@/lib/api-error';
+import {
+  getApiErrorCode,
+  getApiErrorFields,
+  isNetworkError,
+  isTimeoutError,
+} from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
 
 /**
@@ -38,6 +43,14 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
       await loginMutation.mutateAsync(values);
       onSuccess?.();
     } catch (error) {
+      if (isTimeoutError(error)) {
+        setFormError('Máy chủ phản hồi quá lâu. Vui lòng thử lại sau.');
+        return;
+      }
+      if (isNetworkError(error)) {
+        setFormError('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối và thử lại.');
+        return;
+      }
       const code = getApiErrorCode(error);
       if (code === 'INVALID_CREDENTIALS') {
         setFormError('Email hoặc mật khẩu không đúng. Vui lòng thử lại.');

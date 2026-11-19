@@ -1,4 +1,11 @@
-import { CatalogStatus, CategoryType, DietPattern, FoodGroup, Tradition } from '@prisma/client';
+import {
+  CatalogStatus,
+  CategoryType,
+  DietPattern,
+  DietaryFoodGroup,
+  FoodGroup,
+  Tradition,
+} from '@prisma/client';
 import { z } from '../../common/validation/zod.js';
 
 const paginationQueryFields = {
@@ -164,15 +171,14 @@ const ingredientAliasSchema = z
 const ingredientDietCompatibilitySchema = z
   .object({ dietPattern: z.enum(DietPattern), compatible: z.boolean() })
   .strict();
-const ingredientTraditionWarningSchema = z
-  .object({ tradition: z.enum(Tradition), warningCode: z.string(), label: z.string() })
-  .strict();
-
 export const ingredientSchema = z
   .object({
     id: z.string().uuid(),
     canonicalName: z.string(),
     normalizedName: z.string(),
+    dietaryGroups: z.array(z.enum(DietaryFoodGroup)),
+    dietaryEvidence: z.record(z.string(), z.unknown()).nullable(),
+    dietaryClassificationVersion: z.number().int().nonnegative(),
     compositionStatus: z.enum(['UNKNOWN', 'PARTIAL', 'COMPLETE']),
     compositionKind: z.enum(['UNSPECIFIED', 'SIMPLE', 'COMPOUND']),
     compositionVersion: z.number().int().nonnegative(),
@@ -182,7 +188,6 @@ export const ingredientSchema = z
     aliases: z.array(ingredientAliasSchema),
     allergenCodes: z.array(z.string()),
     dietCompatibilities: z.array(ingredientDietCompatibilitySchema),
-    traditionWarnings: z.array(ingredientTraditionWarningSchema),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
   })

@@ -1,3 +1,4 @@
+import { dietaryGroupLabel } from '@/common/constants/dietary-groups';
 import { FALLBACK_RECIPE_COVER_URL } from '@/lib/env';
 import { BaseMapper, pickField, safeString, safeDate, safeNumber, safeBoolean, safeArray } from '@/lib/mapper';
 import { formatDate } from '@/lib/utils';
@@ -15,7 +16,6 @@ import type {
   RecipeIngredientDto,
   RecipeStepDto,
   NutritionFactDto,
-  TraditionWarningDto,
   DietCompatibilityDto,
   AppliedConstraintsDto,
 } from '../types/recipe.dto';
@@ -26,7 +26,6 @@ import type {
   RecipeInstructionStep,
   NutritionFact,
   RecipeAuthorNutrition,
-  TraditionWarning,
   DietCompatibility,
   RecipeEligibility,
   RecipePaginationResult,
@@ -149,13 +148,8 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
     );
     const author = authorFromDto(dto, 'Bếp Chay An Nhiên');
 
-    const traditionWarnings: TraditionWarning[] = safeArray<TraditionWarningDto>(
-      detail?.traditionWarnings
-    ).map((w) => ({
-      tradition: safeString(w?.tradition),
-      warningCode: safeString(w?.warningCode),
-      label: safeString(w?.label),
-    }));
+    const dietaryGroups = safeArray<string>(detail?.dietaryGroups).filter(Boolean);
+
     const dietCompatibilities: DietCompatibility[] = safeArray<DietCompatibilityDto>(
       detail?.dietCompatibilities
     ).map((c) => ({
@@ -197,7 +191,8 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       formattedPublishedAt: formatDate(publishedAt),
       description: safeString(revision?.excerpt, ''),
       allergenCodes: safeArray<string>(detail?.allergenCodes),
-      traditionWarnings,
+      dietaryGroups,
+      dietaryGroupLabels: dietaryGroups.map(dietaryGroupLabel),
       dietCompatibilities,
       eligibility: toEligibility(detail?.eligibility),
       rating: undefined,
@@ -232,7 +227,8 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
                 meta.appliedConstraints.ingredientExclusionCount,
                 0
               ),
-              traditions: safeArray<string>(meta.appliedConstraints.traditions),
+              foodGroups: safeArray<string>(meta.appliedConstraints.foodGroups),
+              dietaryRevision: meta.appliedConstraints.dietaryRevision ?? null,
               forDate: safeString(meta.appliedConstraints.forDate, ''),
             }
           : undefined,

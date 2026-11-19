@@ -1,15 +1,14 @@
+import type { DietaryImpactService } from '../dietary-impact/dietary-impact.service.js';
 import type { Request, Response } from 'express';
 import { AppError } from '../../common/errors/app-error.js';
 import { getValidatedBody } from '../../common/validation/validate-request.js';
 import {
   dietPreferenceResponseSchema,
-  dietScheduleResponseSchema,
   healthProfileResponseSchema,
   profileResponseSchema,
   type HealthProfileInput,
   type SaveDietPreferencesInput,
   type UpdateBasicProfileInput,
-  type UpdateDietScheduleInput,
 } from '../profile/profile.schemas.js';
 import type { ProfileService } from '../profile/profile.service.js';
 
@@ -19,7 +18,10 @@ function authenticatedUserId(request: Request): string {
 }
 
 export class UsersController {
-  constructor(private readonly service: ProfileService) {}
+  constructor(
+    private readonly service: ProfileService,
+    private readonly impact: DietaryImpactService,
+  ) {}
 
   getMe = async (request: Request, response: Response): Promise<void> => {
     const profile = await this.service.getProfile(authenticatedUserId(request));
@@ -53,18 +55,16 @@ export class UsersController {
       authenticatedUserId(request),
       getValidatedBody<SaveDietPreferencesInput>(request),
     );
-    response
-      .status(200)
-      .json(dietPreferenceResponseSchema.parse({ success: true, data: preference, meta: null }));
-  };
-
-  updateDietSchedule = async (request: Request, response: Response): Promise<void> => {
-    const schedule = await this.service.updateDietSchedule(
-      authenticatedUserId(request),
-      getValidatedBody<UpdateDietScheduleInput>(request),
+    const impact = await this.impact.current(authenticatedUserId(request)).catch(() => null);
+    response.status(200).json(
+      dietPreferenceResponseSchema.parse({
+        success: true,
+        data: {
+          ...preference,
+          ...(impact ? { impact, impactUnavailable: false } : { impactUnavailable: true }),
+        },
+        meta: null,
+      }),
     );
-    response
-      .status(200)
-      .json(dietScheduleResponseSchema.parse({ success: true, data: schedule, meta: null }));
   };
 }

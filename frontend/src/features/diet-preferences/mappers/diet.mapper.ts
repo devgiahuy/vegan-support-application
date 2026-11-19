@@ -2,282 +2,116 @@ import {
   BaseMapper,
   pickField,
   safeArray,
+  safeString,
+  safeNumber,
   safeBoolean,
   safeDate,
-  safeEnum,
-  safeNumber,
-  safeString,
 } from '@/lib/mapper';
 import type {
-  DietPreferenceResponseDto,
-  DietRuleDto,
+  PreferenceDto,
   DietRulePreviewResponseDto,
-  DietScheduleResponseDto,
   SaveDietPreferencesRequestDto,
-  UpdateDietScheduleRequestDto,
 } from '../types/diet.dto';
-import type {
-  Allergy,
-  DietPreference,
-  DietPreview,
-  DietRule,
-  DietSchedule,
-  IngredientExclusion,
-  IngredientAllergy,
-} from '../types/diet.model';
-import { DietPattern, PracticeSchedule, Tradition } from '@/common/enums';
+import type { DietPreference, DietPreferenceDraft, DietPreview } from '../types/diet.model';
+import type { FoodAllowances } from '../types/food-allowances.model';
+import { dietImpactMapper } from './diet-impact.mapper';
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const array = <T>(value: T[] | null | undefined): NonNullable<T>[] =>
+  safeArray<T>(value).filter((item): item is NonNullable<T> => item != null);
 
-const PATTERN_LABELS: Record<DietPattern, string> = {
-  [DietPattern.VEGAN]: 'Thuần chay',
-  [DietPattern.LACTO_OVO]: 'Có trứng sữa',
-};
-
-const SCHEDULE_LABELS: Record<PracticeSchedule, string> = {
-  [PracticeSchedule.PERMANENT]: 'Trường chay',
-  [PracticeSchedule.PERIODIC]: 'Chay kỳ',
-};
-
-const TRADITION_LABELS: Record<Tradition, string> = {
-  [Tradition.NONE]: 'Không theo truyền thống',
-  [Tradition.BUDDHIST]: 'Phật giáo',
-  [Tradition.CHRISTIAN]: 'Kitô giáo',
-};
-
-/**
- * DietMapper: preview/preferences/schedule → Model sạch cho UI.
- * `ruleSetVersion` + đủ `rules[]` được giữ nguyên để gửi lại khi save.
- */
-export class DietMapper extends BaseMapper<DietRuleDto, DietRule> {
-  toModel(dto: DietRuleDto | null | undefined): DietRule {
+const allowanceKeys = ['allowEggs', 'allowDairy', 'allowHoney', 'allowFivePungent'] as const;
+function allowances(data: Partial<FoodAllowances> | null | undefined): FoodAllowances {
+  return {
+    allowEggs: safeBoolean(pickField(data, ['allowEggs'], false)),
+    allowDairy: safeBoolean(pickField(data, ['allowDairy'], false)),
+    allowHoney: safeBoolean(pickField(data, ['allowHoney'], false)),
+    allowFivePungent: safeBoolean(pickField(data, ['allowFivePungent'], false)),
+  };
+}
+function severity(value: string): 'MILD' | 'MODERATE' | 'SEVERE' {
+  const normalized = value.toUpperCase();
+  return normalized === 'MILD' || normalized === 'SEVERE' ? normalized : 'MODERATE';
+}
+export class DietMapper extends BaseMapper<PreferenceDto, DietPreference> {
+  toModel(data: PreferenceDto | null | undefined): DietPreference {
     return {
-      ruleDefinitionId: safeString(
-        pickField(dto, ['ruleDefinitionId', 'rule_definition_id', 'id'], '')
-      ),
-      // Shape thật từ BE (`POST /diet-rules/preview`): `{id, code, label, description,
-      // defaultEnabled, hardConstraint, source, version}` — đã verify bằng contract test 2026-09-15.
-      name: safeString(pickField(dto, ['name', 'label', 'rule_name', 'title'], 'Quy tắc')),
-      source: safeString(pickField(dto, ['source', 'ruleSource', 'rule_source'], '')),
-      isDefault: safeBoolean(pickField(dto, ['isDefault', 'is_default', 'defaultEnabled'], false)),
-      isHard: safeBoolean(
-        pickField(
-          dto,
-          ['isHard', 'is_hard', 'hardConstraint', 'hard_constraint', 'hard', 'required'],
-          false
-        )
-      ),
-      enabled: safeBoolean(pickField(dto, ['enabled', 'isEnabled'], false)),
-    };
-  }
-
-  /** `POST /diet-rules/preview` → `DietPreview`. */
-  toPreviewModel(data: DietRulePreviewResponseDto['data']): DietPreview {
-    const selection = pickField(data, ['selection'], null) as {
-      dietPattern?: string;
-      practiceSchedule?: string;
-      tradition?: string;
-    } | null;
-    return {
-      ruleSetVersion: safeNumber(pickField(data, ['ruleSetVersion', 'rule_set_version'], 0)),
-      selection: {
-        dietPattern: safeEnum(
-          pickField(selection, ['dietPattern', 'diet_pattern'], DietPattern.VEGAN),
-          DietPattern,
-          DietPattern.VEGAN
-        ),
-        practiceSchedule: safeEnum(
-          pickField(
-            selection,
-            ['practiceSchedule', 'practice_schedule'],
-            PracticeSchedule.PERMANENT
-          ),
-          PracticeSchedule,
-          PracticeSchedule.PERMANENT
-        ),
-        tradition: safeEnum(
-          pickField(selection, ['tradition'], Tradition.NONE),
-          Tradition,
-          Tradition.NONE
-        ),
-      },
-      rules: this.toModelList(
-        safeArray<DietRuleDto | null, DietRuleDto | null>(
-          pickField(data, ['rules'], null),
-          (r) => r
-        )
-      ).filter((r) => r.ruleDefinitionId.length > 0),
-    };
-  }
-
-  /** `PUT /users/me/diet-preferences` → `DietPreference`. */
-  toPreferenceModel(dto: DietPreferenceResponseDto['data']): DietPreference {
-    const data = dto ?? {};
-    const pattern = safeEnum(
-      pickField(data, ['dietPattern', 'diet_pattern'], DietPattern.VEGAN),
-      DietPattern,
-      DietPattern.VEGAN
-    );
-    const schedule = safeEnum(
-      pickField(data, ['practiceSchedule', 'practice_schedule'], PracticeSchedule.PERMANENT),
-      PracticeSchedule,
-      PracticeSchedule.PERMANENT
-    );
-    const tradition = safeEnum(
-      pickField(data, ['tradition'], Tradition.NONE),
-      Tradition,
-      Tradition.NONE
-    );
-    const rawSchedule = pickField<Record<string, unknown> | null>(data, ['schedule'], null);
-    const rawConstraints = pickField<Record<string, unknown> | null>(
-      data,
-      ['effectiveConstraints', 'effective_constraints'],
-      null
-    );
-
-    return {
-      dietPattern: pattern,
-      dietPatternLabel: PATTERN_LABELS[pattern],
-      practiceSchedule: schedule,
-      practiceScheduleLabel: SCHEDULE_LABELS[schedule],
-      tradition,
-      traditionLabel: TRADITION_LABELS[tradition],
-      ruleSetVersion: safeNumber(pickField(data, ['ruleSetVersion', 'rule_set_version'], 0)),
-      confirmedAt: safeDate(pickField(data, ['confirmedAt', 'confirmed_at'], null)),
-      requiresRuleReview: safeBoolean(
-        pickField(data, ['requiresRuleReview', 'requires_rule_review'], false)
-      ),
-      rules: safeArray<unknown, DietRule | null>(pickField(data, ['rules'], null), (r) =>
-        typeof r === 'object' && r !== null ? this.toModel(r as DietRuleDto) : null
-      ).filter((r): r is DietRule => r !== null && r.ruleDefinitionId.length > 0),
-      schedule: rawSchedule
-        ? {
-            timezone: safeString(pickField(rawSchedule, ['timezone'], 'Asia/Ho_Chi_Minh')),
-            dates: safeArray<unknown, string>(pickField(rawSchedule, ['dates'], null), (d) =>
-              typeof d === 'string' && DATE_RE.test(d) ? d : ''
-            ).filter((d) => d.length > 0),
-          }
-        : null,
-      allergies: safeArray<unknown, Allergy>(pickField(data, ['allergies'], null), (a) =>
-        toAllergy(a)
-      ),
-      ingredientAllergies: safeArray<unknown, IngredientAllergy>(
-        pickField(data, ['ingredientAllergies'], []),
-        (raw) => ({
-          ingredientId: safeString(pickField(raw, ['ingredientId'], '')),
-          ingredientName: safeString(pickField(raw, ['ingredientName'], '')),
-          severity: safeString(pickField(raw, ['severity'], 'MODERATE')),
-          ingredientActive: safeBoolean(pickField(raw, ['ingredientActive'], false)),
-        })
-      ).filter((entry) => entry.ingredientId.length > 0),
-      ingredientExclusions: safeArray<unknown, IngredientExclusion>(
-        pickField(data, ['ingredientExclusions', 'ingredient_exclusions'], null),
-        (e) => toExclusion(e)
-      ).filter((e) => e.ingredientName.length > 0),
+      ...allowances(data),
+      selectionValid: allowanceKeys.every((key) => typeof data?.[key] === 'boolean'),
+      policyVersion: safeNumber(pickField(data, ['policyVersion'], 0)),
+      dietaryRevision: safeNumber(pickField(data, ['dietaryRevision'], 0)),
+      confirmedAt: safeDate(pickField(data, ['confirmedAt'], null)),
+      requiresRuleReview: safeBoolean(pickField(data, ['requiresRuleReview'], false)),
+      allergies: array(data?.allergies)
+        .filter((item) => item && item.active !== false)
+        .map((item) => ({
+          allergenCode: safeString(item.allergenCode),
+          label: safeString(item.label, item.allergenCode ?? ''),
+          severity: safeString(item.severity, 'MODERATE'),
+        })),
+      ingredientAllergies: array(data?.ingredientAllergies)
+        .filter((item) => item && item.ingredientId)
+        .map((item) => ({
+          ingredientId: safeString(item.ingredientId),
+          ingredientName: safeString(item.ingredientName),
+          severity: safeString(item.severity, 'MODERATE'),
+          ingredientActive: safeBoolean(item.ingredientActive),
+        })),
+      ingredientExclusions: array(data?.ingredientExclusions)
+        .filter((item) => item && item.active !== false)
+        .map((item) => ({
+          ingredientId: safeString(item.ingredientId) || null,
+          ingredientName: safeString(item.ingredientName),
+          reason: safeString(item.reason),
+        })),
       effectiveConstraints: {
-        always: safeArray<unknown, string>(pickField(rawConstraints, ['always'], null), (v) =>
-          typeof v === 'string' ? v : ''
-        ).filter((v) => v.length > 0),
-        scheduledTradition:
-          safeString(
-            pickField(rawConstraints, ['scheduledTradition', 'scheduled_tradition'], null)
-          ) || null,
+        always: array(data?.effectiveConstraints?.always)
+          .filter(Boolean)
+          .map((item) => safeString(item.label, item.code ?? '')),
       },
+      ...(data?.impact ? { impact: dietImpactMapper.impact(data.impact) } : {}),
+      impactUnavailable: safeBoolean(data?.impactUnavailable),
     };
   }
-
-  /** `PUT /users/me/diet-schedule` → `DietSchedule`. */
-  toScheduleModel(data: DietScheduleResponseDto['data']): DietSchedule {
+  toPreferenceModel(data: PreferenceDto | null | undefined): DietPreference {
+    return this.toModel(data);
+  }
+  toPreviewModel(data: DietRulePreviewResponseDto['data']): DietPreview {
     return {
-      practiceSchedule: safeEnum(
-        pickField(data, ['practiceSchedule', 'practice_schedule'], PracticeSchedule.PERIODIC),
-        PracticeSchedule,
-        PracticeSchedule.PERIODIC
-      ),
-      timezone: safeString(pickField(data, ['timezone'], 'Asia/Ho_Chi_Minh')),
-      dates: safeArray<unknown, string>(pickField(data, ['dates'], null), (d) =>
-        typeof d === 'string' && DATE_RE.test(d) ? d : ''
-      ).filter((d) => d.length > 0),
+      policyVersion: safeNumber(data?.policyVersion),
+      selection: allowances(data?.selection),
+      constraints: array(data?.constraints)
+        .filter(Boolean)
+        .map((item) => ({
+          code: safeString(item.code),
+          label: safeString(item.label),
+          allowed: safeBoolean(item.allowed),
+        })),
     };
   }
-
-  /** Dựng payload save từ preview + lựa chọn user. Loại rule rỗng ID. */
-  toSaveDto(input: {
-    dietPattern: string;
-    practiceSchedule: string;
-    tradition: string;
-    ruleSetVersion: number;
-    rules: DietRule[];
-    scheduleDates?: string[];
-    allergies?: Allergy[];
-    ingredientAllergies?: IngredientAllergy[];
-    ingredientExclusions?: IngredientExclusion[];
-  }): SaveDietPreferencesRequestDto {
+  toSaveDto(input: DietPreferenceDraft): SaveDietPreferencesRequestDto {
     return {
-      dietPattern: input.dietPattern,
-      practiceSchedule: input.practiceSchedule,
-      tradition: input.tradition,
-      ruleSetVersion: input.ruleSetVersion,
-      rules: input.rules
-        .filter((r) => r.ruleDefinitionId.length > 0)
-        .map((r) => ({ ruleDefinitionId: r.ruleDefinitionId, enabled: r.enabled })),
-      // Backend chỉ nhận `scheduleDates` khi chay kỳ; caller bỏ trường này cho lịch khác.
-      ...(input.scheduleDates !== undefined
-        ? { scheduleDates: input.scheduleDates.filter((d) => DATE_RE.test(d)) }
-        : {}),
-      allergies: (input.allergies ?? [])
-        .filter((a) => a.allergenCode.trim().length > 0)
-        .map((a) => ({
-          allergenCode: a.allergenCode,
-          label: a.label,
-          // Backend chỉ nhận MILD|MODERATE|SEVERE — chuẩn hóa, mặc định MODERATE.
-          severity: ['MILD', 'MODERATE', 'SEVERE'].includes(a.severity?.toUpperCase?.() ?? '')
-            ? (a.severity.toUpperCase() as 'MILD' | 'MODERATE' | 'SEVERE')
-            : 'MODERATE',
-        })),
-      ingredientExclusions: (input.ingredientExclusions ?? [])
-        .filter((e) => e.ingredientName.trim().length > 0)
-        .map((e) => ({
-          ...(e.ingredientId ? { ingredientId: e.ingredientId } : {}),
-          ingredientName: e.ingredientName.trim(),
-          // Schema strict yêu cầu reason min(1) nếu có — bỏ khi rỗng.
-          ...(e.reason.trim() ? { reason: e.reason.trim() } : {}),
-        })),
-      ...(input.ingredientAllergies !== undefined
-        ? {
-            ingredientAllergies: input.ingredientAllergies.map((entry) => ({
-              ingredientId: entry.ingredientId,
-              severity: ['MILD', 'MODERATE', 'SEVERE'].includes(entry.severity)
-                ? entry.severity
-                : 'MODERATE',
+      ...allowances(input),
+      policyVersion: input.policyVersion,
+      expectedDietaryRevision: input.expectedDietaryRevision,
+      allergies: input.allergies.map((item) => ({
+        allergenCode: item.allergenCode,
+        label: item.label,
+        severity: severity(item.severity),
+      })),
+      ...(input.ingredientAllergies === undefined
+        ? {}
+        : {
+            ingredientAllergies: input.ingredientAllergies.map((item) => ({
+              ingredientId: item.ingredientId,
+              severity: severity(item.severity),
             })),
-          }
-        : {}),
+          }),
+      ingredientExclusions: input.ingredientExclusions.map((item) => ({
+        ...(item.ingredientId ? { ingredientId: item.ingredientId } : {}),
+        ingredientName: item.ingredientName.trim(),
+        ...(item.reason.trim() ? { reason: item.reason.trim() } : {}),
+      })),
     };
   }
-
-  toScheduleDto(dates: string[]): UpdateDietScheduleRequestDto {
-    return { dates: dates.filter((d) => DATE_RE.test(d)) };
-  }
 }
-
-function toAllergy(raw: unknown): Allergy {
-  const o = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
-  const code = safeString(pickField(o, ['allergenCode', 'allergen_code', 'code'], ''));
-  return {
-    allergenCode: code,
-    label: safeString(pickField(o, ['label', 'name'], code)),
-    severity: safeString(pickField(o, ['severity'], '')),
-  };
-}
-
-function toExclusion(raw: unknown): IngredientExclusion {
-  const o = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
-  return {
-    ingredientId: safeString(pickField(o, ['ingredientId', 'ingredient_id'], null)) || null,
-    ingredientName: safeString(pickField(o, ['ingredientName', 'ingredient_name', 'name'], '')),
-    reason: safeString(pickField(o, ['reason'], '')),
-  };
-}
-
 export const dietMapper = new DietMapper();

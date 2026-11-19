@@ -11,6 +11,8 @@ export interface CompositionEvidence {
   reviewedAt: string;
 }
 export interface IngredientComposition {
+  dietaryGroups: string[];
+  dietaryClassificationVersion: number;
   ingredientId: string;
   status: CompositionStatus;
   kind: CompositionKind;
@@ -28,6 +30,7 @@ export interface CompositionSource {
   attribution: string;
 }
 export interface CompositionDraft {
+  dietaryGroups: string[];
   status: CompositionStatus;
   kind: CompositionKind;
   componentIds: string[];

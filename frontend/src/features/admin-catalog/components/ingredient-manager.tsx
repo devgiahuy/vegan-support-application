@@ -31,7 +31,7 @@ import {
   useUpdateIngredientMutation,
 } from '../queries/admin-ingredient.queries';
 import type { Ingredient } from '@/features/ingredient/types/ingredient.model';
-import { CatalogStatus, DietPattern, FoodGroup, Tradition } from '@/common/enums';
+import { CatalogStatus, DietPattern, FoodGroup } from '@/common/enums';
 import { getApiErrorCode, getApiErrorFields } from '@/lib/api-error';
 import { useDebounce } from '@/hooks/useDebounce';
 import { AliasEditor } from './alias-editor';
@@ -58,11 +58,10 @@ const STATUS_OPTIONS = [
 ];
 
 const DIET_PATTERNS = [DietPattern.VEGAN, DietPattern.LACTO_OVO];
-const TRADITIONS = [Tradition.NONE, Tradition.BUDDHIST, Tradition.CHRISTIAN];
 
 /**
  * Quản trị nguyên liệu: list (gồm archived) + tạo/sửa + archive + alias.
- * Form luôn preload đủ 3 mảng metadata vì PATCH là full snapshot.
+ * Phân loại nhóm thực phẩm được review riêng cùng nguồn trong form cấu tạo.
  */
 export function IngredientManager() {
   const [q, setQ] = React.useState('');
@@ -80,12 +79,6 @@ export function IngredientManager() {
   const [compat, setCompat] = React.useState<Array<{ dietPattern: string; compatible: boolean }>>(
     []
   );
-  const [warnings, setWarnings] = React.useState<
-    Array<{ tradition: string; warningCode: string; label: string }>
-  >([]);
-  const [warnTradition, setWarnTradition] = React.useState<string>(Tradition.NONE);
-  const [warnCode, setWarnCode] = React.useState('');
-  const [warnLabel, setWarnLabel] = React.useState('');
   const [formError, setFormError] = React.useState<string | null>(null);
   const [fieldError, setFieldError] = React.useState<string | null>(null);
 
@@ -110,10 +103,6 @@ export function IngredientManager() {
     setFormFoodGroup(FoodGroup.OTHER);
     setAllergenCodes([]);
     setCompat(DIET_PATTERNS.map((dietPattern) => ({ dietPattern, compatible: true })));
-    setWarnings([]);
-    setWarnTradition(Tradition.NONE);
-    setWarnCode('');
-    setWarnLabel('');
     setFormError(null);
     setFieldError(null);
     setDialogOpen(true);
@@ -129,27 +118,9 @@ export function IngredientManager() {
         ? item.dietCompatibilities.map((c) => ({ ...c }))
         : DIET_PATTERNS.map((dietPattern) => ({ dietPattern, compatible: true }))
     );
-    setWarnings(item.traditionWarnings.map((w) => ({ ...w })));
-    setWarnTradition(Tradition.NONE);
-    setWarnCode('');
-    setWarnLabel('');
     setFormError(null);
     setFieldError(null);
     setDialogOpen(true);
-  };
-
-  const addWarning = () => {
-    if (warnCode.trim().length === 0 || warnLabel.trim().length === 0) {
-      setFormError('Cảnh báo truyền thống cần đủ mã và nhãn.');
-      return;
-    }
-    setWarnings((prev) => [
-      ...prev,
-      { tradition: warnTradition, warningCode: warnCode.trim(), label: warnLabel.trim() },
-    ]);
-    setWarnCode('');
-    setWarnLabel('');
-    setFormError(null);
   };
 
   const mapBackendError = (error: unknown): boolean => {
@@ -163,7 +134,7 @@ export function IngredientManager() {
       return true;
     }
     if (code === 'INVALID_INGREDIENT_METADATA') {
-      setFormError('Metadata dị ứng/diet/truyền thống không hợp lệ. Hãy kiểm tra lại các mục.');
+      setFormError('Thông tin dị ứng hoặc phân loại không hợp lệ. Hãy kiểm tra lại các mục.');
       return true;
     }
     if (code === 'CATALOG_REFERENCE_CONFLICT') {
@@ -193,13 +164,12 @@ export function IngredientManager() {
       setFieldError('Vui lòng nhập tên chuẩn.');
       return;
     }
-    // Gửi full snapshot 3 mảng metadata (trường vắng = đã xóa ở backend).
+    // Phân loại ăn uống có nguồn được quản lý trong form cấu tạo.
     const payload = {
       canonicalName: canonicalName.trim(),
       foodGroup: formFoodGroup,
       allergenCodes,
       dietCompatibilities: compat,
-      traditionWarnings: warnings,
     };
     try {
       if (editing) {
@@ -496,57 +466,6 @@ export function IngredientManager() {
                   </span>
                 </label>
               ))}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Cảnh báo truyền thống</Label>
-              {warnings.map((w, i) => (
-                <div
-                  key={`${w.tradition}-${w.warningCode}-${i}`}
-                  className="flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-sm"
-                >
-                  <span>
-                    {w.tradition} · {w.warningCode} · {w.label}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label="Xóa cảnh báo"
-                    onClick={() => setWarnings((prev) => prev.filter((_, xi) => xi !== i))}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
-              <div className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
-                <Select value={warnTradition} onValueChange={setWarnTradition}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Truyền thống" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TRADITIONS.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  value={warnCode}
-                  onChange={(e) => setWarnCode(e.target.value)}
-                  placeholder="Mã, vd: W1"
-                  aria-label="Mã cảnh báo"
-                />
-                <Input
-                  value={warnLabel}
-                  onChange={(e) => setWarnLabel(e.target.value)}
-                  placeholder="Nhãn cảnh báo"
-                  aria-label="Nhãn cảnh báo"
-                />
-                <Button type="button" variant="outline" onClick={addWarning}>
-                  Thêm
-                </Button>
-              </div>
             </div>
 
             {formError && (

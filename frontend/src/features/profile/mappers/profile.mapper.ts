@@ -1,4 +1,4 @@
-import { BaseMapper, pickField, safeArray, safeString } from '@/lib/mapper';
+import { BaseMapper, pickField, safeString } from '@/lib/mapper';
 import { authMapper } from '@/features/auth/mappers/auth.mapper';
 import type { UserDto } from '@/features/auth/types/auth.dto';
 import type { ProfileResponseDto, UpdateBasicProfileRequestDto } from '../types/profile.dto';
@@ -6,8 +6,6 @@ import type { DetailedProfile, DietPreferenceSummary } from '../types/profile.mo
 import { healthMapper } from './health.mapper';
 import { formatDate } from '@/lib/utils';
 import { dietMapper } from '@/features/diet-preferences/mappers/diet.mapper';
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * ProfileMapper: `GET /users/me` → `DetailedProfile`.
@@ -61,17 +59,7 @@ function toDietSummary(
 ): DietPreferenceSummary | null {
   if (!raw || typeof raw !== 'object') return null;
   const pref = dietMapper.toPreferenceModel(raw);
-  const rawSchedule = pickField<Record<string, unknown> | null>(raw, ['schedule'], null);
-  const scheduleDates = safeArray<unknown, string>(pickField(rawSchedule, ['dates'], null), (d) =>
-    typeof d === 'string' && DATE_RE.test(d) ? d : ''
-  ).filter((d) => d.length > 0);
-  const scheduleTimezone = safeString(pickField(rawSchedule, ['timezone'], 'Asia/Ho_Chi_Minh'));
-
-  return {
-    ...pref,
-    scheduleDates: scheduleDates.length > 0 ? scheduleDates : (pref.schedule?.dates ?? []),
-    scheduleTimezone: scheduleTimezone || pref.schedule?.timezone || 'Asia/Ho_Chi_Minh',
-  };
+  return pref;
 }
 
 export const profileMapper = new ProfileMapper();

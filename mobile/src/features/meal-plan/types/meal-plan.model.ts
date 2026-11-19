@@ -1,3 +1,4 @@
+import type { DietaryCompatibility } from '@/features/diet-preferences/types/diet-impact.model';
 import type { MealPlanGoal, MealType, NutritionDataQuality } from '@/common/enums';
 
 export type MealSourceType = 'RECIPE' | 'CUSTOM_MEAL';
@@ -93,6 +94,7 @@ export interface MealPlanDay {
 }
 
 export interface MealPlan {
+  compatibility: DietaryCompatibility | null;
   id: string;
   weekStart: string;
   formattedWeekRange: string;

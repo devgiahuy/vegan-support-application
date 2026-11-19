@@ -122,6 +122,7 @@ export interface RecipeAllergyWarning {
 }
 
 export interface Recipe {
+  dietaryGroups?: string[];
   id: string;
   title: string;
   slug?: string;
@@ -209,7 +210,8 @@ export interface AppliedSearchConstraints {
   dietPattern: string | null;
   allergyCount: number;
   ingredientExclusionCount: number;
-  traditions: string[];
+  foodGroups: string[];
+  dietaryRevision?: number | null;
   forDate: string;
 }
 

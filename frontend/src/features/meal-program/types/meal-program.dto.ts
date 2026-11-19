@@ -1,3 +1,4 @@
+import type { CompatibilityDto } from '@/features/diet-preferences/types/diet-impact.dto';
 export type MealProgramStatusDto =
   'DRAFT' | 'PARTIAL' | 'GENERATING' | 'CONFIRMED' | 'COMPLETED' | 'ARCHIVED' | 'FAILED';
 export type ProgramWeekStatusDto =
@@ -184,6 +185,10 @@ export interface CumulativeAnalysisDto {
 }
 
 export interface MealProgramListItemDto {
+  compatibility?: CompatibilityDto;
+  sourceProgramId?: string | null;
+  effectiveFrom?: string | null;
+  replacedByProgramId?: string | null;
   id: string;
   user_id?: string;
   userId?: string;
@@ -219,6 +224,10 @@ export interface MealProgramListItemDto {
 }
 
 export interface MealProgramDto {
+  sourceProgramId?: string | null;
+  effectiveFrom?: string | null;
+  replacedByProgramId?: string | null;
+  compatibility?: CompatibilityDto;
   id: string;
   user_id?: string;
   userId?: string;

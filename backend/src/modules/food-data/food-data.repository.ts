@@ -4,6 +4,7 @@ import {
   type Prisma,
   type PrismaClient,
 } from '@prisma/client';
+import { lockIngredientCatalog } from '../catalog/catalog-lock.js';
 import type { CanonicalImportRecord } from './food-data-provider.js';
 import type {
   AdminFoodDataRecordQuery,
@@ -649,8 +650,11 @@ export class FoodDataRepository {
     const reviewed = 'reviewStatus' in input.data ? reviewAudit(input.data, actorId) : {};
     switch (input.kind) {
       case 'SOURCE':
-        return this.prisma.foodDataSource.create({
-          data: prismaData<Prisma.FoodDataSourceUncheckedCreateInput>(input.data),
+        return this.prisma.$transaction(async (transaction) => {
+          await lockIngredientCatalog(transaction);
+          return transaction.foodDataSource.create({
+            data: prismaData<Prisma.FoodDataSourceUncheckedCreateInput>(input.data),
+          });
         });
       case 'NUTRIENT':
         return this.prisma.nutrient.create({
@@ -736,9 +740,12 @@ export class FoodDataRepository {
     const reviewed = 'reviewStatus' in input.data ? reviewAudit(input.data, actorId) : {};
     switch (input.kind) {
       case 'SOURCE':
-        return this.prisma.foodDataSource.update({
-          where: { id },
-          data: prismaData<Prisma.FoodDataSourceUncheckedUpdateInput>(input.data),
+        return this.prisma.$transaction(async (transaction) => {
+          await lockIngredientCatalog(transaction);
+          return transaction.foodDataSource.update({
+            where: { id },
+            data: prismaData<Prisma.FoodDataSourceUncheckedUpdateInput>(input.data),
+          });
         });
       case 'NUTRIENT':
         return this.prisma.nutrient.update({
@@ -837,7 +844,10 @@ export class FoodDataRepository {
     const reviewedAt = new Date();
     switch (kind) {
       case 'SOURCE':
-        return this.prisma.foodDataSource.update({ where: { id }, data: { active: false } });
+        return this.prisma.$transaction(async (transaction) => {
+          await lockIngredientCatalog(transaction);
+          return transaction.foodDataSource.update({ where: { id }, data: { active: false } });
+        });
       case 'NUTRIENT':
         return this.prisma.nutrient.update({ where: { id }, data: { active: false } });
       case 'COOKING_METHOD':

@@ -111,7 +111,8 @@ export interface RecommendationMetaDto {
     dietPattern?: string | null;
     allergyCount?: number | string;
     ingredientExclusionCount?: number | string;
-    traditions?: (string | null)[] | null;
+    foodGroups?: (string | null)[] | null;
+    dietaryRevision?: number | null;
     forDate?: string | null;
   } | null;
 }

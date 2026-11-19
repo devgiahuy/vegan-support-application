@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.24
+**Version:** 4.25
 
-**Updated:** 2026-11-16
+**Updated:** 2026-11-18
 
 **Status:** Approved implementation baseline
 
@@ -21,7 +21,7 @@ The current API contract may still contain legacy Contributor subtype fields unt
 | D1 | Delivery | Implement vertical backend phases; every phase is independently verifiable and committed. |
 | D2 | Personalization | MVP uses explainable behavioral scoring. Advanced embeddings/GenAI ranking remains in Roadmap Phase 2. |
 | D3 | Contributor | One Contributor permission set. User applies during registration or later; Admin manually approves. Store approval basis only: `ORGANIZATION_AFFILIATION`, `PLATFORM_TRACK_RECORD`, `ADMIN_INVITED`. |
-| D4 | Vegetarian rules | Keep `dietPattern`, `practiceSchedule`, and `tradition`. MVP traditions: Buddhist and Christian. The system proposes rules and the user confirms/toggles each rule. |
+| D4 | Dietary preferences | User-approved 2026-11-18: four independent daily food allowances (eggs/dairy/honey/five-pungent); remove profile pattern/tradition/calendar setup. Offer replace or keep-with-warnings for affected plans. Dev-only clean break; no legacy-data/client support. |
 | D5 | Publication | Recipes, handbooks, and videos require manual Admin approval. AI flags and reports are evidence for review, never automatic deletion. |
 | D6 | Health data | MVP web uses user-entered measurements. HealthKit/Health Connect/wearables/phone-sensor research remains in Roadmap Phase 2. |
 | D7 | Persistence | MongoDB replica set + Prisma; UUID API identifiers retained. Approved by user on 2026-10-07; preservation of historical database data is not required. |
@@ -211,26 +211,31 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 
 ### BL-02 — Diet rules and precedence
 
-1. Selecting a diet pattern or tradition returns a versioned default rule set.
-2. The user confirms and may toggle individual rules. Store enabled state and rule version.
+1. Preview four independent allowances `allowEggs`, `allowDairy`, `allowHoney`, `allowFivePungent` and policy version. Enabled means allowed every day; no profile tradition/pattern/calendar setup (user-approved 2026-11-18).
+2. Explicitly confirm the allowances and allergy/exclusion state. Persist policy version and semantic dietary revision; a missing/load-failed profile cannot become silently confirmed defaults.
 3. Effective constraints use this precedence:
    - allergies and explicit ingredient exclusions;
-   - enabled diet-pattern rules;
-   - enabled tradition rules for the current practice schedule;
+   - prohibited animal-origin baseline and disabled food-group allowances;
    - health/nutrition limits;
    - preferences and ranking signals.
 4. Hard constraints remove candidates before scoring. Ranking cannot restore them.
-5. MVP supports Buddhist and Christian traditions; the model remains extensible.
+5. Reviewed neutral groups and transitive composition are distinct from allergens. Product five-pungent membership is hành/hẹ/tỏi/kiệu/hưng cừ. Independent content/search labels do not become profile traditions.
 6. Restaurant directory discovery/details follow BL-16's explicit-search exception and do not inherit these personal profile constraints.
 7. Recipe discovery may show profile-removed recipes only in an explicit, separately labelled "not suitable" view (`GET /posts?eligibility=INELIGIBLE`, user-approved 2026-10-26). Each item carries its reason codes and offending ingredients; the view never feeds ranking, recommendations or meal planning, and detail pages stay viewable as before.
 8. User-approved 2026-11-16: recipe detail allergy banners show only positive matches to the current viewer's active saved allergy groups or ingredient IDs. Backend compares recipe snapshot allergen codes and current transitive ingredient components, without fuzzy/shared-food-group inference. Guests, no allergy profile and no known match produce no banner; absence never certifies safety. Explicit exclusions, diet and tradition do not become allergy warnings. Detail warnings are read-time private output, not stored in the public revision; client caches vary by viewer and refresh after profile edits. Existing fail-closed discovery/planning rules are unchanged.
 
-### BL-03 — Practice schedule
+### BL-03 — Dietary profile changes and existing plans
 
-- `ALWAYS` rules apply continuously.
-- Periodic schedules use local date/time and explicit recurrence configuration.
-- User overrides are versioned and explainable.
-- Missing/ambiguous schedules fail safely by asking for confirmation rather than inferring religious observance.
+User-approved 2026-11-18: remove dietary practice calendars and their generation blockers. Keep meal dates/week boundaries.
+
+- Preview changed constraints against current/future plans and selected program alternatives; deduplicate shared plan/item IDs and distinguish known violations from uncertain data.
+- Offer replacement suggestions with preview/apply or save profile and keep content with persistent warnings. Closing a warning never overrides a hard constraint.
+- Save dietary revision and invalidate dependent analyses/projections atomically. Repair failure/cancellation does not roll back profile. No-op saves do not advance the semantic revision.
+- Repair only affected meals from today in Asia/Ho_Chi_Minh onward; keep compatible meals and past dates. No consumed-state inference from time of day. No candidate means unchanged plan and visible unresolved warning.
+- Apply atomically per plan with profile/plan/catalog guards and idempotency; batches return individual results. Recalculate nutrition/warnings/plan-derived shopping without changing pantry/purchases.
+- Reads and confirmation evaluate current constraints; client cache invalidation is insufficient. Relaxing preferences can clear warnings without adding/replacing meals.
+- Keep confirmed programs immutable: create a linked DRAFT adjustment; confirmation records replacement lineage/effective future range. Historical source remains readable.
+- Direct dev schema/seed replacement, no legacy-data/client compatibility. Detailed acceptance: `docs/DIET_PROFILE_MEAL_PLAN_IMPACT.md`.
 
 ### BL-04 — Canonical ingredients and compatibility
 
@@ -339,7 +344,7 @@ Maintenance clarification 2026-10-26: titles and bodies need not be unique. Auto
 - Repeated-pattern and cumulative nutrient checks span the configured horizon.
 - Editing one week invalidates affected later analyses and shopping projections.
 - Generated programs are drafts until the user confirms them.
-- Before starting/resuming missing weekly alternatives, validate health and periodic calendar coverage for every week to generate. Return all missing week starts/dates before creating new records; users explicitly save days for each week. Successful repair of the last failed week recomputes PARTIAL/FAILED → DRAFT in the same versioned mutation, allowing confirmation. Do not infer religious observance or weaken hard dietary constraints.
+- Before starting/resuming missing weekly alternatives, validate required health and dietary preferences. Dietary calendar coverage is no longer required (user-approved 2026-11-18). Successful repair of the last failed week recomputes PARTIAL/FAILED → DRAFT in the same versioned mutation, allowing confirmation. Never weaken hard dietary constraints.
 
 ### BL-12 — Pantry, fridge images, and receipts
 

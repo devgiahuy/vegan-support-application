@@ -42,6 +42,14 @@ function ingredientOutput(ingredient: IngredientRecord): IngredientOutput {
     id: ingredient.id,
     canonicalName: ingredient.canonicalName,
     normalizedName: ingredient.normalizedName,
+    dietaryGroups: ingredient.dietaryGroups,
+    dietaryEvidence:
+      ingredient.dietaryEvidence &&
+      typeof ingredient.dietaryEvidence === 'object' &&
+      !Array.isArray(ingredient.dietaryEvidence)
+        ? ingredient.dietaryEvidence
+        : null,
+    dietaryClassificationVersion: ingredient.dietaryClassificationVersion,
     compositionStatus: ingredient.compositionStatus,
     compositionKind: ingredient.compositionKind,
     compositionVersion: ingredient.compositionVersion,
@@ -57,11 +65,6 @@ function ingredientOutput(ingredient: IngredientRecord): IngredientOutput {
     dietCompatibilities: ingredient.dietCompatibilities.map((compatibility) => ({
       dietPattern: compatibility.dietPattern,
       compatible: compatibility.compatible,
-    })),
-    traditionWarnings: ingredient.traditionWarnings.map((warning) => ({
-      tradition: warning.tradition,
-      warningCode: warning.warningCode,
-      label: warning.label,
     })),
     createdAt: ingredient.createdAt.toISOString(),
     updatedAt: ingredient.updatedAt.toISOString(),

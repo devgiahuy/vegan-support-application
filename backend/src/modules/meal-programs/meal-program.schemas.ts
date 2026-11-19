@@ -1,3 +1,4 @@
+import { compatibilitySchema } from '../dietary-impact/dietary-impact.schemas.js';
 import { MealGoal, MealProgramStatus, MealProgramWeekStatus } from '@prisma/client';
 import { optionalTrimmedTextSchema, z } from '../../common/validation/zod.js';
 import { dateOnlySchema } from '../profile/profile.schemas.js';
@@ -137,6 +138,10 @@ const programAnalysisSchema = z
 
 const mealProgramSummarySchema = z
   .object({
+    compatibility: compatibilitySchema,
+    sourceProgramId: z.string().uuid().nullable().optional(),
+    effectiveFrom: dateOnlySchema.nullable().optional(),
+    replacedByProgramId: z.string().uuid().nullable().optional(),
     id: z.string().uuid(),
     title: z.string(),
     goal: z.enum(MealGoal),

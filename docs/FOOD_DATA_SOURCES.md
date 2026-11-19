@@ -1,10 +1,16 @@
 # Food, Nutrition, and Cooking Data Source Assessment
 
-**Version:** 1.4
+**Version:** 1.5
 
-**Updated:** 2026-10-29
+**Updated:** 2026-11-18
 
 **Status:** Architecture research for Backend Phase 12; provider/legal validation still required before bulk import
+
+## Reviewed dietary food groups — 2026-11-18
+
+Four profile allowances use EGG/DAIRY/HONEY/FIVE_PUNGENT classifications; MEAT/FISH_SEAFOOD/OTHER_ANIMAL remain prohibited. Food classification is separate from allergens, nutrient-provider records and names. Admin composition review supplies explicit `dietaryGroups`, including reviewed known-none `[]`, with source/record/version/scope, reviewer/time and source-license linkage. Metadata changes invalidate reviewed classification and composition. Unknown evidence cannot pass a food constraint; all descendants are checked.
+
+Project-authored demo assertions use COMPOSITION_DEMO_V1 with explicit formulation/review evidence; they are educational synthetic fixtures, not USDA nutrient findings, branded-product verification or religious authority. Approved product pungent membership is hành/hẹ/tỏi/kiệu/hưng cừ, with reviewed canonical aliases; boaro is not automatically included. Both seeds and normalization use the same assessment logic. Dev data can be recreated; canonical nutrient provenance remains unchanged.
 
 ## Recipe review estimates and AI gap filling — 2026-10-28
 

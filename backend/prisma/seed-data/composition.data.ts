@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client';
+import { DietaryFoodGroup, type PrismaClient } from '@prisma/client';
 import { CompositionService } from '../../src/modules/catalog/composition.service.js';
 import { normalizeVietnameseText } from '../../src/modules/catalog/catalog.normalization.js';
 import { ingredientDefinitions } from './ingredients.data.js';
@@ -6,6 +6,17 @@ import { allergenDefinitions } from './allergens.data.js';
 
 // Explicit local demonstration assertions. Never infer completeness from absence of allergens.
 const SIMPLE_NAMES = new Set([
+  'trung ga',
+  'sua bo',
+  'mat ong',
+  'he',
+  'kieu',
+  'hung cu',
+  'hanh tay',
+  'hanh tim',
+  'thit ga',
+  'ca hoi',
+  'gelatin dong vat',
   'dau ga',
   'dau lang',
   'dau den',
@@ -106,6 +117,104 @@ const PREPARED_VERSION = 'composition-demo-2026-10-26';
 // Spice blend expressed through existing reviewed SIMPLE spices so allergens propagate.
 const CURRY_COMPONENTS = ['nghe', 'ot', 'tieu den', 'que', 'gung gia'];
 
+// Exact, project-reviewed synthetic fixtures. These assertions are not inferred from allergen labels.
+const DIETARY_FIXTURES = [
+  {
+    normalizedName: 'trung ga',
+    canonicalName: 'Trứng gà',
+    group: DietaryFoodGroup.EGG,
+    foodGroup: 'DAIRY_EGGS' as const,
+    allergen: 'EGG',
+    aliases: ['chicken egg'],
+  },
+  {
+    normalizedName: 'sua bo',
+    canonicalName: 'Sữa bò',
+    group: DietaryFoodGroup.DAIRY,
+    foodGroup: 'DAIRY_EGGS' as const,
+    allergen: 'MILK',
+    aliases: ['cow milk'],
+  },
+  {
+    normalizedName: 'mat ong',
+    canonicalName: 'Mật ong',
+    group: DietaryFoodGroup.HONEY,
+    foodGroup: 'OTHER' as const,
+    allergen: null,
+    aliases: ['honey'],
+  },
+  {
+    normalizedName: 'he',
+    canonicalName: 'Hẹ',
+    group: DietaryFoodGroup.FIVE_PUNGENT,
+    foodGroup: 'HERBS_SPICES' as const,
+    allergen: null,
+    aliases: ['garlic chives'],
+  },
+  {
+    normalizedName: 'kieu',
+    canonicalName: 'Kiệu',
+    group: DietaryFoodGroup.FIVE_PUNGENT,
+    foodGroup: 'HERBS_SPICES' as const,
+    allergen: null,
+    aliases: ['Chinese onion'],
+  },
+  {
+    normalizedName: 'hung cu',
+    canonicalName: 'Hưng cừ',
+    group: DietaryFoodGroup.FIVE_PUNGENT,
+    foodGroup: 'HERBS_SPICES' as const,
+    allergen: null,
+    aliases: ['asafoetida', 'hing nguyên chất'],
+  },
+  {
+    normalizedName: 'hanh tay',
+    canonicalName: 'Hành tây',
+    group: DietaryFoodGroup.FIVE_PUNGENT,
+    foodGroup: 'HERBS_SPICES' as const,
+    allergen: null,
+    aliases: ['onion'],
+  },
+  {
+    normalizedName: 'hanh tim',
+    canonicalName: 'Hành tím',
+    group: DietaryFoodGroup.FIVE_PUNGENT,
+    foodGroup: 'HERBS_SPICES' as const,
+    allergen: null,
+    aliases: ['shallot'],
+  },
+  {
+    normalizedName: 'thit ga',
+    canonicalName: 'Thịt gà',
+    group: DietaryFoodGroup.MEAT,
+    foodGroup: 'OTHER' as const,
+    allergen: null,
+    aliases: ['chicken meat'],
+  },
+  {
+    normalizedName: 'ca hoi',
+    canonicalName: 'Cá hồi',
+    group: DietaryFoodGroup.FISH_SEAFOOD,
+    foodGroup: 'OTHER' as const,
+    allergen: 'FISH',
+    aliases: ['salmon'],
+  },
+  {
+    normalizedName: 'gelatin dong vat',
+    canonicalName: 'Gelatin động vật',
+    group: DietaryFoodGroup.OTHER_ANIMAL,
+    foodGroup: 'OTHER' as const,
+    allergen: null,
+    aliases: ['animal gelatin'],
+  },
+];
+const PUNGENT_NAMES = new Set(['toi', 'hanh la', 'hanh tay', 'hanh tim', 'he', 'kieu', 'hung cu']);
+function demoDietaryGroups(name: string): DietaryFoodGroup[] {
+  if (PUNGENT_NAMES.has(name)) return [DietaryFoodGroup.FIVE_PUNGENT];
+  const fixture = DIETARY_FIXTURES.find((item) => item.normalizedName === name);
+  return fixture ? [fixture.group] : [];
+}
+
 export async function normalizeAllergyCatalog(prisma: PrismaClient, adminId: string) {
   const source = await prisma.foodDataSource.upsert({
     where: { code: 'COMPOSITION_DEMO_V1' },
@@ -132,6 +241,60 @@ export async function normalizeAllergyCatalog(prisma: PrismaClient, adminId: str
       },
       create: { ...definition },
     });
+  for (const fixture of DIETARY_FIXTURES) {
+    const ingredient = await prisma.ingredient.upsert({
+      where: { normalizedName: fixture.normalizedName },
+      update: {},
+      create: {
+        normalizedName: fixture.normalizedName,
+        canonicalName: fixture.canonicalName,
+        foodGroup: fixture.foodGroup,
+      },
+    });
+    for (const alias of [fixture.canonicalName, ...fixture.aliases]) {
+      const normalizedAlias = normalizeVietnameseText(alias);
+      await prisma.ingredientAlias.upsert({
+        where: { ingredientId_normalizedAlias: { ingredientId: ingredient.id, normalizedAlias } },
+        update: {},
+        create: {
+          ingredientId: ingredient.id,
+          alias,
+          normalizedAlias,
+          reviewStatus: 'APPROVED',
+          sourceId: source.id,
+          sourceRecordId: fixture.normalizedName,
+        },
+      });
+    }
+    if (fixture.allergen && allergenDefinitions.some((a) => a.code === fixture.allergen))
+      await prisma.ingredientAllergen.upsert({
+        where: {
+          ingredientId_allergenCode: {
+            ingredientId: ingredient.id,
+            allergenCode: fixture.allergen,
+          },
+        },
+        update: {},
+        create: { ingredientId: ingredient.id, allergenCode: fixture.allergen },
+      });
+    await prisma.ingredientDietCompatibility.deleteMany({ where: { ingredientId: ingredient.id } });
+    await prisma.ingredientDietCompatibility.createMany({
+      data: [
+        {
+          ingredientId: ingredient.id,
+          dietPattern: 'VEGAN',
+          compatible: fixture.group === DietaryFoodGroup.FIVE_PUNGENT,
+        },
+        {
+          ingredientId: ingredient.id,
+          dietPattern: 'LACTO_OVO',
+          compatible: (['FIVE_PUNGENT', 'EGG', 'DAIRY', 'HONEY'] as string[]).includes(
+            fixture.group,
+          ),
+        },
+      ],
+    });
+  }
   const service = new CompositionService(prisma);
   let reviewed = 0;
   const assertSimple = async (
@@ -141,7 +304,7 @@ export async function normalizeAllergyCatalog(prisma: PrismaClient, adminId: str
   ) => {
     const preparedScope = PREPARED_SIMPLE_SCOPES.get(normalizedName);
     if (!SIMPLE_NAMES.has(normalizedName) && !preparedScope) return false;
-    const sourceVersion = preparedScope ? PREPARED_VERSION : 'composition-demo-2026-10-25';
+    const sourceVersion = 'dietary-demo-2026-11-18';
     const current = await service.get(ingredientId);
     if (
       current.evidence &&
@@ -152,6 +315,7 @@ export async function normalizeAllergyCatalog(prisma: PrismaClient, adminId: str
       return false;
     if (
       current.complete &&
+      current.dietaryClassificationVersion > 0 &&
       current.evidence &&
       typeof current.evidence === 'object' &&
       !Array.isArray(current.evidence) &&
@@ -160,6 +324,7 @@ export async function normalizeAllergyCatalog(prisma: PrismaClient, adminId: str
       return false;
     await service.save(ingredientId, adminId, {
       expectedVersion: current.version,
+      dietaryGroups: demoDietaryGroups(normalizedName),
       status: 'COMPLETE',
       kind: 'SIMPLE',
       componentIds: [],
@@ -212,6 +377,13 @@ export async function normalizeAllergyCatalog(prisma: PrismaClient, adminId: str
     if (ingredient?.status !== 'ACTIVE') continue;
     if (await assertSimple(ingredient.id, normalizedName, ingredient.canonicalName)) reviewed++;
   }
+  for (const fixture of DIETARY_FIXTURES) {
+    const ingredient = await prisma.ingredient.findUniqueOrThrow({
+      where: { normalizedName: fixture.normalizedName },
+    });
+    if (await assertSimple(ingredient.id, ingredient.normalizedName, ingredient.canonicalName))
+      reviewed++;
+  }
   const curry = await prisma.ingredient.findUnique({ where: { normalizedName: 'bot ca ri' } });
   const curryParts = await prisma.ingredient.findMany({
     where: { normalizedName: { in: CURRY_COMPONENTS }, status: 'ACTIVE' },
@@ -229,6 +401,7 @@ export async function normalizeAllergyCatalog(prisma: PrismaClient, adminId: str
     ) {
       await service.save(curry.id, adminId, {
         expectedVersion: current.version,
+        dietaryGroups: [],
         status: 'COMPLETE',
         kind: 'COMPOUND',
         componentIds: curryParts.map((item) => item.id),
@@ -277,6 +450,7 @@ export async function normalizeAllergyCatalog(prisma: PrismaClient, adminId: str
       if (!current.complete || current.componentIds[0] !== componentId)
         await service.save(parent.id, adminId, {
           expectedVersion: current.version,
+          dietaryGroups: [],
           status: 'COMPLETE',
           kind: 'COMPOUND',
           componentIds: [componentId],

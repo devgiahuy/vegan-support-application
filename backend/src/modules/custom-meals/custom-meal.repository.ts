@@ -8,6 +8,7 @@ import {
   type PrismaClient,
 } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
+import { lockDocument } from '../../database/locking.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 
 const customMealInclude = {
@@ -182,20 +183,28 @@ export class CustomMealRepository {
       coverage: NutritionCoverage;
     },
   ): Promise<CustomMealRecord | null> {
-    const result = await this.prisma.customMeal.updateMany({
-      where: { id, ownerId, deletedAt: null, updatedAt: expectedUpdatedAt },
-      data: {
-        ...(values.calories !== undefined ? { userCalories: Math.round(values.calories) } : {}),
-        ...(values.proteinGrams !== undefined ? { userProteinGrams: values.proteinGrams } : {}),
-        ...(values.carbsGrams !== undefined ? { userCarbsGrams: values.carbsGrams } : {}),
-        ...(values.fatGrams !== undefined ? { userFatGrams: values.fatGrams } : {}),
-        ...(values.fiberGrams !== undefined ? { userFiberGrams: values.fiberGrams } : {}),
-        nutritionMetadata: values.metadata,
-        nutritionAnalyzedAt: new Date(),
-        nutritionCoverage: values.coverage,
-      },
+    return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: ownerId });
+      const result = await transaction.customMeal.updateMany({
+        where: { id, ownerId, deletedAt: null, updatedAt: expectedUpdatedAt },
+        data: {
+          ...(values.calories !== undefined ? { userCalories: Math.round(values.calories) } : {}),
+          ...(values.proteinGrams !== undefined ? { userProteinGrams: values.proteinGrams } : {}),
+          ...(values.carbsGrams !== undefined ? { userCarbsGrams: values.carbsGrams } : {}),
+          ...(values.fatGrams !== undefined ? { userFatGrams: values.fatGrams } : {}),
+          ...(values.fiberGrams !== undefined ? { userFiberGrams: values.fiberGrams } : {}),
+          nutritionMetadata: values.metadata,
+          nutritionAnalyzedAt: new Date(),
+          nutritionCoverage: values.coverage,
+        },
+      });
+      return result.count === 1
+        ? transaction.customMeal.findFirst({
+            where: { id, ownerId, deletedAt: null },
+            include: customMealInclude,
+          })
+        : null;
     });
-    return result.count === 1 ? this.findOwned(ownerId, id) : null;
   }
 
   async update(
@@ -256,6 +265,14 @@ export class CustomMealRepository {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      await lockDocument(tx, 'user', { id: ownerId });
+      if (
+        !(await tx.customMeal.findFirst({
+          where: { id, ownerId, deletedAt: null },
+          select: { id: true },
+        }))
+      )
+        return null;
       if (resolvedIngredients !== undefined) {
         await tx.customMealIngredient.deleteMany({ where: { customMealId: id } });
       }
@@ -338,23 +355,26 @@ export class CustomMealRepository {
   }
 
   async softDelete(ownerId: string, id: string): Promise<'deleted' | 'not-found' | 'in-use'> {
-    const meal = await this.prisma.customMeal.findFirst({
-      where: { id, ownerId, deletedAt: null },
-      include: { _count: { select: { mealPlanItems: true } } },
-    });
-    if (!meal) return 'not-found';
+    return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: ownerId });
+      const meal = await transaction.customMeal.findFirst({
+        where: { id, ownerId, deletedAt: null },
+        include: { _count: { select: { mealPlanItems: true } } },
+      });
+      if (!meal) return 'not-found';
 
-    if (meal.deletePolicy === CustomMealDeletePolicy.BLOCK && meal._count.mealPlanItems > 0) {
-      return 'in-use';
-    }
+      if (meal.deletePolicy === CustomMealDeletePolicy.BLOCK && meal._count.mealPlanItems > 0) {
+        return 'in-use';
+      }
 
-    // RETAIN_SNAPSHOT: snapshot is already stored on MealPlanItem.customMealSnapshot.
-    // Block policy: reject. Retain policy: proceed with soft-delete.
-    await this.prisma.customMeal.update({
-      where: { id },
-      data: { deletedAt: new Date() },
+      // RETAIN_SNAPSHOT: snapshot is already stored on MealPlanItem.customMealSnapshot.
+      // Block policy: reject. Retain policy: proceed with soft-delete.
+      await transaction.customMeal.update({
+        where: { id },
+        data: { deletedAt: new Date() },
+      });
+      return 'deleted';
     });
-    return 'deleted';
   }
 
   /** Check if an asset is used as a photo on any active custom meal. */

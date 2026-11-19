@@ -901,29 +901,177 @@
                   "null"
                 ],
                 "properties": {
-                  "dietPattern": {
-                    "type": "string",
-                    "enum": [
-                      "VEGAN",
-                      "LACTO_OVO"
-                    ]
+                  "allowEggs": {
+                    "type": "boolean"
                   },
-                  "practiceSchedule": {
-                    "type": "string",
-                    "enum": [
-                      "PERMANENT",
-                      "PERIODIC"
-                    ]
+                  "allowDairy": {
+                    "type": "boolean"
                   },
-                  "tradition": {
-                    "type": "string",
-                    "enum": [
-                      "NONE",
-                      "BUDDHIST",
-                      "CHRISTIAN"
-                    ]
+                  "allowHoney": {
+                    "type": "boolean"
                   },
-                  "ruleSetVersion": {
+                  "allowFivePungent": {
+                    "type": "boolean"
+                  },
+                  "impact": {
+                    "type": "object",
+                    "properties": {
+                      "dietaryRevision": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "assessedFrom": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      "affectedPlanCount": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "affectedMealCount": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "plans": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "planId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "weekStart": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "expectedVersion": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "COMPATIBLE",
+                                "NEEDS_REVIEW",
+                                "HISTORICAL"
+                              ]
+                            },
+                            "canRepair": {
+                              "type": "boolean"
+                            },
+                            "programs": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "GENERATING",
+                                      "DRAFT",
+                                      "PARTIAL",
+                                      "FAILED",
+                                      "CONFIRMED"
+                                    ]
+                                  },
+                                  "expectedVersion": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "title",
+                                  "status",
+                                  "expectedVersion"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "itemId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "date": {
+                                    "type": "string",
+                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                  },
+                                  "mealType": {
+                                    "type": "string",
+                                    "enum": [
+                                      "BREAKFAST",
+                                      "LUNCH",
+                                      "DINNER"
+                                    ]
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "reasons": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "unverified": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "itemId",
+                                  "date",
+                                  "mealType",
+                                  "name",
+                                  "reasons",
+                                  "unverified"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "planId",
+                            "weekStart",
+                            "expectedVersion",
+                            "status",
+                            "canRepair",
+                            "programs",
+                            "items"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "dietaryRevision",
+                      "assessedFrom",
+                      "affectedPlanCount",
+                      "affectedMealCount",
+                      "plans"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "impactUnavailable": {
+                    "type": "boolean"
+                  },
+                  "policyVersion": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "dietaryRevision": {
                     "type": "integer",
                     "exclusiveMinimum": 0
                   },
@@ -933,82 +1081,6 @@
                   },
                   "requiresRuleReview": {
                     "type": "boolean"
-                  },
-                  "rules": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "code": {
-                          "type": "string"
-                        },
-                        "label": {
-                          "type": "string"
-                        },
-                        "description": {
-                          "type": "string"
-                        },
-                        "defaultEnabled": {
-                          "type": "boolean"
-                        },
-                        "hardConstraint": {
-                          "type": "boolean"
-                        },
-                        "source": {
-                          "type": "string",
-                          "enum": [
-                            "DIET_PATTERN",
-                            "TRADITION"
-                          ]
-                        },
-                        "version": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "enabled": {
-                          "type": "boolean"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "code",
-                        "label",
-                        "description",
-                        "defaultEnabled",
-                        "hardConstraint",
-                        "source",
-                        "version",
-                        "enabled"
-                      ],
-                      "additionalProperties": false
-                    }
-                  },
-                  "schedule": {
-                    "type": "object",
-                    "properties": {
-                      "timezone": {
-                        "type": "string",
-                        "enum": [
-                          "Asia/Ho_Chi_Minh"
-                        ]
-                      },
-                      "dates": {
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-                        }
-                      }
-                    },
-                    "required": [
-                      "timezone",
-                      "dates"
-                    ],
-                    "additionalProperties": false
                   },
                   "allergies": {
                     "type": "array",
@@ -1148,7 +1220,7 @@
                               "enum": [
                                 "ALLERGY",
                                 "INGREDIENT_EXCLUSION",
-                                "DIET_PATTERN"
+                                "FOOD_GROUP"
                               ]
                             },
                             "code": {
@@ -1173,109 +1245,23 @@
                           ],
                           "additionalProperties": false
                         }
-                      },
-                      "scheduledTradition": {
-                        "type": "object",
-                        "properties": {
-                          "practiceSchedule": {
-                            "type": "string",
-                            "enum": [
-                              "PERMANENT",
-                              "PERIODIC"
-                            ]
-                          },
-                          "timezone": {
-                            "type": "string",
-                            "enum": [
-                              "Asia/Ho_Chi_Minh"
-                            ]
-                          },
-                          "dates": {
-                            "type": "array",
-                            "items": {
-                              "type": "string",
-                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-                            }
-                          },
-                          "rules": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "id": {
-                                  "type": "string",
-                                  "format": "uuid"
-                                },
-                                "code": {
-                                  "type": "string"
-                                },
-                                "label": {
-                                  "type": "string"
-                                },
-                                "description": {
-                                  "type": "string"
-                                },
-                                "defaultEnabled": {
-                                  "type": "boolean"
-                                },
-                                "hardConstraint": {
-                                  "type": "boolean"
-                                },
-                                "source": {
-                                  "type": "string",
-                                  "enum": [
-                                    "DIET_PATTERN",
-                                    "TRADITION"
-                                  ]
-                                },
-                                "version": {
-                                  "type": "integer",
-                                  "exclusiveMinimum": 0
-                                },
-                                "enabled": {
-                                  "type": "boolean"
-                                }
-                              },
-                              "required": [
-                                "id",
-                                "code",
-                                "label",
-                                "description",
-                                "defaultEnabled",
-                                "hardConstraint",
-                                "source",
-                                "version",
-                                "enabled"
-                              ],
-                              "additionalProperties": false
-                            }
-                          }
-                        },
-                        "required": [
-                          "practiceSchedule",
-                          "timezone",
-                          "dates",
-                          "rules"
-                        ],
-                        "additionalProperties": false
                       }
                     },
                     "required": [
-                      "always",
-                      "scheduledTradition"
+                      "always"
                     ],
                     "additionalProperties": false
                   }
                 },
                 "required": [
-                  "dietPattern",
-                  "practiceSchedule",
-                  "tradition",
-                  "ruleSetVersion",
+                  "allowEggs",
+                  "allowDairy",
+                  "allowHoney",
+                  "allowFivePungent",
+                  "policyVersion",
+                  "dietaryRevision",
                   "confirmedAt",
                   "requiresRuleReview",
-                  "rules",
-                  "schedule",
                   "allergies",
                   "ingredientAllergies",
                   "ingredientExclusions",
@@ -1450,33 +1436,24 @@
       "DietRulePreviewRequest": {
         "type": "object",
         "properties": {
-          "dietPattern": {
-            "type": "string",
-            "enum": [
-              "VEGAN",
-              "LACTO_OVO"
-            ]
+          "allowEggs": {
+            "type": "boolean"
           },
-          "practiceSchedule": {
-            "type": "string",
-            "enum": [
-              "PERMANENT",
-              "PERIODIC"
-            ]
+          "allowDairy": {
+            "type": "boolean"
           },
-          "tradition": {
-            "type": "string",
-            "enum": [
-              "NONE",
-              "BUDDHIST",
-              "CHRISTIAN"
-            ]
+          "allowHoney": {
+            "type": "boolean"
+          },
+          "allowFivePungent": {
+            "type": "boolean"
           }
         },
         "required": [
-          "dietPattern",
-          "practiceSchedule",
-          "tradition"
+          "allowEggs",
+          "allowDairy",
+          "allowHoney",
+          "allowFivePungent"
         ],
         "additionalProperties": false
       },
@@ -1492,97 +1469,62 @@
           "data": {
             "type": "object",
             "properties": {
-              "ruleSetVersion": {
+              "policyVersion": {
                 "type": "integer",
                 "exclusiveMinimum": 0
               },
               "selection": {
                 "type": "object",
                 "properties": {
-                  "dietPattern": {
-                    "type": "string",
-                    "enum": [
-                      "VEGAN",
-                      "LACTO_OVO"
-                    ]
+                  "allowEggs": {
+                    "type": "boolean"
                   },
-                  "practiceSchedule": {
-                    "type": "string",
-                    "enum": [
-                      "PERMANENT",
-                      "PERIODIC"
-                    ]
+                  "allowDairy": {
+                    "type": "boolean"
                   },
-                  "tradition": {
-                    "type": "string",
-                    "enum": [
-                      "NONE",
-                      "BUDDHIST",
-                      "CHRISTIAN"
-                    ]
+                  "allowHoney": {
+                    "type": "boolean"
+                  },
+                  "allowFivePungent": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
-                  "dietPattern",
-                  "practiceSchedule",
-                  "tradition"
+                  "allowEggs",
+                  "allowDairy",
+                  "allowHoney",
+                  "allowFivePungent"
                 ],
                 "additionalProperties": false
               },
-              "rules": {
+              "constraints": {
                 "type": "array",
                 "items": {
                   "type": "object",
                   "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
                     "code": {
                       "type": "string"
                     },
                     "label": {
                       "type": "string"
                     },
-                    "description": {
-                      "type": "string"
-                    },
-                    "defaultEnabled": {
+                    "allowed": {
                       "type": "boolean"
-                    },
-                    "hardConstraint": {
-                      "type": "boolean"
-                    },
-                    "source": {
-                      "type": "string",
-                      "enum": [
-                        "DIET_PATTERN",
-                        "TRADITION"
-                      ]
-                    },
-                    "version": {
-                      "type": "integer",
-                      "exclusiveMinimum": 0
                     }
                   },
                   "required": [
-                    "id",
                     "code",
                     "label",
-                    "description",
-                    "defaultEnabled",
-                    "hardConstraint",
-                    "source",
-                    "version"
+                    "allowed"
                   ],
                   "additionalProperties": false
                 }
               }
             },
             "required": [
-              "ruleSetVersion",
+              "policyVersion",
               "selection",
-              "rules"
+              "constraints"
             ],
             "additionalProperties": false
           },
@@ -1600,60 +1542,25 @@
       "SaveDietPreferencesRequest": {
         "type": "object",
         "properties": {
-          "dietPattern": {
-            "type": "string",
-            "enum": [
-              "VEGAN",
-              "LACTO_OVO"
-            ]
+          "allowEggs": {
+            "type": "boolean"
           },
-          "practiceSchedule": {
-            "type": "string",
-            "enum": [
-              "PERMANENT",
-              "PERIODIC"
-            ]
+          "allowDairy": {
+            "type": "boolean"
           },
-          "tradition": {
-            "type": "string",
-            "enum": [
-              "NONE",
-              "BUDDHIST",
-              "CHRISTIAN"
-            ]
+          "allowHoney": {
+            "type": "boolean"
           },
-          "ruleSetVersion": {
+          "allowFivePungent": {
+            "type": "boolean"
+          },
+          "policyVersion": {
             "type": "integer",
             "exclusiveMinimum": 0
           },
-          "rules": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "ruleDefinitionId": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "enabled": {
-                  "type": "boolean"
-                }
-              },
-              "required": [
-                "ruleDefinitionId",
-                "enabled"
-              ],
-              "additionalProperties": false
-            },
-            "minItems": 1
-          },
-          "scheduleDates": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-            },
-            "maxItems": 366
+          "expectedDietaryRevision": {
+            "type": "integer",
+            "minimum": 0
           },
           "allergies": {
             "type": "array",
@@ -1743,11 +1650,12 @@
           }
         },
         "required": [
-          "dietPattern",
-          "practiceSchedule",
-          "tradition",
-          "ruleSetVersion",
-          "rules"
+          "allowEggs",
+          "allowDairy",
+          "allowHoney",
+          "allowFivePungent",
+          "policyVersion",
+          "expectedDietaryRevision"
         ],
         "additionalProperties": false
       },
@@ -1763,29 +1671,177 @@
           "data": {
             "type": "object",
             "properties": {
-              "dietPattern": {
-                "type": "string",
-                "enum": [
-                  "VEGAN",
-                  "LACTO_OVO"
-                ]
+              "allowEggs": {
+                "type": "boolean"
               },
-              "practiceSchedule": {
-                "type": "string",
-                "enum": [
-                  "PERMANENT",
-                  "PERIODIC"
-                ]
+              "allowDairy": {
+                "type": "boolean"
               },
-              "tradition": {
-                "type": "string",
-                "enum": [
-                  "NONE",
-                  "BUDDHIST",
-                  "CHRISTIAN"
-                ]
+              "allowHoney": {
+                "type": "boolean"
               },
-              "ruleSetVersion": {
+              "allowFivePungent": {
+                "type": "boolean"
+              },
+              "impact": {
+                "type": "object",
+                "properties": {
+                  "dietaryRevision": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "assessedFrom": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "affectedPlanCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "affectedMealCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "plans": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "planId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "weekStart": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "expectedVersion": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "COMPATIBLE",
+                            "NEEDS_REVIEW",
+                            "HISTORICAL"
+                          ]
+                        },
+                        "canRepair": {
+                          "type": "boolean"
+                        },
+                        "programs": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "GENERATING",
+                                  "DRAFT",
+                                  "PARTIAL",
+                                  "FAILED",
+                                  "CONFIRMED"
+                                ]
+                              },
+                              "expectedVersion": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "title",
+                              "status",
+                              "expectedVersion"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "itemId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "date": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                              },
+                              "mealType": {
+                                "type": "string",
+                                "enum": [
+                                  "BREAKFAST",
+                                  "LUNCH",
+                                  "DINNER"
+                                ]
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "reasons": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "unverified": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "itemId",
+                              "date",
+                              "mealType",
+                              "name",
+                              "reasons",
+                              "unverified"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "planId",
+                        "weekStart",
+                        "expectedVersion",
+                        "status",
+                        "canRepair",
+                        "programs",
+                        "items"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "dietaryRevision",
+                  "assessedFrom",
+                  "affectedPlanCount",
+                  "affectedMealCount",
+                  "plans"
+                ],
+                "additionalProperties": false
+              },
+              "impactUnavailable": {
+                "type": "boolean"
+              },
+              "policyVersion": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "dietaryRevision": {
                 "type": "integer",
                 "exclusiveMinimum": 0
               },
@@ -1795,82 +1851,6 @@
               },
               "requiresRuleReview": {
                 "type": "boolean"
-              },
-              "rules": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "code": {
-                      "type": "string"
-                    },
-                    "label": {
-                      "type": "string"
-                    },
-                    "description": {
-                      "type": "string"
-                    },
-                    "defaultEnabled": {
-                      "type": "boolean"
-                    },
-                    "hardConstraint": {
-                      "type": "boolean"
-                    },
-                    "source": {
-                      "type": "string",
-                      "enum": [
-                        "DIET_PATTERN",
-                        "TRADITION"
-                      ]
-                    },
-                    "version": {
-                      "type": "integer",
-                      "exclusiveMinimum": 0
-                    },
-                    "enabled": {
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "code",
-                    "label",
-                    "description",
-                    "defaultEnabled",
-                    "hardConstraint",
-                    "source",
-                    "version",
-                    "enabled"
-                  ],
-                  "additionalProperties": false
-                }
-              },
-              "schedule": {
-                "type": "object",
-                "properties": {
-                  "timezone": {
-                    "type": "string",
-                    "enum": [
-                      "Asia/Ho_Chi_Minh"
-                    ]
-                  },
-                  "dates": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-                    }
-                  }
-                },
-                "required": [
-                  "timezone",
-                  "dates"
-                ],
-                "additionalProperties": false
               },
               "allergies": {
                 "type": "array",
@@ -2010,7 +1990,7 @@
                           "enum": [
                             "ALLERGY",
                             "INGREDIENT_EXCLUSION",
-                            "DIET_PATTERN"
+                            "FOOD_GROUP"
                           ]
                         },
                         "code": {
@@ -2035,181 +2015,27 @@
                       ],
                       "additionalProperties": false
                     }
-                  },
-                  "scheduledTradition": {
-                    "type": "object",
-                    "properties": {
-                      "practiceSchedule": {
-                        "type": "string",
-                        "enum": [
-                          "PERMANENT",
-                          "PERIODIC"
-                        ]
-                      },
-                      "timezone": {
-                        "type": "string",
-                        "enum": [
-                          "Asia/Ho_Chi_Minh"
-                        ]
-                      },
-                      "dates": {
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-                        }
-                      },
-                      "rules": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "id": {
-                              "type": "string",
-                              "format": "uuid"
-                            },
-                            "code": {
-                              "type": "string"
-                            },
-                            "label": {
-                              "type": "string"
-                            },
-                            "description": {
-                              "type": "string"
-                            },
-                            "defaultEnabled": {
-                              "type": "boolean"
-                            },
-                            "hardConstraint": {
-                              "type": "boolean"
-                            },
-                            "source": {
-                              "type": "string",
-                              "enum": [
-                                "DIET_PATTERN",
-                                "TRADITION"
-                              ]
-                            },
-                            "version": {
-                              "type": "integer",
-                              "exclusiveMinimum": 0
-                            },
-                            "enabled": {
-                              "type": "boolean"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "code",
-                            "label",
-                            "description",
-                            "defaultEnabled",
-                            "hardConstraint",
-                            "source",
-                            "version",
-                            "enabled"
-                          ],
-                          "additionalProperties": false
-                        }
-                      }
-                    },
-                    "required": [
-                      "practiceSchedule",
-                      "timezone",
-                      "dates",
-                      "rules"
-                    ],
-                    "additionalProperties": false
                   }
                 },
                 "required": [
-                  "always",
-                  "scheduledTradition"
+                  "always"
                 ],
                 "additionalProperties": false
               }
             },
             "required": [
-              "dietPattern",
-              "practiceSchedule",
-              "tradition",
-              "ruleSetVersion",
+              "allowEggs",
+              "allowDairy",
+              "allowHoney",
+              "allowFivePungent",
+              "policyVersion",
+              "dietaryRevision",
               "confirmedAt",
               "requiresRuleReview",
-              "rules",
-              "schedule",
               "allergies",
               "ingredientAllergies",
               "ingredientExclusions",
               "effectiveConstraints"
-            ],
-            "additionalProperties": false
-          },
-          "meta": {
-            "type": "null"
-          }
-        },
-        "required": [
-          "success",
-          "data",
-          "meta"
-        ],
-        "additionalProperties": false
-      },
-      "UpdateDietScheduleRequest": {
-        "type": "object",
-        "properties": {
-          "dates": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-            },
-            "maxItems": 366
-          }
-        },
-        "required": [
-          "dates"
-        ],
-        "additionalProperties": false
-      },
-      "DietScheduleResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "enum": [
-              true
-            ]
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "practiceSchedule": {
-                "type": "string",
-                "enum": [
-                  "PERMANENT",
-                  "PERIODIC"
-                ]
-              },
-              "timezone": {
-                "type": "string",
-                "enum": [
-                  "Asia/Ho_Chi_Minh"
-                ]
-              },
-              "dates": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-                }
-              }
-            },
-            "required": [
-              "practiceSchedule",
-              "timezone",
-              "dates"
             ],
             "additionalProperties": false
           },
@@ -2581,6 +2407,32 @@
               "normalizedName": {
                 "type": "string"
               },
+              "dietaryGroups": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "MEAT",
+                    "FISH_SEAFOOD",
+                    "EGG",
+                    "DAIRY",
+                    "HONEY",
+                    "FIVE_PUNGENT",
+                    "OTHER_ANIMAL"
+                  ]
+                }
+              },
+              "dietaryEvidence": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": {}
+              },
+              "dietaryClassificationVersion": {
+                "type": "integer",
+                "minimum": 0
+              },
               "compositionStatus": {
                 "type": "string",
                 "enum": [
@@ -2682,34 +2534,6 @@
                   "additionalProperties": false
                 }
               },
-              "traditionWarnings": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "tradition": {
-                      "type": "string",
-                      "enum": [
-                        "NONE",
-                        "BUDDHIST",
-                        "CHRISTIAN"
-                      ]
-                    },
-                    "warningCode": {
-                      "type": "string"
-                    },
-                    "label": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "tradition",
-                    "warningCode",
-                    "label"
-                  ],
-                  "additionalProperties": false
-                }
-              },
               "createdAt": {
                 "type": "string",
                 "format": "date-time"
@@ -2723,6 +2547,9 @@
               "id",
               "canonicalName",
               "normalizedName",
+              "dietaryGroups",
+              "dietaryEvidence",
+              "dietaryClassificationVersion",
               "compositionStatus",
               "compositionKind",
               "compositionVersion",
@@ -2732,7 +2559,6 @@
               "aliases",
               "allergenCodes",
               "dietCompatibilities",
-              "traditionWarnings",
               "createdAt",
               "updatedAt"
             ],
@@ -2772,6 +2598,32 @@
                 },
                 "normalizedName": {
                   "type": "string"
+                },
+                "dietaryGroups": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "MEAT",
+                      "FISH_SEAFOOD",
+                      "EGG",
+                      "DAIRY",
+                      "HONEY",
+                      "FIVE_PUNGENT",
+                      "OTHER_ANIMAL"
+                    ]
+                  }
+                },
+                "dietaryEvidence": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "additionalProperties": {}
+                },
+                "dietaryClassificationVersion": {
+                  "type": "integer",
+                  "minimum": 0
                 },
                 "compositionStatus": {
                   "type": "string",
@@ -2874,34 +2726,6 @@
                     "additionalProperties": false
                   }
                 },
-                "traditionWarnings": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "tradition": {
-                        "type": "string",
-                        "enum": [
-                          "NONE",
-                          "BUDDHIST",
-                          "CHRISTIAN"
-                        ]
-                      },
-                      "warningCode": {
-                        "type": "string"
-                      },
-                      "label": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "tradition",
-                      "warningCode",
-                      "label"
-                    ],
-                    "additionalProperties": false
-                  }
-                },
                 "createdAt": {
                   "type": "string",
                   "format": "date-time"
@@ -2915,6 +2739,9 @@
                 "id",
                 "canonicalName",
                 "normalizedName",
+                "dietaryGroups",
+                "dietaryEvidence",
+                "dietaryClassificationVersion",
                 "compositionStatus",
                 "compositionKind",
                 "compositionVersion",
@@ -2924,7 +2751,6 @@
                 "aliases",
                 "allergenCodes",
                 "dietCompatibilities",
-                "traditionWarnings",
                 "createdAt",
                 "updatedAt"
               ],
@@ -3007,6 +2833,32 @@
                     },
                     "normalizedName": {
                       "type": "string"
+                    },
+                    "dietaryGroups": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "MEAT",
+                          "FISH_SEAFOOD",
+                          "EGG",
+                          "DAIRY",
+                          "HONEY",
+                          "FIVE_PUNGENT",
+                          "OTHER_ANIMAL"
+                        ]
+                      }
+                    },
+                    "dietaryEvidence": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    "dietaryClassificationVersion": {
+                      "type": "integer",
+                      "minimum": 0
                     },
                     "compositionStatus": {
                       "type": "string",
@@ -3109,34 +2961,6 @@
                         "additionalProperties": false
                       }
                     },
-                    "traditionWarnings": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "tradition": {
-                            "type": "string",
-                            "enum": [
-                              "NONE",
-                              "BUDDHIST",
-                              "CHRISTIAN"
-                            ]
-                          },
-                          "warningCode": {
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "tradition",
-                          "warningCode",
-                          "label"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -3150,6 +2974,9 @@
                     "id",
                     "canonicalName",
                     "normalizedName",
+                    "dietaryGroups",
+                    "dietaryEvidence",
+                    "dietaryClassificationVersion",
                     "compositionStatus",
                     "compositionKind",
                     "compositionVersion",
@@ -3159,7 +2986,6 @@
                     "aliases",
                     "allergenCodes",
                     "dietCompatibilities",
-                    "traditionWarnings",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -3241,6 +3067,32 @@
               "ingredientId": {
                 "type": "string",
                 "format": "uuid"
+              },
+              "dietaryGroups": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "MEAT",
+                    "FISH_SEAFOOD",
+                    "EGG",
+                    "DAIRY",
+                    "HONEY",
+                    "FIVE_PUNGENT",
+                    "OTHER_ANIMAL"
+                  ]
+                }
+              },
+              "dietaryEvidence": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": {}
+              },
+              "dietaryClassificationVersion": {
+                "type": "integer",
+                "minimum": 0
               },
               "status": {
                 "type": "string",
@@ -3342,6 +3194,9 @@
             },
             "required": [
               "ingredientId",
+              "dietaryGroups",
+              "dietaryEvidence",
+              "dietaryClassificationVersion",
               "status",
               "kind",
               "version",
@@ -5009,32 +4864,10 @@
                         },
                         "description": "GET detail only: matches against the authenticated viewer’s active saved allergies. Empty for guests or no known match; not a safety clearance."
                       },
-                      "traditionWarnings": {
+                      "dietaryGroups": {
                         "type": "array",
                         "items": {
-                          "type": "object",
-                          "properties": {
-                            "tradition": {
-                              "type": "string",
-                              "enum": [
-                                "NONE",
-                                "BUDDHIST",
-                                "CHRISTIAN"
-                              ]
-                            },
-                            "warningCode": {
-                              "type": "string"
-                            },
-                            "label": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "tradition",
-                            "warningCode",
-                            "label"
-                          ],
-                          "additionalProperties": false
+                          "type": "string"
                         }
                       },
                       "dietCompatibilities": {
@@ -5250,6 +5083,8 @@
                                     "ALLERGEN_SELECTION_UNRESOLVED",
                                     "DIET_PATTERN",
                                     "INGREDIENT_COMPOSITION_UNCERTAIN",
+                                    "INGREDIENT_DIETARY_UNCERTAIN",
+                                    "FOOD_GROUP_EXCLUSION",
                                     "INGREDIENT_EXCLUSION",
                                     "TRADITION_RULE",
                                     "UNRESOLVED_INGREDIENT"
@@ -5288,7 +5123,7 @@
                       "authorNutrition",
                       "mealPlannerEligible",
                       "allergenCodes",
-                      "traditionWarnings",
+                      "dietaryGroups",
                       "dietCompatibilities",
                       "ingredients",
                       "steps"
@@ -6383,32 +6218,10 @@
                           },
                           "description": "GET detail only: matches against the authenticated viewer’s active saved allergies. Empty for guests or no known match; not a safety clearance."
                         },
-                        "traditionWarnings": {
+                        "dietaryGroups": {
                           "type": "array",
                           "items": {
-                            "type": "object",
-                            "properties": {
-                              "tradition": {
-                                "type": "string",
-                                "enum": [
-                                  "NONE",
-                                  "BUDDHIST",
-                                  "CHRISTIAN"
-                                ]
-                              },
-                              "warningCode": {
-                                "type": "string"
-                              },
-                              "label": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "tradition",
-                              "warningCode",
-                              "label"
-                            ],
-                            "additionalProperties": false
+                            "type": "string"
                           }
                         },
                         "dietCompatibilities": {
@@ -6624,6 +6437,8 @@
                                       "ALLERGEN_SELECTION_UNRESOLVED",
                                       "DIET_PATTERN",
                                       "INGREDIENT_COMPOSITION_UNCERTAIN",
+                                      "INGREDIENT_DIETARY_UNCERTAIN",
+                                      "FOOD_GROUP_EXCLUSION",
                                       "INGREDIENT_EXCLUSION",
                                       "TRADITION_RULE",
                                       "UNRESOLVED_INGREDIENT"
@@ -6662,7 +6477,7 @@
                         "authorNutrition",
                         "mealPlannerEligible",
                         "allergenCodes",
-                        "traditionWarnings",
+                        "dietaryGroups",
                         "dietCompatibilities",
                         "ingredients",
                         "steps"
@@ -7331,16 +7146,18 @@
                     "type": "integer",
                     "minimum": 0
                   },
-                  "traditions": {
+                  "foodGroups": {
                     "type": "array",
                     "items": {
-                      "type": "string",
-                      "enum": [
-                        "NONE",
-                        "BUDDHIST",
-                        "CHRISTIAN"
-                      ]
+                      "type": "string"
                     }
+                  },
+                  "dietaryRevision": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "exclusiveMinimum": 0
                   },
                   "forDate": {
                     "type": "string",
@@ -7352,7 +7169,8 @@
                   "dietPattern",
                   "allergyCount",
                   "ingredientExclusionCount",
-                  "traditions",
+                  "foodGroups",
+                  "dietaryRevision",
                   "forDate"
                 ],
                 "additionalProperties": false
@@ -7842,32 +7660,10 @@
                           },
                           "description": "GET detail only: matches against the authenticated viewer’s active saved allergies. Empty for guests or no known match; not a safety clearance."
                         },
-                        "traditionWarnings": {
+                        "dietaryGroups": {
                           "type": "array",
                           "items": {
-                            "type": "object",
-                            "properties": {
-                              "tradition": {
-                                "type": "string",
-                                "enum": [
-                                  "NONE",
-                                  "BUDDHIST",
-                                  "CHRISTIAN"
-                                ]
-                              },
-                              "warningCode": {
-                                "type": "string"
-                              },
-                              "label": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "tradition",
-                              "warningCode",
-                              "label"
-                            ],
-                            "additionalProperties": false
+                            "type": "string"
                           }
                         },
                         "dietCompatibilities": {
@@ -8083,6 +7879,8 @@
                                       "ALLERGEN_SELECTION_UNRESOLVED",
                                       "DIET_PATTERN",
                                       "INGREDIENT_COMPOSITION_UNCERTAIN",
+                                      "INGREDIENT_DIETARY_UNCERTAIN",
+                                      "FOOD_GROUP_EXCLUSION",
                                       "INGREDIENT_EXCLUSION",
                                       "TRADITION_RULE",
                                       "UNRESOLVED_INGREDIENT"
@@ -8121,7 +7919,7 @@
                         "authorNutrition",
                         "mealPlannerEligible",
                         "allergenCodes",
-                        "traditionWarnings",
+                        "dietaryGroups",
                         "dietCompatibilities",
                         "ingredients",
                         "steps"
@@ -9243,32 +9041,10 @@
                           },
                           "description": "GET detail only: matches against the authenticated viewer’s active saved allergies. Empty for guests or no known match; not a safety clearance."
                         },
-                        "traditionWarnings": {
+                        "dietaryGroups": {
                           "type": "array",
                           "items": {
-                            "type": "object",
-                            "properties": {
-                              "tradition": {
-                                "type": "string",
-                                "enum": [
-                                  "NONE",
-                                  "BUDDHIST",
-                                  "CHRISTIAN"
-                                ]
-                              },
-                              "warningCode": {
-                                "type": "string"
-                              },
-                              "label": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "tradition",
-                              "warningCode",
-                              "label"
-                            ],
-                            "additionalProperties": false
+                            "type": "string"
                           }
                         },
                         "dietCompatibilities": {
@@ -9484,6 +9260,8 @@
                                       "ALLERGEN_SELECTION_UNRESOLVED",
                                       "DIET_PATTERN",
                                       "INGREDIENT_COMPOSITION_UNCERTAIN",
+                                      "INGREDIENT_DIETARY_UNCERTAIN",
+                                      "FOOD_GROUP_EXCLUSION",
                                       "INGREDIENT_EXCLUSION",
                                       "TRADITION_RULE",
                                       "UNRESOLVED_INGREDIENT"
@@ -9522,7 +9300,7 @@
                         "authorNutrition",
                         "mealPlannerEligible",
                         "allergenCodes",
-                        "traditionWarnings",
+                        "dietaryGroups",
                         "dietCompatibilities",
                         "ingredients",
                         "steps"
@@ -10192,16 +9970,18 @@
                     "type": "integer",
                     "minimum": 0
                   },
-                  "traditions": {
+                  "foodGroups": {
                     "type": "array",
                     "items": {
-                      "type": "string",
-                      "enum": [
-                        "NONE",
-                        "BUDDHIST",
-                        "CHRISTIAN"
-                      ]
+                      "type": "string"
                     }
+                  },
+                  "dietaryRevision": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "exclusiveMinimum": 0
                   },
                   "forDate": {
                     "type": "string",
@@ -10213,7 +9993,8 @@
                   "dietPattern",
                   "allergyCount",
                   "ingredientExclusionCount",
-                  "traditions",
+                  "foodGroups",
+                  "dietaryRevision",
                   "forDate"
                 ],
                 "additionalProperties": false
@@ -15179,16 +14960,18 @@
                     "type": "integer",
                     "minimum": 0
                   },
-                  "traditions": {
+                  "foodGroups": {
                     "type": "array",
                     "items": {
-                      "type": "string",
-                      "enum": [
-                        "NONE",
-                        "BUDDHIST",
-                        "CHRISTIAN"
-                      ]
+                      "type": "string"
                     }
+                  },
+                  "dietaryRevision": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "exclusiveMinimum": 0
                   },
                   "forDate": {
                     "type": "string",
@@ -15200,7 +14983,8 @@
                   "dietPattern",
                   "allergyCount",
                   "ingredientExclusionCount",
-                  "traditions",
+                  "foodGroups",
+                  "dietaryRevision",
                   "forDate"
                 ],
                 "additionalProperties": false
@@ -15338,6 +15122,84 @@
           "data": {
             "type": "object",
             "properties": {
+              "compatibility": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "COMPATIBLE",
+                      "NEEDS_REVIEW",
+                      "HISTORICAL"
+                    ]
+                  },
+                  "dietaryRevision": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "assessedFrom": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "affectedMealCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "itemId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "mealType": {
+                          "type": "string",
+                          "enum": [
+                            "BREAKFAST",
+                            "LUNCH",
+                            "DINNER"
+                          ]
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "reasons": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "unverified": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "itemId",
+                        "date",
+                        "mealType",
+                        "name",
+                        "reasons",
+                        "unverified"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "status",
+                  "dietaryRevision",
+                  "assessedFrom",
+                  "affectedMealCount",
+                  "items"
+                ],
+                "additionalProperties": false
+              },
               "id": {
                 "type": "string",
                 "format": "uuid"
@@ -17410,6 +17272,7 @@
               }
             },
             "required": [
+              "compatibility",
               "id",
               "weekStart",
               "goal",
@@ -17463,6 +17326,84 @@
             "items": {
               "type": "object",
               "properties": {
+                "compatibility": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "COMPATIBLE",
+                        "NEEDS_REVIEW",
+                        "HISTORICAL"
+                      ]
+                    },
+                    "dietaryRevision": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "assessedFrom": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "affectedMealCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "itemId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "date": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "mealType": {
+                            "type": "string",
+                            "enum": [
+                              "BREAKFAST",
+                              "LUNCH",
+                              "DINNER"
+                            ]
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "reasons": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "unverified": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "itemId",
+                          "date",
+                          "mealType",
+                          "name",
+                          "reasons",
+                          "unverified"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "dietaryRevision",
+                    "assessedFrom",
+                    "affectedMealCount",
+                    "items"
+                  ],
+                  "additionalProperties": false
+                },
                 "id": {
                   "type": "string",
                   "format": "uuid"
@@ -17769,6 +17710,7 @@
                 }
               },
               "required": [
+                "compatibility",
                 "id",
                 "weekStart",
                 "goal",
@@ -18825,6 +18767,105 @@
           "data": {
             "type": "object",
             "properties": {
+              "compatibility": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "COMPATIBLE",
+                      "NEEDS_REVIEW",
+                      "HISTORICAL"
+                    ]
+                  },
+                  "dietaryRevision": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "assessedFrom": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "affectedMealCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "itemId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "mealType": {
+                          "type": "string",
+                          "enum": [
+                            "BREAKFAST",
+                            "LUNCH",
+                            "DINNER"
+                          ]
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "reasons": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "unverified": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "itemId",
+                        "date",
+                        "mealType",
+                        "name",
+                        "reasons",
+                        "unverified"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "status",
+                  "dietaryRevision",
+                  "assessedFrom",
+                  "affectedMealCount",
+                  "items"
+                ],
+                "additionalProperties": false
+              },
+              "sourceProgramId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "effectiveFrom": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "replacedByProgramId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
               "id": {
                 "type": "string",
                 "format": "uuid"
@@ -19116,6 +19157,7 @@
               }
             },
             "required": [
+              "compatibility",
               "id",
               "title",
               "goal",
@@ -19162,6 +19204,105 @@
             "items": {
               "type": "object",
               "properties": {
+                "compatibility": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "COMPATIBLE",
+                        "NEEDS_REVIEW",
+                        "HISTORICAL"
+                      ]
+                    },
+                    "dietaryRevision": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "assessedFrom": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "affectedMealCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "itemId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "date": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "mealType": {
+                            "type": "string",
+                            "enum": [
+                              "BREAKFAST",
+                              "LUNCH",
+                              "DINNER"
+                            ]
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "reasons": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "unverified": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "itemId",
+                          "date",
+                          "mealType",
+                          "name",
+                          "reasons",
+                          "unverified"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "dietaryRevision",
+                    "assessedFrom",
+                    "affectedMealCount",
+                    "items"
+                  ],
+                  "additionalProperties": false
+                },
+                "sourceProgramId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "effectiveFrom": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "replacedByProgramId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
                 "id": {
                   "type": "string",
                   "format": "uuid"
@@ -19231,6 +19372,7 @@
                 }
               },
               "required": [
+                "compatibility",
                 "id",
                 "title",
                 "goal",
@@ -33596,9 +33738,9 @@
         "tags": [
           "Diet Rules"
         ],
-        "summary": "Xem trước bộ quy tắc diet/tradition hiện hành",
-        "description": "Tradition rules là tùy chọn do user xác nhận; allergy và explicit exclusions không nằm trong danh sách toggle này.",
         "operationId": "previewDietRules",
+        "summary": "Xem trước bốn tùy chọn thực phẩm áp dụng mọi ngày",
+        "description": "Bật nghĩa là được ăn; dị ứng và nguyên liệu kiêng luôn ưu tiên. Ngũ vị tân: hành, hẹ, tỏi, kiệu, hưng cừ. Không có lựa chọn tôn giáo hay lịch chay.",
         "security": [
           {
             "BearerAuth": []
@@ -33612,9 +33754,10 @@
           "content": {
             "application/json": {
               "example": {
-                "dietPattern": "VEGAN",
-                "practiceSchedule": "PERIODIC",
-                "tradition": "BUDDHIST"
+                "allowEggs": true,
+                "allowDairy": false,
+                "allowHoney": true,
+                "allowFivePungent": false
               },
               "schema": {
                 "$ref": "#/components/schemas/DietRulePreviewRequest"
@@ -33624,7 +33767,7 @@
         },
         "responses": {
           "200": {
-            "description": "Rule set có version và default toggle",
+            "description": "Chính sách hiện hành và nhóm thực phẩm",
             "content": {
               "application/json": {
                 "schema": {
@@ -33670,14 +33813,14 @@
             }
           },
           "403": {
-            "description": "Tài khoản đã bị cấm",
+            "description": "Tài khoản không được phép",
             "content": {
               "application/json": {
                 "example": {
                   "success": false,
                   "error": {
                     "code": "ACCOUNT_BANNED",
-                    "message": "Tài khoản đã bị cấm",
+                    "message": "Tài khoản không được phép",
                     "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                   }
                 },
@@ -33701,24 +33844,6 @@
                     "message": "Tài khoản đang bị khóa",
                     "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                   }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Bộ quy tắc chưa sẵn sàng",
-            "content": {
-              "application/json": {
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "DIET_RULES_UNAVAILABLE",
-                    "message": "Bộ quy tắc chưa sẵn sàng",
-                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
-                  }
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -33732,9 +33857,9 @@
           "Users",
           "Diet Rules"
         ],
-        "summary": "Xác nhận diet preferences, rules và hard constraints cá nhân",
-        "description": "Rule IDs phải khớp toàn bộ preview/version. Diet-pattern rule không thể tắt. PERIODIC bắt buộc có scheduleDates theo Asia/Ho_Chi_Minh. Ingredient exclusion nhận optional canonical ingredientId; free-text vẫn được giữ khi chưa map. Allergies và exclusions luôn là hard constraints.",
         "operationId": "saveDietPreferences",
+        "summary": "Lưu bốn tùy chọn thực phẩm và hạn chế cá nhân",
+        "description": "Contract mới cho bản dev. Bốn boolean độc lập áp dụng mọi ngày; thịt/cá và thành phần thuộc nhóm cấm luôn bị loại. policyVersion=1; expectedDietaryRevision=0 cho lần lưu đầu. Save kiểm tra revision, lưu nguyên tử và làm stale các phân tích/thực đơn liên quan. IngredientAllergies bỏ qua thì giữ nguyên; [] xóa hết. Allergies/exclusions được thay thế theo payload. Không tự thay món chỉ vì profile đã lưu.",
         "security": [
           {
             "BearerAuth": []
@@ -33748,37 +33873,15 @@
           "content": {
             "application/json": {
               "example": {
-                "dietPattern": "VEGAN",
-                "practiceSchedule": "PERIODIC",
-                "tradition": "BUDDHIST",
-                "ruleSetVersion": 1,
-                "rules": [
-                  {
-                    "ruleDefinitionId": "11111111-1111-4111-8111-111111111111",
-                    "enabled": true
-                  },
-                  {
-                    "ruleDefinitionId": "22222222-2222-4222-8222-222222222222",
-                    "enabled": false
-                  }
-                ],
-                "scheduleDates": [
-                  "2026-09-18",
-                  "2026-09-25"
-                ],
-                "allergies": [
-                  {
-                    "allergenCode": "PEANUT",
-                    "severity": "SEVERE"
-                  }
-                ],
-                "ingredientExclusions": [
-                  {
-                    "ingredientId": "33333333-3333-4333-8333-333333333333",
-                    "ingredientName": "Đậu hũ",
-                    "reason": "Không thích"
-                  }
-                ]
+                "allowEggs": true,
+                "allowDairy": false,
+                "allowHoney": true,
+                "allowFivePungent": false,
+                "policyVersion": 1,
+                "expectedDietaryRevision": 0,
+                "allergies": [],
+                "ingredientAllergies": [],
+                "ingredientExclusions": []
               },
               "schema": {
                 "$ref": "#/components/schemas/SaveDietPreferencesRequest"
@@ -33788,7 +33891,7 @@
         },
         "responses": {
           "200": {
-            "description": "Snapshot preference và effective constraints đã lưu",
+            "description": "Thiết lập đã lưu và dietary revision",
             "content": {
               "application/json": {
                 "schema": {
@@ -33798,7 +33901,7 @@
             }
           },
           "400": {
-            "description": "Rule hoặc preference không hợp lệ",
+            "description": "Lựa chọn không hợp lệ",
             "content": {
               "application/json": {
                 "examples": {
@@ -33807,37 +33910,7 @@
                       "success": false,
                       "error": {
                         "code": "VALIDATION_ERROR",
-                        "message": "Rule hoặc preference không hợp lệ",
-                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
-                      }
-                    }
-                  },
-                  "INVALID_DIET_RULE_SELECTION": {
-                    "value": {
-                      "success": false,
-                      "error": {
-                        "code": "INVALID_DIET_RULE_SELECTION",
-                        "message": "Rule hoặc preference không hợp lệ",
-                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
-                      }
-                    }
-                  },
-                  "DIET_RULE_REQUIRED": {
-                    "value": {
-                      "success": false,
-                      "error": {
-                        "code": "DIET_RULE_REQUIRED",
-                        "message": "Rule hoặc preference không hợp lệ",
-                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
-                      }
-                    }
-                  },
-                  "INVALID_INGREDIENT_EXCLUSIONS": {
-                    "value": {
-                      "success": false,
-                      "error": {
-                        "code": "INVALID_INGREDIENT_EXCLUSIONS",
-                        "message": "Rule hoặc preference không hợp lệ",
+                        "message": "Lựa chọn không hợp lệ",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -33847,7 +33920,7 @@
                       "success": false,
                       "error": {
                         "code": "INVALID_ALLERGEN_SELECTION",
-                        "message": "Rule hoặc preference không hợp lệ",
+                        "message": "Lựa chọn không hợp lệ",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -33857,17 +33930,17 @@
                       "success": false,
                       "error": {
                         "code": "INVALID_INGREDIENT_ALLERGIES",
-                        "message": "Rule hoặc preference không hợp lệ",
+                        "message": "Lựa chọn không hợp lệ",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
                   },
-                  "DIET_SCHEDULE_NOT_APPLICABLE": {
+                  "INVALID_INGREDIENT_EXCLUSIONS": {
                     "value": {
                       "success": false,
                       "error": {
-                        "code": "DIET_SCHEDULE_NOT_APPLICABLE",
-                        "message": "Rule hoặc preference không hợp lệ",
+                        "code": "INVALID_INGREDIENT_EXCLUSIONS",
+                        "message": "Lựa chọn không hợp lệ",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -33898,14 +33971,14 @@
             }
           },
           "403": {
-            "description": "Tài khoản đã bị cấm",
+            "description": "Tài khoản không được phép",
             "content": {
               "application/json": {
                 "example": {
                   "success": false,
                   "error": {
                     "code": "ACCOUNT_BANNED",
-                    "message": "Tài khoản đã bị cấm",
+                    "message": "Tài khoản không được phép",
                     "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                   }
                 },
@@ -33916,26 +33989,26 @@
             }
           },
           "409": {
-            "description": "Bộ quy tắc đã thay đổi hoặc lịch PERIODIC chưa có ngày",
+            "description": "Thiết lập hoặc chính sách đã thay đổi",
             "content": {
               "application/json": {
                 "examples": {
+                  "DIET_PREFERENCES_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DIET_PREFERENCES_CONFLICT",
+                        "message": "Thiết lập hoặc chính sách đã thay đổi",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
                   "DIET_RULE_RECONFIRMATION_REQUIRED": {
                     "value": {
                       "success": false,
                       "error": {
                         "code": "DIET_RULE_RECONFIRMATION_REQUIRED",
-                        "message": "Bộ quy tắc đã thay đổi hoặc lịch PERIODIC chưa có ngày",
-                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
-                      }
-                    }
-                  },
-                  "DIET_SCHEDULE_REQUIRED": {
-                    "value": {
-                      "success": false,
-                      "error": {
-                        "code": "DIET_SCHEDULE_REQUIRED",
-                        "message": "Bộ quy tắc đã thay đổi hoặc lịch PERIODIC chưa có ngày",
+                        "message": "Thiết lập hoặc chính sách đã thay đổi",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -33964,37 +34037,17 @@
                 }
               }
             }
-          },
-          "503": {
-            "description": "Bộ quy tắc chưa sẵn sàng",
-            "content": {
-              "application/json": {
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "DIET_RULES_UNAVAILABLE",
-                    "message": "Bộ quy tắc chưa sẵn sàng",
-                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
-                  }
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         }
       }
     },
-    "/api/v1/users/me/diet-schedule": {
-      "put": {
+    "/api/v1/users/me/diet-preferences/impact-preview": {
+      "post": {
         "tags": [
-          "Users",
-          "Diet Rules"
+          "Dietary Impact"
         ],
-        "summary": "Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC",
-        "description": "Date-only YYYY-MM-DD được lưu trong MongoDB bằng UTC midnight với semantic Asia/Ho_Chi_Minh; backend không tự tính lịch âm/ngày lễ.",
-        "operationId": "updateDietSchedule",
+        "operationId": "previewDietaryImpact",
+        "summary": "Xem ảnh hưởng của thiết lập dự kiến, chưa lưu",
         "security": [
           {
             "BearerAuth": []
@@ -34003,45 +34056,317 @@
             "AccessTokenCookie": []
           }
         ],
+        "description": "Authenticated owner only. Four food allowances and allergies/exclusions are enforced server-side. Keeping a plan preserves its content, never overrides compatibility. Repair proposals expire after 15 minutes and validate dietary, plan and catalog revisions. Apply is idempotent and atomic per plan; a failed plan stays unchanged. Confirmed programs require a new draft revision.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "example": {
-                "dates": [
-                  "2026-09-18",
-                  "2026-09-25"
-                ]
-              },
               "schema": {
-                "$ref": "#/components/schemas/UpdateDietScheduleRequest"
+                "type": "object",
+                "properties": {
+                  "allowEggs": {
+                    "type": "boolean"
+                  },
+                  "allowDairy": {
+                    "type": "boolean"
+                  },
+                  "allowHoney": {
+                    "type": "boolean"
+                  },
+                  "allowFivePungent": {
+                    "type": "boolean"
+                  },
+                  "policyVersion": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "expectedDietaryRevision": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "allergies": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "allergenCode": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "label": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 160
+                        },
+                        "severity": {
+                          "type": "string",
+                          "enum": [
+                            "MILD",
+                            "MODERATE",
+                            "SEVERE"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "allergenCode"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "maxItems": 50,
+                    "default": []
+                  },
+                  "ingredientExclusions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ingredientId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "ingredientName": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 160
+                        },
+                        "reason": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500
+                        }
+                      },
+                      "required": [
+                        "ingredientName"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "maxItems": 100,
+                    "default": []
+                  },
+                  "ingredientAllergies": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ingredientId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "severity": {
+                          "type": "string",
+                          "enum": [
+                            "MILD",
+                            "MODERATE",
+                            "SEVERE"
+                          ],
+                          "default": "MODERATE"
+                        }
+                      },
+                      "required": [
+                        "ingredientId"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "maxItems": 100
+                  }
+                },
+                "required": [
+                  "allowEggs",
+                  "allowDairy",
+                  "allowHoney",
+                  "allowFivePungent",
+                  "policyVersion",
+                  "expectedDietaryRevision"
+                ],
+                "additionalProperties": false
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Lịch PERIODIC đã cập nhật",
+            "description": "Kết quả",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DietScheduleResponse"
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "dietaryRevision": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "assessedFrom": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "affectedPlanCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "affectedMealCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "plans": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "planId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "weekStart": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                              },
+                              "expectedVersion": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "COMPATIBLE",
+                                  "NEEDS_REVIEW",
+                                  "HISTORICAL"
+                                ]
+                              },
+                              "canRepair": {
+                                "type": "boolean"
+                              },
+                              "programs": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "title": {
+                                      "type": "string"
+                                    },
+                                    "status": {
+                                      "type": "string",
+                                      "enum": [
+                                        "GENERATING",
+                                        "DRAFT",
+                                        "PARTIAL",
+                                        "FAILED",
+                                        "CONFIRMED"
+                                      ]
+                                    },
+                                    "expectedVersion": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "title",
+                                    "status",
+                                    "expectedVersion"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "items": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "itemId": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "date": {
+                                      "type": "string",
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                    },
+                                    "mealType": {
+                                      "type": "string",
+                                      "enum": [
+                                        "BREAKFAST",
+                                        "LUNCH",
+                                        "DINNER"
+                                      ]
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "reasons": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "unverified": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "itemId",
+                                    "date",
+                                    "mealType",
+                                    "name",
+                                    "reasons",
+                                    "unverified"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "planId",
+                              "weekStart",
+                              "expectedVersion",
+                              "status",
+                              "canRepair",
+                              "programs",
+                              "items"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "dietaryRevision",
+                        "assessedFrom",
+                        "affectedPlanCount",
+                        "affectedMealCount",
+                        "plans"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
           },
           "400": {
-            "description": "Danh sách ngày không hợp lệ",
+            "description": "VALIDATION_ERROR / INVALID_ALLERGEN_SELECTION / INVALID_INGREDIENT_ALLERGIES / INVALID_INGREDIENT_EXCLUSIONS",
             "content": {
               "application/json": {
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "VALIDATION_ERROR",
-                    "message": "Danh sách ngày không hợp lệ",
-                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
-                  }
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
@@ -34049,17 +34374,9 @@
             }
           },
           "401": {
-            "description": "Yêu cầu đăng nhập",
+            "description": "AUTH_REQUIRED",
             "content": {
               "application/json": {
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "AUTH_REQUIRED",
-                    "message": "Yêu cầu đăng nhập",
-                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
-                  }
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
@@ -34067,17 +34384,19 @@
             }
           },
           "403": {
-            "description": "Tài khoản đã bị cấm",
+            "description": "ACCOUNT_BANNED",
             "content": {
               "application/json": {
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "ACCOUNT_BANNED",
-                    "message": "Tài khoản đã bị cấm",
-                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
-                  }
-                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND: no owned plan/proposal/program",
+            "content": {
+              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
@@ -34085,41 +34404,1237 @@
             }
           },
           "409": {
-            "description": "Cần diet preference PERIODIC và ít nhất một ngày hợp lệ",
+            "description": "DIET_REPAIR_CONFLICT / DIET_REPAIR_EXPIRED / IDEMPOTENCY_CONFLICT / DIET_PREFERENCES_CONFLICT / MEAL_PROGRAM_VERSION_CONFLICT / MEAL_PROGRAM_HISTORICAL / MEAL_PROGRAM_REVISION_NOT_REQUIRED",
             "content": {
               "application/json": {
-                "examples": {
-                  "DIET_PREFERENCES_REQUIRED": {
-                    "value": {
-                      "success": false,
-                      "error": {
-                        "code": "DIET_PREFERENCES_REQUIRED",
-                        "message": "Cần diet preference PERIODIC và ít nhất một ngày hợp lệ",
-                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
-                      }
-                    }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meal-plans/diet-repair/preview": {
+      "post": {
+        "tags": [
+          "Dietary Impact"
+        ],
+        "operationId": "previewDietaryRepair",
+        "summary": "Tìm món thay thế và xem trước; không sửa thực đơn",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "description": "Authenticated owner only. Four food allowances and allergies/exclusions are enforced server-side. Keeping a plan preserves its content, never overrides compatibility. Repair proposals expire after 15 minutes and validate dietary, plan and catalog revisions. Apply is idempotent and atomic per plan; a failed plan stays unchanged. Confirmed programs require a new draft revision.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "planIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "minItems": 1,
+                    "maxItems": 20
                   },
-                  "DIET_SCHEDULE_NOT_APPLICABLE": {
-                    "value": {
-                      "success": false,
-                      "error": {
-                        "code": "DIET_SCHEDULE_NOT_APPLICABLE",
-                        "message": "Cần diet preference PERIODIC và ít nhất một ngày hợp lệ",
-                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
-                      }
-                    }
-                  },
-                  "DIET_SCHEDULE_REQUIRED": {
-                    "value": {
-                      "success": false,
-                      "error": {
-                        "code": "DIET_SCHEDULE_REQUIRED",
-                        "message": "Cần diet preference PERIODIC và ít nhất một ngày hợp lệ",
-                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
-                      }
-                    }
+                  "expectedDietaryRevision": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
                   }
                 },
+                "required": [
+                  "planIds",
+                  "expectedDietaryRevision"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Kết quả",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "proposalId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "dietaryRevision": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "plans": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "planId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "weekStart": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                              },
+                              "expectedVersion": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "READY",
+                                  "NO_CANDIDATES",
+                                  "PROGRAM_REVISION_REQUIRED",
+                                  "UNCHANGED"
+                                ]
+                              },
+                              "message": {
+                                "type": "string"
+                              },
+                              "programs": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "title": {
+                                      "type": "string"
+                                    },
+                                    "status": {
+                                      "type": "string",
+                                      "enum": [
+                                        "GENERATING",
+                                        "DRAFT",
+                                        "PARTIAL",
+                                        "FAILED",
+                                        "CONFIRMED"
+                                      ]
+                                    },
+                                    "expectedVersion": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "title",
+                                    "status",
+                                    "expectedVersion"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "replacements": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "itemId": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "date": {
+                                      "type": "string",
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                    },
+                                    "mealType": {
+                                      "type": "string",
+                                      "enum": [
+                                        "BREAKFAST",
+                                        "LUNCH",
+                                        "DINNER"
+                                      ]
+                                    },
+                                    "beforeName": {
+                                      "type": "string"
+                                    },
+                                    "afterName": {
+                                      "type": "string"
+                                    },
+                                    "recipeId": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "servings": {
+                                      "type": "number",
+                                      "exclusiveMinimum": 0
+                                    },
+                                    "calories": {
+                                      "type": [
+                                        "number",
+                                        "null"
+                                      ],
+                                      "minimum": 0
+                                    }
+                                  },
+                                  "required": [
+                                    "itemId",
+                                    "date",
+                                    "mealType",
+                                    "beforeName",
+                                    "afterName",
+                                    "recipeId",
+                                    "servings",
+                                    "calories"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "beforeNutrition": {
+                                "type": "object",
+                                "properties": {
+                                  "calories": {
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ],
+                                    "minimum": 0
+                                  },
+                                  "proteinGrams": {
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ],
+                                    "minimum": 0
+                                  },
+                                  "fiberGrams": {
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ],
+                                    "minimum": 0
+                                  },
+                                  "fatGrams": {
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ],
+                                    "minimum": 0
+                                  },
+                                  "carbohydrateGrams": {
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ],
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "calories",
+                                  "proteinGrams",
+                                  "fiberGrams",
+                                  "fatGrams",
+                                  "carbohydrateGrams"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "afterNutrition": {
+                                "type": "object",
+                                "properties": {
+                                  "calories": {
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ],
+                                    "minimum": 0
+                                  },
+                                  "proteinGrams": {
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ],
+                                    "minimum": 0
+                                  },
+                                  "fiberGrams": {
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ],
+                                    "minimum": 0
+                                  },
+                                  "fatGrams": {
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ],
+                                    "minimum": 0
+                                  },
+                                  "carbohydrateGrams": {
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ],
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "calories",
+                                  "proteinGrams",
+                                  "fiberGrams",
+                                  "fatGrams",
+                                  "carbohydrateGrams"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "shoppingBefore": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "ingredientId": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "canonicalName": {
+                                      "type": "string"
+                                    },
+                                    "amount": {
+                                      "type": "number",
+                                      "exclusiveMinimum": 0
+                                    },
+                                    "unit": {
+                                      "type": "string"
+                                    },
+                                    "sourceItemCount": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0
+                                    }
+                                  },
+                                  "required": [
+                                    "ingredientId",
+                                    "canonicalName",
+                                    "amount",
+                                    "unit",
+                                    "sourceItemCount"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "shoppingAfter": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "ingredientId": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "canonicalName": {
+                                      "type": "string"
+                                    },
+                                    "amount": {
+                                      "type": "number",
+                                      "exclusiveMinimum": 0
+                                    },
+                                    "unit": {
+                                      "type": "string"
+                                    },
+                                    "sourceItemCount": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0
+                                    }
+                                  },
+                                  "required": [
+                                    "ingredientId",
+                                    "canonicalName",
+                                    "amount",
+                                    "unit",
+                                    "sourceItemCount"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "planId",
+                              "weekStart",
+                              "expectedVersion",
+                              "status",
+                              "message",
+                              "programs",
+                              "replacements",
+                              "beforeNutrition",
+                              "afterNutrition",
+                              "shoppingBefore",
+                              "shoppingAfter"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "proposalId",
+                        "expiresAt",
+                        "dietaryRevision",
+                        "plans"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR / INVALID_ALLERGEN_SELECTION / INVALID_INGREDIENT_ALLERGIES / INVALID_INGREDIENT_EXCLUSIONS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCOUNT_BANNED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND: no owned plan/proposal/program",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "DIET_REPAIR_CONFLICT / DIET_REPAIR_EXPIRED / IDEMPOTENCY_CONFLICT / DIET_PREFERENCES_CONFLICT / MEAL_PROGRAM_VERSION_CONFLICT / MEAL_PROGRAM_HISTORICAL / MEAL_PROGRAM_REVISION_NOT_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meal-plans/diet-repair/apply": {
+      "post": {
+        "tags": [
+          "Dietary Impact"
+        ],
+        "operationId": "applyDietaryRepair",
+        "summary": "Áp dụng phương án theo phiên bản; kết quả riêng từng thực đơn",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "description": "Authenticated owner only. Four food allowances and allergies/exclusions are enforced server-side. Keeping a plan preserves its content, never overrides compatibility. Repair proposals expire after 15 minutes and validate dietary, plan and catalog revisions. Apply is idempotent and atomic per plan; a failed plan stays unchanged. Confirmed programs require a new draft revision.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "proposalId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "proposalId",
+                  "idempotencyKey"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Kết quả",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "dietaryRevision": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "results": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "planId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "UPDATED",
+                                  "UNCHANGED",
+                                  "FAILED",
+                                  "PROGRAM_REVISION_REQUIRED"
+                                ]
+                              },
+                              "message": {
+                                "type": "string"
+                              },
+                              "remainingAffectedMeals": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "planId",
+                              "status",
+                              "message",
+                              "remainingAffectedMeals"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "dietaryRevision",
+                        "results"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR / INVALID_ALLERGEN_SELECTION / INVALID_INGREDIENT_ALLERGIES / INVALID_INGREDIENT_EXCLUSIONS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCOUNT_BANNED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND: no owned plan/proposal/program",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "DIET_REPAIR_CONFLICT / DIET_REPAIR_EXPIRED / IDEMPOTENCY_CONFLICT / DIET_PREFERENCES_CONFLICT / MEAL_PROGRAM_VERSION_CONFLICT / MEAL_PROGRAM_HISTORICAL / MEAL_PROGRAM_REVISION_NOT_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meal-programs/{id}/diet-revision": {
+      "post": {
+        "tags": [
+          "Dietary Impact"
+        ],
+        "operationId": "createDietaryProgramRevision",
+        "summary": "Tạo bản điều chỉnh nháp của chương trình đã xác nhận",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "description": "Authenticated owner only. Four food allowances and allergies/exclusions are enforced server-side. Keeping a plan preserves its content, never overrides compatibility. Repair proposals expire after 15 minutes and validate dietary, plan and catalog revisions. Apply is idempotent and atomic per plan; a failed plan stays unchanged. Confirmed programs require a new draft revision.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "expectedVersion",
+                  "idempotencyKey"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Kết quả",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "compatibility": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "COMPATIBLE",
+                                "NEEDS_REVIEW",
+                                "HISTORICAL"
+                              ]
+                            },
+                            "dietaryRevision": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "assessedFrom": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "affectedMealCount": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "itemId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "date": {
+                                    "type": "string",
+                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                  },
+                                  "mealType": {
+                                    "type": "string",
+                                    "enum": [
+                                      "BREAKFAST",
+                                      "LUNCH",
+                                      "DINNER"
+                                    ]
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "reasons": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "unverified": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "itemId",
+                                  "date",
+                                  "mealType",
+                                  "name",
+                                  "reasons",
+                                  "unverified"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "dietaryRevision",
+                            "assessedFrom",
+                            "affectedMealCount",
+                            "items"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "sourceProgramId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "uuid"
+                        },
+                        "effectiveFrom": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "replacedByProgramId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "uuid"
+                        },
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "goal": {
+                          "type": "string",
+                          "enum": [
+                            "MAINTAIN",
+                            "LOSE",
+                            "GAIN"
+                          ]
+                        },
+                        "startDate": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "endDate": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "timezone": {
+                          "type": "string"
+                        },
+                        "horizonWeeks": {
+                          "type": "integer",
+                          "minimum": 2
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "GENERATING",
+                            "DRAFT",
+                            "PARTIAL",
+                            "FAILED",
+                            "CONFIRMED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "readyWeeks": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "failedWeeks": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "confirmedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "generationParameters": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "failureSummary": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        "weeks": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "weekIndex": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "weekStart": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PENDING",
+                                  "READY",
+                                  "FAILED"
+                                ]
+                              },
+                              "selectedAlternativeRank": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ],
+                                "minimum": 0
+                              },
+                              "projectionStatus": {
+                                "type": "string",
+                                "enum": [
+                                  "CURRENT",
+                                  "STALE"
+                                ]
+                              },
+                              "failure": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "additionalProperties": {}
+                              },
+                              "alternatives": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "rank": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "mealPlanId": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "selected": {
+                                      "type": "boolean"
+                                    },
+                                    "snapshot": {
+                                      "type": "object",
+                                      "additionalProperties": {}
+                                    },
+                                    "createdAt": {
+                                      "type": "string",
+                                      "format": "date-time"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "rank",
+                                    "mealPlanId",
+                                    "selected",
+                                    "snapshot",
+                                    "createdAt"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "weekIndex",
+                              "weekStart",
+                              "status",
+                              "selectedAlternativeRank",
+                              "projectionStatus",
+                              "failure",
+                              "alternatives"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "analysis": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "version": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "CURRENT",
+                                "STALE"
+                              ]
+                            },
+                            "invalidatedFromWeekIndex": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "warnings": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": {}
+                              }
+                            },
+                            "nutritionSummary": {
+                              "type": "object",
+                              "properties": {
+                                "horizonWeeks": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0
+                                },
+                                "analyzedWeeks": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "totalCalories": {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                "averageDailyCalories": {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                "totalVitaminB12Mcg": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ],
+                                  "minimum": 0
+                                },
+                                "averageWeeklyVitaminB12Mcg": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ],
+                                  "minimum": 0
+                                },
+                                "incompleteWeekIndexes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                }
+                              },
+                              "required": [
+                                "horizonWeeks",
+                                "analyzedWeeks",
+                                "totalCalories",
+                                "averageDailyCalories",
+                                "totalVitaminB12Mcg",
+                                "averageWeeklyVitaminB12Mcg",
+                                "incompleteWeekIndexes"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "weeklyAnalyses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": {}
+                              }
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "version",
+                            "status",
+                            "invalidatedFromWeekIndex",
+                            "warnings",
+                            "nutritionSummary",
+                            "weeklyAnalyses",
+                            "createdAt"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "compatibility",
+                        "id",
+                        "title",
+                        "goal",
+                        "startDate",
+                        "endDate",
+                        "timezone",
+                        "horizonWeeks",
+                        "status",
+                        "version",
+                        "readyWeeks",
+                        "failedWeeks",
+                        "confirmedAt",
+                        "createdAt",
+                        "updatedAt",
+                        "generationParameters",
+                        "failureSummary",
+                        "weeks",
+                        "analysis"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR / INVALID_ALLERGEN_SELECTION / INVALID_INGREDIENT_ALLERGIES / INVALID_INGREDIENT_EXCLUSIONS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCOUNT_BANNED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND: no owned plan/proposal/program",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "DIET_REPAIR_CONFLICT / DIET_REPAIR_EXPIRED / IDEMPOTENCY_CONFLICT / DIET_PREFERENCES_CONFLICT / MEAL_PROGRAM_VERSION_CONFLICT / MEAL_PROGRAM_HISTORICAL / MEAL_PROGRAM_REVISION_NOT_REQUIRED",
+            "content": {
+              "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
@@ -37619,6 +39134,22 @@
                     "type": "integer",
                     "minimum": 0
                   },
+                  "dietaryGroups": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "MEAT",
+                        "FISH_SEAFOOD",
+                        "EGG",
+                        "DAIRY",
+                        "HONEY",
+                        "FIVE_PUNGENT",
+                        "OTHER_ANIMAL"
+                      ]
+                    },
+                    "maxItems": 7
+                  },
                   "status": {
                     "type": "string",
                     "enum": [
@@ -37677,6 +39208,7 @@
                 },
                 "required": [
                   "expectedVersion",
+                  "dietaryGroups",
                   "status",
                   "kind",
                   "componentIds"

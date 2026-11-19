@@ -199,7 +199,15 @@ function compile(sql, model) {
   return { $ne: [value, false] };
 }
 const result = {};
+// These scopes were replaced by explicit daily food preferences in the dev schema.
+const replacedDietTables = new Set([
+  'diet_preferences',
+  'diet_rule_definitions',
+  'diet_preference_rules',
+  'diet_schedule_dates',
+]);
 for (const check of checks) {
+  if (replacedDietTables.has(check.table)) continue;
   const model = Prisma.dmmf.datamodel.models.find((item) => item.dbName === check.table);
   if (!model) throw new Error(`No model for ${check.table}`);
   (result[check.table] ??= []).push({
@@ -207,6 +215,12 @@ for (const check of checks) {
     expression: compile(check.definition, model),
   });
 }
+result.diet_preferences = [
+  {
+    name: 'diet_preferences_policy_revision_positive',
+    expression: { $and: [{ $gt: ['$policy_version', 0] }, { $gt: ['$dietary_revision', 0] }] },
+  },
+];
 fs.writeFileSync(
   new URL('../prisma/mongodb-validators.json', import.meta.url),
   '{\n' +
@@ -219,5 +233,5 @@ fs.writeFileSync(
     '\n}\n',
 );
 console.info(
-  `Compiled ${checks.length} legacy CHECK constraints for ${Object.keys(result).length} collections.`,
+  `Compiled ${Object.values(result).reduce((total, entries) => total + entries.length, 0)} reviewed CHECK constraints for ${Object.keys(result).length} collections.`,
 );

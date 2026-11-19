@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "../backend/openapi.json",
-  "generatedAt": "2026-11-16T07:50:55.133Z",
+  "source": "..\\backend\\openapi.json",
+  "generatedAt": "2026-11-19T05:52:03.158Z",
   "stats": {
-    "operations": 195,
-    "groups": 42,
-    "schemas": 166
+    "operations": 198,
+    "groups": 43,
+    "schemas": 164
   },
   "operations": [
     {
@@ -151,7 +151,7 @@
       "method": "POST",
       "path": "/api/v1/diet-rules/preview",
       "group": "Diet Rules",
-      "summary": "Xem trước bộ quy tắc diet/tradition hiện hành",
+      "summary": "Xem trước bốn tùy chọn thực phẩm áp dụng mọi ngày",
       "operationId": "previewDietRules",
       "params": [],
       "request": {
@@ -165,15 +165,14 @@
         "400": "ErrorResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse",
-        "423": "ErrorResponse",
-        "503": "ErrorResponse"
+        "423": "ErrorResponse"
       }
     },
     {
       "method": "PUT",
       "path": "/api/v1/users/me/diet-preferences",
       "group": "Users",
-      "summary": "Xác nhận diet preferences, rules và hard constraints cá nhân",
+      "summary": "Lưu bốn tùy chọn thực phẩm và hạn chế cá nhân",
       "operationId": "saveDietPreferences",
       "params": [],
       "request": {
@@ -188,28 +187,245 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "409": "ErrorResponse",
-        "423": "ErrorResponse",
-        "503": "ErrorResponse"
+        "423": "ErrorResponse"
       }
     },
     {
-      "method": "PUT",
-      "path": "/api/v1/users/me/diet-schedule",
-      "group": "Users",
-      "summary": "Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC",
-      "operationId": "updateDietSchedule",
+      "method": "POST",
+      "path": "/api/v1/users/me/diet-preferences/impact-preview",
+      "group": "Dietary Impact",
+      "summary": "Xem ảnh hưởng của thiết lập dự kiến, chưa lưu",
+      "operationId": "previewDietaryImpact",
       "params": [],
       "request": {
         "schema": {
-          "$ref": "UpdateDietScheduleRequest"
+          "type": "object",
+          "required": [
+            "allowEggs",
+            "allowDairy",
+            "allowHoney",
+            "allowFivePungent",
+            "policyVersion",
+            "expectedDietaryRevision"
+          ],
+          "properties": {
+            "allowEggs": {
+              "type": "boolean"
+            },
+            "allowDairy": {
+              "type": "boolean"
+            },
+            "allowHoney": {
+              "type": "boolean"
+            },
+            "allowFivePungent": {
+              "type": "boolean"
+            },
+            "policyVersion": {
+              "type": "integer"
+            },
+            "expectedDietaryRevision": {
+              "type": "integer"
+            },
+            "allergies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "allergenCode"
+                ],
+                "properties": {
+                  "allergenCode": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "label": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "severity": {
+                    "type": "string",
+                    "_truncated": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "ingredientExclusions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "ingredientName"
+                ],
+                "properties": {
+                  "ingredientId": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "ingredientName": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "reason": {
+                    "type": "string",
+                    "_truncated": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "ingredientAllergies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "ingredientId"
+                ],
+                "properties": {
+                  "ingredientId": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "severity": {
+                    "type": "string",
+                    "_truncated": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
         },
         "required": true
       },
       "responses": {
-        "200": "DietScheduleResponse",
+        "200": "object",
         "400": "ErrorResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/meal-plans/diet-repair/preview",
+      "group": "Dietary Impact",
+      "summary": "Tìm món thay thế và xem trước; không sửa thực đơn",
+      "operationId": "previewDietaryRepair",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "planIds",
+            "expectedDietaryRevision"
+          ],
+          "properties": {
+            "planIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "expectedDietaryRevision": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "object",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/meal-plans/diet-repair/apply",
+      "group": "Dietary Impact",
+      "summary": "Áp dụng phương án theo phiên bản; kết quả riêng từng thực đơn",
+      "operationId": "applyDietaryRepair",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "proposalId",
+            "idempotencyKey"
+          ],
+          "properties": {
+            "proposalId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "idempotencyKey": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "object",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/meal-programs/{id}/diet-revision",
+      "group": "Dietary Impact",
+      "summary": "Tạo bản điều chỉnh nháp của chương trình đã xác nhận",
+      "operationId": "createDietaryProgramRevision",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "expectedVersion",
+            "idempotencyKey"
+          ],
+          "properties": {
+            "expectedVersion": {
+              "type": "integer"
+            },
+            "idempotencyKey": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "object",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
         "409": "ErrorResponse",
         "423": "ErrorResponse"
       }
@@ -901,6 +1117,7 @@
           "type": "object",
           "required": [
             "expectedVersion",
+            "dietaryGroups",
             "status",
             "kind",
             "componentIds"
@@ -908,6 +1125,21 @@
           "properties": {
             "expectedVersion": {
               "type": "integer"
+            },
+            "dietaryGroups": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "MEAT",
+                  "FISH_SEAFOOD",
+                  "EGG",
+                  "DAIRY",
+                  "HONEY",
+                  "FIVE_PUNGENT",
+                  "OTHER_ANIMAL"
+                ]
+              }
             },
             "status": {
               "type": "string",
