@@ -32,7 +32,14 @@ export function ReportsTable() {
   const { data, isLoading, isError, refetch } = useReportsQuery(
     status ? { status, limit: 20 } : { limit: 20 }
   );
-  const reports = data?.items ?? [];
+  const reports = React.useMemo(() => {
+    const raw = data?.items ?? [];
+    return [...raw].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
+  }, [data?.items]);
 
   return (
     <div className="space-y-3">

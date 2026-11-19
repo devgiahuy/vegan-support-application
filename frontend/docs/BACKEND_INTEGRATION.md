@@ -1,12 +1,18 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.82
+**Version:** 4.83
 
 **Cập nhật:** 19/11/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
 **Contract target:** `/api/v1`
+
+## Native mobile street map — 2026-11-19 (4.83, consumer-only)
+
+Mobile restaurant discovery now renders a real MapLibre street map (`@maplibre/maplibre-react-native`, style from `EXPO_PUBLIC_MAP_STYLE_URL`, OpenFreeMap-compatible, no API key) in installed Android/iOS builds, matching the web map: numbered pins in list order, clustering, search-radius outline, selection highlight, and "Tìm trong vùng đang xem" using the visible bounds. **No backend route, request, response, enum, error code, authorization rule, migration or seed changed; `GET /restaurants/*` endpoints and their READY status are unchanged.** The module is native-only, so Expo Go, web, an empty style URL or a style that does not load within 15 seconds fall back to the existing relative-position schematic with a visible notice; the result list is unaffected. Basemap attribution (OpenFreeMap © OpenMapTiles, OpenStreetMap data) and provider attribution (Google Maps data via SerpApi) are shown separately. Restaurant results remain dietary-unverified and personal eating profiles are still not applied. The library adds native code, so the APK must be built after installing it; OTA JS updates cannot add it to an existing build. Mobile typecheck, lint, 176 unit tests and Android/iOS bundle export pass; native rendering, gestures inside the scroll view and Android/iOS device behaviour are **not yet verified on a device**.
+
+Changelog 2026-11-19 (4.83): document the mobile street map consumer change; no contract change.
 
 ## payOS checkout return — 2026-11-19 (4.82, READY)
 

@@ -1,14 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import {
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  FileEdit,
-  User,
-  Calendar,
-} from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, FileEdit, User, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { ContentReviewHistoryTimelineItem } from '../types/content-review.model';
 import { PostReviewStatus } from '../types/content-review.model';
@@ -22,17 +15,22 @@ export function ReviewHistoryTimeline({
   revisions,
   emptyMessage = 'Chưa có lịch sử kiểm duyệt nào.',
 }: ReviewHistoryTimelineProps) {
-  if (!revisions || revisions.length === 0) {
-    return (
-      <div className="py-8 text-center text-xs text-muted-foreground">
-        {emptyMessage}
-      </div>
-    );
+  const sortedRevisions = React.useMemo(() => {
+    return [...revisions].sort((a, b) => {
+      const timeA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+      const timeB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+      if (timeA !== timeB) return timeB - timeA;
+      return b.revisionVersion - a.revisionVersion;
+    });
+  }, [revisions]);
+
+  if (!sortedRevisions || sortedRevisions.length === 0) {
+    return <div className="py-8 text-center text-xs text-muted-foreground">{emptyMessage}</div>;
   }
 
   return (
     <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
-      {revisions.map((rev) => {
+      {sortedRevisions.map((rev) => {
         const isApproved = rev.status === PostReviewStatus.PUBLISHED;
         const isRejected = rev.status === PostReviewStatus.REJECTED;
         const isPending = rev.status === PostReviewStatus.PENDING_REVIEW;
@@ -45,18 +43,16 @@ export function ReviewHistoryTimeline({
                 isApproved
                   ? 'border-emerald-500 text-emerald-600'
                   : isRejected
-                  ? 'border-destructive text-destructive'
-                  : isPending
-                  ? 'border-amber-500 text-amber-500'
-                  : 'border-muted-foreground text-muted-foreground'
+                    ? 'border-destructive text-destructive'
+                    : isPending
+                      ? 'border-amber-500 text-amber-500'
+                      : 'border-muted-foreground text-muted-foreground'
               }`}
             >
               {isApproved && <CheckCircle2 className="h-3 w-3" />}
               {isRejected && <AlertCircle className="h-3 w-3" />}
               {isPending && <Clock className="h-3 w-3" />}
-              {!isApproved && !isRejected && !isPending && (
-                <FileEdit className="h-2.5 w-2.5" />
-              )}
+              {!isApproved && !isRejected && !isPending && <FileEdit className="h-2.5 w-2.5" />}
             </div>
 
             {/* Nội dung mốc thời gian */}
@@ -71,17 +67,17 @@ export function ReviewHistoryTimeline({
                       isApproved
                         ? 'default'
                         : isRejected
-                        ? 'destructive'
-                        : isPending
-                        ? 'secondary'
-                        : 'outline'
+                          ? 'destructive'
+                          : isPending
+                            ? 'secondary'
+                            : 'outline'
                     }
                     className={`text-[10px] font-medium px-2 py-0 ${
                       isApproved
                         ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                         : isPending
-                        ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
-                        : ''
+                          ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                          : ''
                     }`}
                   >
                     {rev.statusLabel}

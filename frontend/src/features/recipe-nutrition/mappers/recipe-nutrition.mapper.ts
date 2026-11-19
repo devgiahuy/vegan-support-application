@@ -199,7 +199,22 @@ export class RecipeNutritionMapper extends BaseMapper<
     }
 
     const code = safeString(pickField(dto, ['nutrientCode', 'code'], ''), '');
-    const name = safeString(pickField(dto, ['nutrientName', 'name'], code), code);
+    const rawName = safeString(pickField(dto, ['nutrientName', 'name'], code), code);
+    const fallbackNames: Record<string, string> = {
+      FIBER: 'Chất xơ',
+      FIBTG: 'Chất xơ',
+      PROTEIN: 'Chất đạm',
+      PROCNT: 'Chất đạm',
+      CARBS: 'Tinh bột',
+      CHOCDF: 'Tinh bột',
+      FAT: 'Chất béo',
+      ENERGY_KCAL: 'Năng lượng',
+      ENERC_KCAL: 'Năng lượng',
+    };
+    const name =
+      rawName === code && fallbackNames[code.toUpperCase()]
+        ? fallbackNames[code.toUpperCase()]
+        : rawName;
     const unit = safeString(dto.unit, '');
     const amount = Math.round(safeNumber(dto.amount, 0) * 10) / 10;
     const formattedAmount = `${amount} ${unit}`.trim();
@@ -287,11 +302,18 @@ export class RecipeNutritionMapper extends BaseMapper<
       const c = n.code.toUpperCase();
       return c === 'FAT' || c === 'LIPID' || c === 'FAT_TOTAL' || c === 'FATCE';
     });
+    const fiberNutrient = perServingNutrients.find((n) => {
+      const c = n.code.toUpperCase();
+      return (
+        c === 'FIBER' || c === 'FIBTG' || c === 'FIB' || c === 'FIBRE' || c === 'DIETARY_FIBER'
+      );
+    });
 
     const calories = calNutrient ? calNutrient.amount : 0;
     const proteinGrams = proNutrient ? proNutrient.amount : 0;
     const carbsGrams = carbNutrient ? carbNutrient.amount : 0;
     const fatGrams = fatNutrient ? fatNutrient.amount : 0;
+    const fiberGrams = fiberNutrient ? fiberNutrient.amount : 0;
 
     if (calories <= 0) {
       return {
@@ -299,6 +321,7 @@ export class RecipeNutritionMapper extends BaseMapper<
         proteinGrams,
         carbsGrams,
         fatGrams,
+        fiberGrams,
         proteinCaloriesPercent: 0,
         carbsCaloriesPercent: 0,
         fatCaloriesPercent: 0,
@@ -315,6 +338,7 @@ export class RecipeNutritionMapper extends BaseMapper<
       proteinGrams,
       carbsGrams,
       fatGrams,
+      fiberGrams,
       proteinCaloriesPercent,
       carbsCaloriesPercent,
       fatCaloriesPercent,
@@ -341,6 +365,7 @@ export class RecipeNutritionMapper extends BaseMapper<
         proteinGrams: 0,
         carbsGrams: 0,
         fatGrams: 0,
+        fiberGrams: 0,
         proteinCaloriesPercent: 0,
         carbsCaloriesPercent: 0,
         fatCaloriesPercent: 0,

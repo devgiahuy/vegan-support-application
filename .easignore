@@ -1,0 +1,44 @@
+# Dùng cho `eas build` / `eas update` của app mobile.
+# File này THAY THẾ mọi .gitignore khi EAS đóng gói dự án (xem https://expo.fyi/eas-build-archive),
+# nên phải liệt kê lại các mục của mobile/.gitignore và thêm phần loại bỏ web/backend (không cần cho bản dựng mobile).
+
+# Chỉ giữ lại thư mục mobile/ (cùng AGENTS.md ở gốc repo)
+/frontend
+/backend
+/docs
+/node_modules
+
+# Thư viện và kết quả build ở mọi thư mục (lý do archive từng nặng 2,2 GB)
+node_modules/
+.next/
+dist/
+dist-billing-*/
+web-build/
+.expo/
+
+# Thư mục native sinh bởi prebuild: để EAS tự sinh khi build (giữ quy trình managed)
+/mobile/ios
+/mobile/android
+.kotlin/
+
+# Biến môi trường và khóa: dùng biến của EAS (eas env:list), không tải .env cục bộ lên cloud
+.env
+.env.*
+.env*.local
+*.jks
+*.p8
+*.p12
+*.key
+*.pem
+*.mobileprovision
+
+# Khác
+*.orig.*
+*.tsbuildinfo
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+.idea/
+.vscode/

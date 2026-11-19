@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } fro
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { Leaf, ShieldCheck, X } from 'lucide-react-native';
+import { AuthBrandHeader } from '@/features/auth/components/auth-brand-header';
 import { LoginForm } from '@/features/auth/components/login-form';
 import { goBackOrHome } from '@/lib/navigation';
 import { useIconColors } from '@/lib/theme-colors';
@@ -32,6 +33,8 @@ export default function LoginScreen() {
           >
             <X size={18} color={colors.mutedForeground} />
           </Pressable>
+
+          <AuthBrandHeader />
 
           <View className="rounded-[28px] border border-border bg-card p-6 shadow-sm">
             <Text className="text-2xl font-bold tracking-tight text-foreground">

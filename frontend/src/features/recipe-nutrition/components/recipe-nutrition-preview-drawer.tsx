@@ -156,7 +156,7 @@ export function RecipeNutritionPreviewDrawer({
               )}
 
               {/* Nutrient List Table */}
-              {/* <NutrientListTable nutrients={previewResult.perServingNutrients} /> */}
+              <NutrientListTable nutrients={previewResult.perServingNutrients} />
 
               {/* Educational Disclaimer */}
               <div className="p-3 rounded-xl bg-muted/30 border border-border/50 text-[11px] text-muted-foreground flex items-start gap-2 leading-relaxed">

@@ -104,7 +104,14 @@ export function ReviewQueueTable() {
     setPage(1);
   };
 
-  const items = query.data?.items || [];
+  const items = React.useMemo(() => {
+    const raw = query.data?.items || [];
+    return [...raw].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
+  }, [query.data?.items]);
   const totalPages = query.data?.metadata.totalPages || 1;
   const totalItems = query.data?.metadata.totalItems || 0;
   const isForbidden = getApiErrorCode(query.error) === 'FORBIDDEN';

@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -10,7 +11,15 @@ function formatDate(date: Date | null): string {
 
 /** Lịch sử đơn xét duyệt Contributor của bản thân (Phase 14 Parity). */
 export function MyApplications({ apps }: { apps: ContributorApplication[] }) {
-  if (apps.length === 0) {
+  const sortedApps = React.useMemo(() => {
+    return [...apps].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
+  }, [apps]);
+
+  if (sortedApps.length === 0) {
     return (
       <EmptyState
         title="Chưa có hồ sơ nào"
@@ -21,7 +30,7 @@ export function MyApplications({ apps }: { apps: ContributorApplication[] }) {
 
   return (
     <div className="grid gap-3">
-      {apps.map((app) => (
+      {sortedApps.map((app) => (
         <Card key={app.id}>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">

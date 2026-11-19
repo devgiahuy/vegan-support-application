@@ -16,6 +16,7 @@ export function MacroDistributionBar({ macros, servings, className }: MacroDistr
     proteinGrams,
     carbsGrams,
     fatGrams,
+    fiberGrams = 0,
     proteinCaloriesPercent,
     carbsCaloriesPercent,
     fatCaloriesPercent,
@@ -93,8 +94,8 @@ export function MacroDistributionBar({ macros, servings, className }: MacroDistr
         </div>
       </div>
 
-      {/* 3 Macro Cards */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-1">
+      {/* 4 Macro Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 pt-1">
         {/* Protein */}
         <div className="rounded-lg p-2.5 sm:p-3 bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/50 dark:border-emerald-800/40 text-center">
           <div className="flex items-center justify-center gap-1.5 mb-1">
@@ -127,6 +128,18 @@ export function MacroDistributionBar({ macros, servings, className }: MacroDistr
           </div>
           <div className="text-base sm:text-lg font-bold text-foreground">~{fatGrams}g</div>
           <p className="text-[11px] text-muted-foreground mt-0.5">{fatCaloriesPercent}% calo</p>
+        </div>
+
+        {/* Fiber */}
+        <div className="rounded-lg p-2.5 sm:p-3 bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200/50 dark:border-purple-800/40 text-center">
+          <div className="flex items-center justify-center gap-1.5 mb-1">
+            <span className="w-2 h-2 rounded-full bg-purple-500" />
+            <span className="text-xs font-semibold text-purple-800 dark:text-purple-300">
+              Chất xơ (Fiber)
+            </span>
+          </div>
+          <div className="text-base sm:text-lg font-bold text-foreground">~{fiberGrams}g</div>
+          <p className="text-[11px] text-muted-foreground mt-0.5">Hỗ trợ tiêu hóa</p>
         </div>
       </div>
     </div>

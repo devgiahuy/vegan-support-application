@@ -103,6 +103,16 @@ describe('RecipeNutritionMapper', () => {
         max: null,
       },
       {
+        nutrientCode: 'FIBER',
+        nutrientName: 'Chất xơ',
+        unit: 'g',
+        amount: 8,
+        origin: 'CANONICAL_CALCULATED',
+        confidence: 0.9,
+        min: null,
+        max: null,
+      },
+      {
         nutrientCode: 'FE',
         nutrientName: 'Sắt',
         unit: 'mg',
@@ -173,6 +183,7 @@ describe('RecipeNutritionMapper', () => {
     expect(model.macros.proteinGrams).toBe(20);
     expect(model.macros.carbsGrams).toBe(50);
     expect(model.macros.fatGrams).toBe(10);
+    expect(model.macros.fiberGrams).toBe(8);
     expect(model.macros.proteinCaloriesPercent).toBe(20);
     expect(model.macros.carbsCaloriesPercent).toBe(50);
     expect(model.macros.fatCaloriesPercent).toBe(23);
@@ -196,6 +207,7 @@ describe('RecipeNutritionMapper', () => {
     };
     const model = recipeNutritionMapper.toModel(zeroCalDto);
     expect(model.macros.calories).toBe(0);
+    expect(model.macros.fiberGrams).toBe(0);
     expect(model.macros.proteinCaloriesPercent).toBe(0);
     expect(model.macros.carbsCaloriesPercent).toBe(0);
     expect(model.macros.fatCaloriesPercent).toBe(0);
@@ -357,6 +369,16 @@ describe('RecipeNutritionMapper', () => {
           min: null,
           max: null,
         },
+        {
+          nutrientCode: 'FIBER',
+          nutrientName: 'Chất xơ',
+          unit: 'g',
+          amount: 6.5,
+          origin: 'CANONICAL_CALCULATED',
+          confidence: 0.9,
+          min: null,
+          max: null,
+        },
       ],
     };
 
@@ -365,6 +387,7 @@ describe('RecipeNutritionMapper', () => {
     expect(model.macros.proteinGrams).toBe(15);
     expect(model.macros.carbsGrams).toBe(30);
     expect(model.macros.fatGrams).toBe(5);
+    expect(model.macros.fiberGrams).toBe(6.5);
     expect(model.macros.proteinCaloriesPercent).toBe(24); // (15*4)/250 = 24%
     expect(model.macros.carbsCaloriesPercent).toBe(48); // (30*4)/250 = 48%
     expect(model.macros.fatCaloriesPercent).toBe(18); // (5*9)/250 = 18%

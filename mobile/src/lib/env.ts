@@ -61,6 +61,12 @@ export function buildDirectionsUrl(lat: number, lng: number): string {
   return DIRECTIONS_URL_TEMPLATE.replace('{lat}', String(lat)).replace('{lng}', String(lng));
 }
 
+/**
+ * Style bản đồ đường phố (MapLibre, ví dụ OpenFreeMap — không cần API key). Để trống = luôn dùng sơ đồ vị trí tương đối.
+ * Bản đồ thật cần module native nên chỉ chạy trong bản dựng (APK/development build), không chạy trong Expo Go.
+ */
+export const MAP_STYLE_URL: string = readOptional(process.env.EXPO_PUBLIC_MAP_STYLE_URL);
+
 /** Email hỗ trợ/liên hệ. Để trống = ẩn nút gửi email ở trang Liên hệ và Góp ý. */
 export const SUPPORT_EMAIL: string = readOptional(process.env.EXPO_PUBLIC_SUPPORT_EMAIL);
 export const CONTACT_EMAIL: string = readOptional(process.env.EXPO_PUBLIC_CONTACT_EMAIL);
