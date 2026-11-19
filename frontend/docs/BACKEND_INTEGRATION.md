@@ -1,12 +1,18 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.81
+**Version:** 4.82
 
 **Cập nhật:** 19/11/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
 **Contract target:** `/api/v1`
+
+## payOS checkout return — 2026-11-19 (4.82, READY)
+
+`POST /billing/orders` accepts optional `checkoutClient: "web" | "mobile"`. Omit it for web, mobile web and Expo Go. New installed iOS/Android clients send `"mobile"`; the approved `BILLING_RETURN_URL` stays on the web origin and receives `orderId` and `returnTo=app`. Web opens the owned order. The mobile return page attempts to open `mobile://billing?orderId=<local UUID>` and offers links to the app and the web order. payOS status and cancel parameters are display hints and are ignored by the clients for confirmation. Only verified backend settlement changes status and grants allowances.
+
+The destination is fixed when the order is created. Idempotent retry and reconciliation use the stored destination. Previously issued payOS links retain their original return URL. Mongo provisioning adds nullable `payment_orders.checkout_client` without reseeding or backfill. Deploy the updated web and backend before the new native client. Integrations and fixtures passed locally. Native-device return and production rollout of this change remain unverified.
 
 ## Dietary preferences replacement — 2026-11-19 (4.81, READY)
 
@@ -229,7 +235,7 @@ User-approved BL-20.1. Additive contract; no endpoint returns to `CHANGING`.
 | POST     | `/admin/billing/products`                                                 | `READY` | Yes, web 2026-11-10 | ADMIN only. Creates an inactive package and audit event; apply Mongo schema first. |
 | PATCH    | `/admin/billing/products/{id}`                                            | `READY` | Yes, web 2026-11-10 | ADMIN only. Updates package with expectedVersion and optional reason; empty audit reason records no supplied reason. |
 | POST     | `/admin/billing/products/{id}/availability`                               | `READY` | Yes, web 2026-11-10 | ADMIN only. Activate or withdraw with expectedVersion and reason; audited. |
-| POST/GET | `/billing/orders`, `/billing/orders/:id`, `/billing/orders/:id/reconcile` | `CHANGING` | Web/mobile migration pending | Order creation now requires displayed product version for new orders. |
+| POST/GET | `/billing/orders`, `/billing/orders/:id`, `/billing/orders/:id/reconcile` | `READY` | Web and mobile 2026-11-19 | Creation uses the displayed product version and optional checkout client. Authenticated reconciliation retains the order's return destination. |
 | GET      | `/entitlements/me`                                                        | `READY` | Web 2026-10-27; mobile 2026-10-28 | New nullable `subscription` (period credits, per-period allotment, `periodEndsAt`, `endsAt` incl. appended purchases). Top-level `chatCredits/fridgeCredits/receiptCredits/pantrySlots` stay permanent balances; `pantryLimit` includes active +50. New ledger reasons `SUBSCRIPTION_PERIOD_GRANT`, `SUBSCRIPTION_PERIOD_EXPIRED`, `USAGE_RELEASED_PERIOD_EXPIRED`                                                    |
 | GET      | `/admin/billing/revenue`                                                  | `READY` | Yes, web 2026-10-27               | ADMIN only. Query `from`, `to` (ISO, default last 30 days, max 731), `granularity=day\|week\|month`. Overview, contiguous series (Asia/Ho_Chi_Minh, Monday weeks, revenue by `paidAt`), status counts by `createdAt` + `successRate`. Sandbox history excluded                                                                                                                                                        |
 | GET      | `/admin/ai/usage`                                                         | `READY` | Yes, web 2026-10-27               | ADMIN only. Query `page`, `limit≤100`, `feature=CHAT\|FRIDGE\|RECEIPT`, `outcome=HELD\|SPENT\|RELEASED`, `user` (email/name contains), `from`, `to`. Rows: user, feature, `quotaSource` (`FREE_DAILY`, `SUBSCRIPTION`, `CREDITS`, `NONE`, `UNKNOWN` for chat before 2026-10-27), `quotaCharged`, outcome, AI status, provider/model, tokens, latency, error code. Never prompt/image/receipt content; guests excluded |
@@ -415,7 +421,7 @@ Provider migration is complete in this UI checkout after web/mobile consumer gat
 | Method   | Endpoint                        | Status    | FE integrated              | Notes                                                                                                                            |
 | -------- | ------------------------------- | --------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | GET      | `/billing/products`             | `READY`   | Yes, web/mobile 2026-11-09 | Version-2 duration catalog; existing order snapshots preserved                                                                   |
-| POST     | `/billing/orders`               | `CHANGING`   | Web/mobile migration pending | New orders require expectedProductVersion; existing idempotent retries remain valid. |
+| POST     | `/billing/orders`                | `READY`   | Yes, web/mobile 2026-11-19 | Displayed product version required for new orders. Optional checkoutClient selects the return destination. Idempotent retries retain it. |
 | GET      | `/billing/orders`               | `READY`   | Yes, web/mobile 2026-10-14 | Owned history retains legacy providers without checkout                                                                          |
 | GET      | `/billing/orders/:id`           | `READY`   | Yes, web/mobile 2026-10-14 | Owned status; expired URL hidden; return never grants                                                                            |
 | POST     | `/billing/orders/:id/reconcile` | `READY`   | Yes, web/mobile 2026-10-14 | Signed payOS query; 30-second cooldown; history unchanged                                                                        |

@@ -1,6 +1,6 @@
 # Backend Implementation Phases
 
-**Version:** 3.28
+**Version:** 3.29
 
 **Updated:** 2026-11-19
 
@@ -219,6 +219,8 @@ Regenerate/validate OpenAPI using the repository workflow. Live external-provide
 User-approved cross-phase maintenance replaces PostgreSQL with MongoDB; this is not a new numbered product phase. Historical prompts and SQL migrations are archived context. Current provisioning uses `npm run prisma:push` (native validators/indexes), not Prisma Migrate. UUID contracts, permissions and confirmation boundaries remain unchanged. Historical-data preservation is optional. MongoDB maintenance gate: schema provisioning, idempotent seed, backend lint/typecheck/build, OpenAPI synchronization, existing acceptance flows and frontend compatibility checks passed on 2026-10-07. Verification record and operational instructions: [MONGODB_MIGRATION.md](MONGODB_MIGRATION.md). Phase 27 retains its existing release limitations.
 
 ## 10. Usage billing extension — approved 2026-10-13; payOS conversion 2026-10-14
+
+Checkout return maintenance 2026-11-19: new orders snapshot an optional web/mobile checkout client. payOS redirects to the configured HTTPS billing page with the owned order UUID, and the mobile path adds an app handoff with web fallback. Provider query/webhook and ownership remain authoritative. Mongo provisioning, backend lint/typecheck/build/OpenAPI, client synchronization and mocked checkout/recovery acceptance passed. Native device and live checkout acceptance remain pending.
 
 Provider conversion approved 2026-10-14: active checkout/settlement is now payOS only, via official SDK 2.0.5. VNPAY and local sandbox routes/configuration are removed; old orders/balances remain historical with optional new provider fields and partial unique indexes. payOS has no sandbox; real money mode is disclosed and missing credentials disable checkout. Application production rollout remains disabled. Backend lint/typecheck/build/OpenAPI, additive Mongo provisioning/seed and controlled transport acceptance pass (SDK signatures, partial/extra payment, replay, sample webhook, provider failure/cooldown and ambiguous-create recovery plus existing accounting/auth checks). External merchant acceptance remains pending user configuration; frontend migration is recorded separately in the contract registry.
 

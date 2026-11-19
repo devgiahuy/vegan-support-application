@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { Plus, Trash2 } from 'lucide-react-native';
+import { AlertCircle, CheckCircle2, Plus, Trash2, X } from 'lucide-react-native';
 
 import { MealType } from '@/common/enums';
 import { SiteScreen } from '@/components/layout/site-screen';
@@ -82,20 +82,40 @@ export default function MealPlanDetailScreen() {
 
   const [pickSlot, setPickSlot] = React.useState<MealSlot | null>(null);
   const [shoppingSlot, setShoppingSlot] = React.useState<MealSlot | null>(null);
+  const [swappingSlotId, setSwappingSlotId] = React.useState<string | null>(null);
+  const [pickingSlotId, setPickingSlotId] = React.useState<string | null>(null);
+  const [actionFeedback, setActionFeedback] = React.useState<{
+    tone: 'success' | 'error';
+    message: string;
+  } | null>(null);
   const [viewTab, setViewTab] = React.useState<'days' | 'overview'>('days');
   const [selectedDay, setSelectedDay] = React.useState<string>('ALL');
 
   const swapSlot = async (slot: MealSlot) => {
     if (!plan) return;
+    setActionFeedback(null);
+    setSwappingSlotId(slot.id);
     try {
-      await swapMutation.mutateAsync({
+      const updated = await swapMutation.mutateAsync({
         planId: plan.id,
         itemId: slot.id,
         expectedVersion: plan.lockVersion,
         idempotencyKey: createIdempotencyKey('mobile-meal-plan-swap'),
       });
+      const updatedSlot = updated.items.find((item) => item.id === slot.id);
+      const nextTitle = updatedSlot?.recipeTitle || 'món mới';
+      setActionFeedback({
+        tone: 'success',
+        message: `Đã đổi ${slot.mealTypeLabel.toLowerCase()} sang "${nextTitle}".`,
+      });
     } catch (mutationError) {
-      Alert.alert('Không đổi được món', getMealPlanErrorMessage(mutationError));
+      const message = getMealPlanErrorMessage(mutationError);
+      setActionFeedback({ tone: 'error', message });
+      if (Platform.OS !== 'web') {
+        Alert.alert('Không đổi được món', message);
+      }
+    } finally {
+      setSwappingSlotId(null);
     }
   };
 
@@ -103,6 +123,8 @@ export default function MealPlanDetailScreen() {
     if (!plan || !pickSlot) return;
     const slot = pickSlot;
     setPickSlot(null);
+    setActionFeedback(null);
+    setPickingSlotId(slot.id);
     try {
       await manualAddMutation.mutateAsync({
         planId: plan.id,
@@ -113,8 +135,18 @@ export default function MealPlanDetailScreen() {
         ...(item.sourceType === 'RECIPE' ? { recipeId: item.id } : { customMealId: item.id }),
         servings: item.servings,
       });
+      setActionFeedback({
+        tone: 'success',
+        message: `Đã chọn "${item.title}" cho ${slot.mealTypeLabel.toLowerCase()}.`,
+      });
     } catch (mutationError) {
-      Alert.alert('Không thêm được món', getMealPlanErrorMessage(mutationError));
+      const message = getMealPlanErrorMessage(mutationError);
+      setActionFeedback({ tone: 'error', message });
+      if (Platform.OS !== 'web') {
+        Alert.alert('Không thêm được món', message);
+      }
+    } finally {
+      setPickingSlotId(null);
     }
   };
 
@@ -205,6 +237,28 @@ export default function MealPlanDetailScreen() {
   return (
     <SiteScreen
       title={`Thực đơn ${plan.formattedWeekRange}`}
+      headerRight={
+        <View className="flex-row items-center gap-1.5">
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Tạo thực đơn mới"
+            onPress={() => router.push('/meal-plans' as Href)}
+            className="h-11 w-11 items-center justify-center rounded-full bg-primary/10 active:opacity-80">
+            <Plus size={18} color={colors.primary} />
+          </Pressable>
+          <Pressable
+            disabled={busy}
+            onPress={confirmDelete}
+            accessibilityRole="button"
+            accessibilityLabel="Xóa thực đơn"
+            className={cn(
+              'h-11 w-11 items-center justify-center rounded-full bg-destructive/10 active:opacity-80',
+              busy ? 'opacity-60' : ''
+            )}>
+            <Trash2 size={17} color={colors.destructive} />
+          </Pressable>
+        </View>
+      }
       onRefresh={() => refetch()}
       contentClassName="gap-4 px-5 pt-4"
       maintainContentPosition
@@ -217,34 +271,43 @@ export default function MealPlanDetailScreen() {
         />
       }>
       <>
-        <View className="flex-row items-center justify-between gap-2">
-          <Pressable
-            accessibilityRole="link"
-            onPress={() => router.push('/meal-plans' as Href)}
-            className="min-h-11 flex-row items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 active:bg-muted">
-            <Plus size={16} color={colors.foreground} />
-            <Text className="text-sm font-medium text-foreground">Tạo thực đơn mới</Text>
-          </Pressable>
-          <Pressable
-            disabled={busy}
-            onPress={confirmDelete}
-            accessibilityRole="button"
-            accessibilityLabel="Xóa thực đơn"
-            className={cn(
-              'min-h-11 flex-row items-center gap-1.5 rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 active:bg-destructive/10',
-              busy ? 'opacity-60' : ''
-            )}>
-            <Trash2 size={15} color={colors.destructive} />
-            <Text className="text-xs font-semibold text-destructive">Xóa thực đơn</Text>
-          </Pressable>
-        </View>
-
         <PlanHero plan={plan} />
 
         <DietaryCompatibilityBanner
           compatibility={plan.compatibility}
           repairHref={`/diet-repair?planIds=${encodeURIComponent(plan.id)}&revision=${plan.compatibility?.dietaryRevision ?? 0}` as Href}
         />
+
+        {actionFeedback ? (
+          <View
+            accessibilityRole="alert"
+            className={cn(
+              'flex-row items-center gap-2.5 rounded-2xl border px-3.5 py-3',
+              actionFeedback.tone === 'success'
+                ? 'border-primary/35 bg-primary/10'
+                : 'border-destructive/35 bg-destructive/10'
+            )}>
+            {actionFeedback.tone === 'success' ? (
+              <CheckCircle2 size={16} color={colors.primary} />
+            ) : (
+              <AlertCircle size={16} color={colors.destructive} />
+            )}
+            <Text
+              className={cn(
+                'flex-1 text-xs font-medium leading-5',
+                actionFeedback.tone === 'success' ? 'text-foreground' : 'text-destructive'
+              )}>
+              {actionFeedback.message}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Đóng thông báo"
+              onPress={() => setActionFeedback(null)}
+              className="h-8 w-8 items-center justify-center rounded-full active:bg-muted">
+              <X size={14} color={colors.mutedForeground} />
+            </Pressable>
+          </View>
+        ) : null}
 
         {/* Thanh chuyển 2 tab */}
         <View
@@ -345,6 +408,8 @@ export default function MealPlanDetailScreen() {
                     slot={slot}
                     dietaryWarning={plan.compatibility?.items.find((item) => item.itemId === slot.id)?.reasonLabels.join('; ')}
                     disabled={busy}
+                    swapping={swappingSlotId === slot.id}
+                    picking={pickingSlotId === slot.id}
                     onSwap={(item) => void swapSlot(item)}
                     onPick={setPickSlot}
                     onShopping={setShoppingSlot}

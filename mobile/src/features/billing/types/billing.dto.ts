@@ -83,6 +83,7 @@ export interface CreateBillingOrderRequestDto {
   expectedProductVersion: number;
   productId: string;
   idempotencyKey: string;
+  checkoutClient?: 'web' | 'mobile';
 }
 export interface BillingOrdersRequestDto {
   page: number;

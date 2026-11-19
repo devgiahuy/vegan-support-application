@@ -1,7 +1,8 @@
 import { createChatIdempotencyKey } from '@/features/chat/utils/idempotency';
 import * as React from 'react';
-import { AppState, Pressable, Text, View } from 'react-native';
-import { Link, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
+import { AppState, Platform, Pressable, Text, View } from 'react-native';
+import { Link, router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
 import { useQueryClient } from '@tanstack/react-query';
 import { SiteScreen } from '@/components/layout/site-screen';
@@ -32,6 +33,8 @@ import { useIconColors } from '@/lib/theme-colors';
 
 /** Số dòng "Biến động quyền lợi" hiện sẵn; phần còn lại nằm sau nút "Xem thêm". */
 const LEDGER_PREVIEW_COUNT = 3;
+const nativeCheckout =
+  Platform.OS !== 'web' && Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
 
 function openCheckout(url: string) {
   // Expo web opens in the current tab, so an async order request cannot lose
@@ -212,27 +215,24 @@ export default function BillingScreen() {
   const authenticated = useAuthStore((state) => state.isAuthenticated);
   const client = useQueryClient();
   const params = useLocalSearchParams<{ orderId?: string }>();
-  const initialId =
-    typeof params.orderId === 'string' && /^[a-f0-9-]{36}$/i.test(params.orderId)
+  const selectedId =
+    typeof params.orderId === 'string' &&
+    /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(params.orderId)
       ? params.orderId
       : '';
-  const [selectedId, setSelectedId] = React.useState(initialId);
   const [billingTab, setBillingTab] = React.useState<'CATALOG' | 'ORDERS'>(
-    initialId ? 'ORDERS' : 'CATALOG'
+    selectedId ? 'ORDERS' : 'CATALOG'
   );
-  const [seenOrderId, setSeenOrderId] = React.useState(initialId);
-  if (seenOrderId !== initialId) {
-    setSeenOrderId(initialId);
-    if (initialId) {
-      setSelectedId(initialId);
-      setBillingTab('ORDERS');
-    }
+  const [seenOrderId, setSeenOrderId] = React.useState(selectedId);
+  if (seenOrderId !== selectedId) {
+    setSeenOrderId(selectedId);
+    if (selectedId) setBillingTab('ORDERS');
   }
   const [page, setPage] = React.useState(1);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const intents = React.useRef(new Map<string, string>());
   const awaitingCheckoutId = React.useRef<string | null>(null);
-  const checkingCheckout = React.useRef(false);
+  const checkoutOpen = React.useRef(false);
   const [checkoutNotice, setCheckoutNotice] = React.useState<BillingCheckFeedback | null>(null);
   const catalog = useBillingCatalogQuery();
   const allowances = useEntitlementsQuery();
@@ -261,11 +261,12 @@ export default function BillingScreen() {
         productId,
         idempotencyKey: key,
         expectedProductVersion: product.version,
+        ...(nativeCheckout ? { checkoutClient: 'mobile' } : {}),
       });
       intents.current.delete(productId);
-      setSelectedId(order.id);
       setBillingTab('ORDERS');
-      await continueCheckout(order);
+      if (order.checkoutUrl) await continueCheckout(order);
+      else router.setParams({ orderId: order.id });
     } catch (error) {
       if (getApiErrorCode(error) === 'BILLING_PRODUCT_CHANGED' || getApiErrorCode(error) === 'BILLING_PRODUCT_UNAVAILABLE') {
         intents.current.delete(productId);
@@ -274,29 +275,31 @@ export default function BillingScreen() {
       setActionError(billingErrorMessage(error));
     }
   }
-  /**
-   * Mở trang payOS; khi người dùng đóng trình duyệt thì tự hỏi payOS trạng thái đơn để không phải bấm
-   * "Kiểm tra thanh toán". App cũng tự kiểm tra lại khi quay về foreground (xem effect AppState bên dưới).
-   */
   async function continueCheckout(order: BillingOrder) {
-    if (!order.checkoutUrl) return;
+    if (!order.checkoutUrl || checkoutOpen.current) return;
+    router.setParams({ orderId: order.id });
     setCheckoutNotice(null);
-    awaitingCheckoutId.current = order.id;
+    checkoutOpen.current = true;
     try {
-      await openCheckout(order.checkoutUrl);
+      if (nativeCheckout) {
+        const callbackUrl = 'mobile://billing?orderId=' + encodeURIComponent(order.id);
+        await WebBrowser.openAuthSessionAsync(order.checkoutUrl, callbackUrl, { createTask: false });
+      } else {
+        if (Platform.OS === 'android') awaitingCheckoutId.current = order.id;
+        const result = await openCheckout(order.checkoutUrl);
+        if (result.type === 'opened') return;
+      }
+      await checkAfterCheckout(order.id);
     } catch {
-      // Không mở được trình duyệt: vẫn kiểm tra xem đơn đã được thanh toán chưa.
+      awaitingCheckoutId.current = null;
+      setActionError('Không mở được trang thanh toán. Bạn có thể mở lại từ đơn hàng.');
+    } finally {
+      checkoutOpen.current = false;
     }
-    await checkAfterCheckout(order.id, false);
   }
-  async function checkAfterCheckout(id: string, silentWhenPending: boolean) {
-    // Kiểm tra im lặng nhường chỗ cho lần đang chạy; lần sau khi đóng trình duyệt luôn phải báo kết quả.
-    if (silentWhenPending && checkingCheckout.current) return;
-    checkingCheckout.current = true;
+  async function checkAfterCheckout(id: string) {
     try {
       const result = await reconcile.mutateAsync(id);
-      if (result.status !== 'PENDING') awaitingCheckoutId.current = null;
-      if (silentWhenPending && result.status === 'PENDING') return;
       setCheckoutNotice({
         message: billingCheckMessage(result),
         checkedAtLabel: billingCheckTime(),
@@ -304,23 +307,24 @@ export default function BillingScreen() {
         status: result.status,
       });
     } catch (error) {
-      if (silentWhenPending) return;
       setCheckoutNotice({
         message: billingErrorMessage(error),
         checkedAtLabel: billingCheckTime(),
         isError: true,
       });
-    } finally {
-      checkingCheckout.current = false;
     }
   }
   const checkAfterCheckoutRef = React.useRef(checkAfterCheckout);
   checkAfterCheckoutRef.current = checkAfterCheckout;
-  // Người dùng có thể sang app ngân hàng rồi quay lại app: đơn đang chờ thì kiểm tra lại, im lặng nếu vẫn chờ.
+  // Expo Go Android mở Custom Tab mà không đợi trình duyệt đóng.
   React.useEffect(() => {
+    if (nativeCheckout || Platform.OS !== 'android') return;
     const subscription = AppState.addEventListener('change', (state) => {
       const id = awaitingCheckoutId.current;
-      if (state === 'active' && id) void checkAfterCheckoutRef.current(id, true);
+      if (state === 'active' && id) {
+        awaitingCheckoutId.current = null;
+        void checkAfterCheckoutRef.current(id);
+      }
     });
     return () => subscription.remove();
   }, []);
@@ -371,7 +375,9 @@ export default function BillingScreen() {
                 có sandbox riêng. Chỉ cộng lượt sau khi xác nhận đã nhận đủ tiền.
               </Text>
               <Text className="text-xs text-muted-foreground">
-                Sau thanh toán, đóng trình duyệt và quay lại ứng dụng để xem quyền lợi.
+                {nativeCheckout
+                  ? 'Sau thanh toán, quay lại ứng dụng để xem trạng thái đơn hàng.'
+                  : 'Sau thanh toán, đóng trang payOS và quay lại ứng dụng để xem quyền lợi.'}
               </Text>
             </View>
             {loading ? (

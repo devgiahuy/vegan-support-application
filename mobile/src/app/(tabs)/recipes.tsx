@@ -345,7 +345,26 @@ export default function RecipesScreen() {
 
       {/* Bảng trượt dưới cho bộ lọc nâng cao (chỉ dùng các tiêu chí backend hỗ trợ) */}
       {filtersOpen ? (
-        <FormSheet title="Bộ lọc món chay" onClose={() => setFiltersOpen(false)}>
+        <FormSheet
+          title="Bộ lọc món chay"
+          variant="bottom-sheet"
+          onClose={() => setFiltersOpen(false)}
+          footer={
+            <View className="flex-row gap-2.5">
+              <PrimaryButton
+                label="Đặt lại"
+                variant="outline"
+                disabled={advancedFilterCount === 0}
+                onPress={resetSheetFilters}
+                className="flex-1"
+              />
+              <PrimaryButton
+                label={`Xem kết quả (${totalItems})`}
+                onPress={() => setFiltersOpen(false)}
+                className="flex-[1.5]"
+              />
+            </View>
+          }>
           {isAuthenticated ? (
             <View className="gap-2">
               <Text className="text-sm font-semibold text-foreground">Lọc theo hồ sơ ăn uống</Text>
@@ -428,21 +447,6 @@ export default function RecipesScreen() {
           <View className="gap-2">
             <Text className="text-sm font-semibold text-foreground">Nguyên liệu có sẵn</Text>
             <IngredientFilterEditor items={ingredients} onChange={setIngredients} />
-          </View>
-
-          <View className="mt-2 flex-row gap-2">
-            <PrimaryButton
-              label="Đặt lại"
-              variant="outline"
-              disabled={advancedFilterCount === 0}
-              onPress={resetSheetFilters}
-              className="flex-1"
-            />
-            <PrimaryButton
-              label={`Xem kết quả (${totalItems})`}
-              onPress={() => setFiltersOpen(false)}
-              className="flex-[1.5]"
-            />
           </View>
         </FormSheet>
       ) : null}

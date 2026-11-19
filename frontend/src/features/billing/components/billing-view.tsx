@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { QrCode, Info } from 'lucide-react';
@@ -35,6 +35,8 @@ import {
   useReconcileBillingOrderMutation,
 } from '@/features/billing/queries/billing.queries';
 import type { BillingOrder, BillingProduct } from '@/features/billing/types/billing.model';
+
+const orderIdPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 
 export function OrderRow({
   order,
@@ -213,9 +215,7 @@ function BillingContent() {
   const router = useRouter();
   const params = useSearchParams();
   const selectedId = params.get('orderId') ?? '';
-  const validId = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(selectedId)
-    ? selectedId
-    : '';
+  const validId = orderIdPattern.test(selectedId) ? selectedId : '';
   const [page, setPage] = useState(1);
   const [actionError, setActionError] = useState<string | null>(null);
   const intents = useRef(new Map<string, string>());
@@ -544,7 +544,46 @@ function BillingContent() {
     </main>
   );
 }
+function MobileCheckoutReturn({ orderId }: { orderId: string }) {
+  const query = new URLSearchParams({ orderId }).toString();
+  const appUrl = 'mobile://billing?' + query;
+  const attemptedUrl = useRef<string>(null);
+  useEffect(() => {
+    if (attemptedUrl.current === appUrl) return;
+    attemptedUrl.current = appUrl;
+    window.location.assign(appUrl);
+  }, [appUrl]);
+
+  return (
+    <main className="container mx-auto max-w-lg px-4 py-12">
+      <Card>
+        <CardHeader>
+          <CardTitle>Quay lại VeggieConnect</CardTitle>
+          <CardDescription>
+            Mở ứng dụng để xem trạng thái đơn hàng sau khi rời trang payOS.
+          </CardDescription>
+        </CardHeader>
+        <CardFooter className="flex flex-wrap gap-3">
+          <Button asChild>
+            <a href={appUrl}>Mở ứng dụng</a>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href={'/billing?' + query} replace>
+              Xem đơn trên web
+            </Link>
+          </Button>
+        </CardFooter>
+      </Card>
+    </main>
+  );
+}
+
 export function BillingView() {
+  const params = useSearchParams();
+  const orderId = params.get('orderId') ?? '';
+  if (params.get('returnTo') === 'app' && orderIdPattern.test(orderId)) {
+    return <MobileCheckoutReturn orderId={orderId} />;
+  }
   return (
     <AuthGuard>
       <BillingContent />

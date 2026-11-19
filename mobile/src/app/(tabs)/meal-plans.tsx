@@ -9,12 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  ShoppingCart,
   Sparkles,
-  Target,
-  Utensils,
-  Warehouse,
-  type LucideIcon,
 } from 'lucide-react-native';
 
 import { MealPlanGoal } from '@/common/enums';
@@ -35,13 +30,6 @@ const GOALS = [
   { value: MealPlanGoal.MAINTAIN, label: 'Giữ cân', description: 'Ăn đủ năng lượng duy trì' },
   { value: MealPlanGoal.LOSE, label: 'Giảm cân', description: 'Thâm hụt nhẹ, đủ đạm' },
   { value: MealPlanGoal.GAIN, label: 'Tăng cân', description: 'Dư nhẹ, tăng cơ lành mạnh' },
-];
-
-const SHORTCUTS: { href: Href; label: string; icon: LucideIcon }[] = [
-  { href: '/pantry' as Href, label: 'Tủ bếp gia đình', icon: Warehouse },
-  { href: '/shopping-preview' as Href, label: 'Danh sách cần mua', icon: ShoppingCart },
-  { href: '/custom-meals' as Href, label: 'Món ăn của tôi', icon: Utensils },
-  { href: '/meal-programs' as Href, label: 'Lộ trình nhiều tuần', icon: Target },
 ];
 
 const RECENT_PLAN_LIMIT = 5;
@@ -103,16 +91,10 @@ export default function MealPlansScreen() {
 
   return (
     <SiteScreen onRefresh={isAuthenticated ? () => refetch() : undefined}>
-      <View className="gap-5 px-5 pt-4">
-        <View>
-          <View className="flex-row items-center gap-2">
-            <CalendarDays size={18} color={colors.primary} />
-            <Text className="text-2xl font-bold tracking-tight text-foreground">Kế hoạch bữa ăn</Text>
-          </View>
-          <Text className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-            Tạo thực đơn chay 7 ngày theo mục tiêu, đúng thiết lập ăn uống và hồ sơ sức khỏe của bạn.
-          </Text>
-        </View>
+      <View className="gap-4 px-5 pt-3.5">
+        <Text className="text-sm leading-relaxed text-muted-foreground">
+          Tạo thực đơn chay 7 ngày theo mục tiêu, đúng thiết lập ăn uống và hồ sơ sức khỏe của bạn.
+        </Text>
 
         <View className="rounded-2xl border border-border bg-card p-4">
           <Text className="text-base font-bold text-foreground">Tạo thực đơn mới</Text>
@@ -213,30 +195,6 @@ export default function MealPlansScreen() {
               icon={<Sparkles size={16} color={colors.primaryForeground} />}
               onPress={() => void generatePlan()}
             />
-          </View>
-        </View>
-
-        {/* Lưới 2x2 công cụ bếp & kế hoạch */}
-        <View className="gap-2">
-          <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Công cụ liên quan
-          </Text>
-          <View className="flex-row flex-wrap justify-between gap-y-2.5">
-            {SHORTCUTS.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link key={item.label} href={item.href} asChild>
-                  <Pressable
-                    accessibilityRole="button"
-                    className="min-h-12 w-[48.5%] flex-row items-center gap-2 rounded-xl border border-input bg-card px-3 py-2.5 active:bg-muted/60">
-                    <Icon size={16} color={colors.primary} />
-                    <Text numberOfLines={2} className="flex-1 text-xs font-semibold text-foreground">
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                </Link>
-              );
-            })}
           </View>
         </View>
 

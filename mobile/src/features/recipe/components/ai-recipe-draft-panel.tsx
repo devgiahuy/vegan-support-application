@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Bot, ChevronDown, Sparkles } from 'lucide-react-native';
+import { Bot, ChevronDown, Clock, Info, Sparkles, Utensils } from 'lucide-react-native';
 
 import { FormSheet } from '@/components/shared/form-sheet';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useIconColors } from '@/lib/theme-colors';
+import { cn } from '@/lib/utils';
 import { difficultyLabel } from '../utils/recipe-editor';
 import { useGenerateRecipeDraftMutation } from '../queries/recipe-draft.queries';
 import { getContentErrorMessage } from '../utils/recipe-errors';
@@ -152,78 +153,148 @@ export function AiRecipeDraftPanel({
       ) : null}
 
       {suggestion ? (
-        <FormSheet title="Gợi ý công thức từ AI" onClose={() => setSuggestion(null)}>
-          <View className="flex-row flex-wrap items-center gap-2">
-            {suggestion.confidence !== null ? (
-              <View className="flex-row items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1">
-                <Bot size={12} color={colors.primary} />
-                <Text className="text-xs font-semibold text-primary">Độ tin cậy: {Math.round(suggestion.confidence * 100)}%</Text>
+        <FormSheet
+          title="Gợi ý công thức từ AI"
+          variant="bottom-sheet"
+          onClose={() => setSuggestion(null)}
+          footer={
+            <View className="flex-row gap-2.5">
+              <PrimaryButton
+                label="Đóng"
+                variant="outline"
+                onPress={() => setSuggestion(null)}
+                className="flex-1"
+              />
+              <PrimaryButton
+                label="Áp dụng vào công thức"
+                onPress={apply}
+                className="flex-[1.8]"
+              />
+            </View>
+          }>
+          {/* Thẻ tóm tắt tên món, mô tả & thông số chính */}
+          <View className="gap-3 rounded-2xl border border-border bg-card p-4">
+            {suggestion.title ? (
+              <View className="gap-1">
+                <Text className="text-lg font-bold leading-snug text-foreground">{suggestion.title}</Text>
+                {suggestion.description ? (
+                  <Text className="text-sm leading-relaxed text-muted-foreground">{suggestion.description}</Text>
+                ) : null}
               </View>
             ) : null}
-            <Text className="text-xs text-muted-foreground">
-              {suggestion.servings} khẩu phần · sơ chế {suggestion.prepTimeMinutes} phút · nấu {suggestion.cookTimeMinutes} phút · {difficultyLabel(suggestion.difficulty)}
-            </Text>
-          </View>
-          {differsFromSuggestedTiming(suggestion) ? (
-            <Text className="text-[11px] leading-4 text-muted-foreground">
-              AI ước tính {suggestion.suggestedTiming?.servings} khẩu phần · sơ chế {suggestion.suggestedTiming?.prepTimeMinutes} phút · nấu {suggestion.suggestedTiming?.cookTimeMinutes} phút. Giá trị bạn đã nhập được giữ nguyên.
-            </Text>
-          ) : null}
-          {suggestion.title ? (
-            <View className="gap-0.5">
-              <Text className="text-base font-bold text-foreground">{suggestion.title}</Text>
-              {suggestion.description ? <Text className="text-xs leading-4 text-muted-foreground">{suggestion.description}</Text> : null}
-            </View>
-          ) : null}
-          <Text className="text-[11px] leading-4 text-muted-foreground">
-            Đây chỉ là bản nháp do AI ước lượng, chưa được xác minh. Hãy kiểm tra lại định lượng và cách nấu; AI không điền dinh dưỡng.
-          </Text>
 
-          <View className="gap-1.5">
-            <Text className="text-sm font-bold text-foreground">Nguyên liệu ({suggestion.ingredients.length})</Text>
-            {suggestion.ingredients.map((ingredient, index) => (
-              <View key={`${ingredient.name}-${index}`} className="flex-row items-baseline justify-between gap-2 rounded-lg bg-muted/50 px-3 py-2">
-                <Text className="flex-1 text-sm text-foreground">
-                  {ingredient.name}
-                  {ingredient.optional ? <Text className="text-xs text-muted-foreground"> (tuỳ chọn)</Text> : null}
-                </Text>
-                <Text className="text-sm text-muted-foreground">
-                  {ingredient.amount} {ingredient.unit}
-                  {ingredient.confidence !== null ? ` (${Math.round(ingredient.confidence * 100)}%)` : ''}
+            <View className="flex-row flex-wrap items-center gap-2">
+              {suggestion.confidence !== null ? (
+                <View className="flex-row items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1">
+                  <Bot size={13} color={colors.primary} />
+                  <Text className="text-xs font-semibold text-primary">
+                    Tin cậy {Math.round(suggestion.confidence * 100)}%
+                  </Text>
+                </View>
+              ) : null}
+              <View className="flex-row items-center gap-1 rounded-full bg-muted px-2.5 py-1">
+                <Utensils size={12} color={colors.mutedForeground} />
+                <Text className="text-xs font-medium text-foreground">{suggestion.servings} khẩu phần</Text>
+              </View>
+              <View className="flex-row items-center gap-1 rounded-full bg-muted px-2.5 py-1">
+                <Clock size={12} color={colors.mutedForeground} />
+                <Text className="text-xs font-medium text-foreground">
+                  Sơ chế {suggestion.prepTimeMinutes}p · Nấu {suggestion.cookTimeMinutes}p
                 </Text>
               </View>
-            ))}
+              <View className="rounded-full bg-muted px-2.5 py-1">
+                <Text className="text-xs font-medium text-foreground">{difficultyLabel(suggestion.difficulty)}</Text>
+              </View>
+            </View>
+
+            {differsFromSuggestedTiming(suggestion) ? (
+              <Text className="text-xs leading-relaxed text-muted-foreground">
+                AI ước tính {suggestion.suggestedTiming?.servings} khẩu phần · sơ chế {suggestion.suggestedTiming?.prepTimeMinutes} phút · nấu {suggestion.suggestedTiming?.cookTimeMinutes} phút. Giá trị bạn đã nhập được giữ nguyên.
+              </Text>
+            ) : null}
           </View>
 
+          {/* Lưu ý bản nháp AI */}
+          <View className="flex-row items-start gap-2 rounded-xl bg-muted/60 px-3 py-2.5">
+            <Info size={14} color={colors.mutedForeground} style={{ marginTop: 2 }} />
+            <Text className="flex-1 text-xs leading-relaxed text-muted-foreground">
+              Đây là bản nháp do AI ước lượng, chưa được xác minh. Hãy kiểm tra lại định lượng và cách nấu; AI không tự điền dinh dưỡng.
+            </Text>
+          </View>
+
+          {/* Nguyên liệu */}
+          <View className="gap-2">
+            <Text className="text-sm font-bold text-foreground">Nguyên liệu ({suggestion.ingredients.length})</Text>
+            <View className="overflow-hidden rounded-2xl border border-border bg-card">
+              {suggestion.ingredients.map((ingredient, index) => (
+                <View
+                  key={`${ingredient.name}-${index}`}
+                  className={cn(
+                    'flex-row items-center justify-between gap-3 px-3.5 py-2.5',
+                    index > 0 ? 'border-t border-border' : ''
+                  )}>
+                  <Text className="min-w-0 flex-1 text-sm font-medium text-foreground">
+                    {ingredient.name}
+                    {ingredient.optional ? <Text className="text-xs font-normal text-muted-foreground"> (tuỳ chọn)</Text> : null}
+                  </Text>
+                  <View className="flex-row items-center gap-1.5">
+                    <Text className="text-sm font-semibold text-foreground">
+                      {ingredient.amount} {ingredient.unit}
+                    </Text>
+                    {ingredient.confidence !== null ? (
+                      <View className="rounded-full bg-muted px-2 py-0.5">
+                        <Text className="text-[11px] font-medium text-muted-foreground">
+                          {Math.round(ingredient.confidence * 100)}%
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Các bước nấu */}
           <View className="gap-2">
             <Text className="text-sm font-bold text-foreground">Các bước nấu ({suggestion.steps.length})</Text>
-            {suggestion.steps.map((step, index) => (
-              <View key={`${index}-${step.instruction.slice(0, 12)}`} className="flex-row gap-3">
-                <View className="size-6 items-center justify-center rounded-full bg-primary">
-                  <Text className="text-xs font-semibold text-primary-foreground">{index + 1}</Text>
+            <View className="gap-2.5">
+              {suggestion.steps.map((step, index) => (
+                <View
+                  key={`${index}-${step.instruction.slice(0, 12)}`}
+                  className="flex-row items-start gap-3 rounded-2xl border border-border bg-card p-3">
+                  <View className="mt-0.5 size-6 items-center justify-center rounded-full bg-primary">
+                    <Text className="text-xs font-bold text-primary-foreground">{index + 1}</Text>
+                  </View>
+                  <View className="min-w-0 flex-1 gap-1.5">
+                    <Text className="text-sm leading-relaxed text-foreground">{step.instruction}</Text>
+                    {step.durationMinutes ? (
+                      <View className="flex-row items-center gap-1 self-start rounded-full bg-muted px-2 py-0.5">
+                        <Clock size={11} color={colors.mutedForeground} />
+                        <Text className="text-xs font-medium text-muted-foreground">{step.durationMinutes} phút</Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
-                <Text className="flex-1 pt-0.5 text-sm leading-5 text-foreground">
-                  {step.instruction}
-                  {step.durationMinutes ? <Text className="text-xs text-muted-foreground"> ({step.durationMinutes} phút)</Text> : null}
-                </Text>
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
 
           {suggestion.assumptions.length > 0 ? (
-            <View className="gap-1 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
-              <Text className="text-xs font-semibold text-foreground">AI đã giả định</Text>
+            <View className="gap-1.5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5">
+              <Text className="text-xs font-bold text-foreground">AI đã giả định</Text>
               {suggestion.assumptions.map((note) => (
-                <Text key={note} className="text-xs leading-4 text-muted-foreground">• {note}</Text>
+                <Text key={note} className="text-xs leading-relaxed text-foreground/85">
+                  • {note}
+                </Text>
               ))}
             </View>
           ) : null}
-          {suggestion.provenance ? (
-            <Text className="text-[10px] text-muted-foreground">Nguồn: {suggestion.provenance.provider} · {suggestion.provenance.model}</Text>
-          ) : null}
 
-          <PrimaryButton label="Áp dụng vào công thức" onPress={apply} />
-          <PrimaryButton label="Đóng" variant="outline" onPress={() => setSuggestion(null)} />
+          {suggestion.provenance ? (
+            <Text className="text-xs text-muted-foreground">
+              Nguồn gợi ý: {suggestion.provenance.provider} · {suggestion.provenance.model}
+            </Text>
+          ) : null}
         </FormSheet>
       ) : null}
     </View>
