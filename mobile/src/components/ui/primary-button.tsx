@@ -58,7 +58,7 @@ export function PrimaryButton({
       accessibilityState={{ disabled: isDisabled, busy: Boolean(loading) }}
       disabled={isDisabled}
       className={cn(
-        'h-12 flex-row items-center justify-center gap-2 rounded-xl px-3.5',
+        'min-h-12 flex-row items-center justify-center gap-2 rounded-xl px-4 py-2.5',
         CONTAINER_CLASSES[variant],
         isDisabled ? 'opacity-60' : '',
         (className as string) ?? ''
@@ -71,8 +71,11 @@ export function PrimaryButton({
         icon
       ) : null}
       <Text
-        numberOfLines={textOnly ? 1 : undefined}
-        style={textOnly ? { width: '100%', textAlign: 'center' } : { flexShrink: 0, textAlign: 'center' }}
+        style={
+          textOnly
+            ? { width: '100%', textAlign: 'center' }
+            : { flexShrink: 1, textAlign: 'center', paddingHorizontal: 2 }
+        }
         className={cn('text-sm font-semibold', TEXT_CLASSES[variant])}
       >
         {label}

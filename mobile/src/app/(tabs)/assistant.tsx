@@ -9,8 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { Link, type Href } from "expo-router";
-import { Compass, History, Plus, Sparkles } from "lucide-react-native";
+import { History, Plus, Sparkles } from "lucide-react-native";
 
 import { SiteHeader } from "@/components/layout/site-header";
 import { ErrorState, LoadingState } from "@/components/shared/state-views";
@@ -178,20 +177,11 @@ export default function AssistantScreen() {
           </Pressable>
         </View>
 
-        <View className="flex-row items-center justify-between gap-2">
-          <QuotaPill quota={sendState.quota} />
-          <Link href={"/ai-knowledge" as Href} asChild>
-            <Pressable
-              accessibilityRole="link"
-              className="ml-auto min-h-11 flex-row items-center gap-1.5 rounded-full border border-border px-3.5 py-2 active:bg-muted"
-            >
-              <Compass size={13} color={colors.primary} />
-              <Text className="text-xs font-semibold text-primary">
-                Khám phá tri thức AI
-              </Text>
-            </Pressable>
-          </Link>
-        </View>
+        {sendState.quota ? (
+          <View className="flex-row items-center">
+            <QuotaPill quota={sendState.quota} />
+          </View>
+        ) : null}
       </View>
 
       <KeyboardAvoidingView

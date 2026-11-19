@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Plus, Shuffle, ShoppingCart, UtensilsCrossed } from 'lucide-react-native';
 
@@ -19,9 +19,9 @@ const UNRESOLVED_LABELS: Record<string, string> = {
 
 function SlotThumbnail({ uri }: { uri: string | null }) {
   const colors = useIconColors();
-  const [failed, setFailed] = React.useState(false);
+  const [failedUri, setFailedUri] = React.useState<string | null>(null);
 
-  if (!uri || failed) {
+  if (!uri || failedUri === uri) {
     return (
       <View className="h-12 w-12 items-center justify-center rounded-lg border border-border bg-muted/40">
         <UtensilsCrossed size={20} color={colors.mutedForeground} />
@@ -32,7 +32,7 @@ function SlotThumbnail({ uri }: { uri: string | null }) {
     <Image
       source={{ uri }}
       contentFit="cover"
-      onError={() => setFailed(true)}
+      onError={() => setFailedUri(uri)}
       style={{ width: 48, height: 48, borderRadius: 8 }}
     />
   );
@@ -44,6 +44,8 @@ function SlotThumbnail({ uri }: { uri: string | null }) {
 export function MealSlotCard({
   slot,
   disabled,
+  swapping = false,
+  picking = false,
   onSwap,
   onPick,
   onShopping,
@@ -51,6 +53,8 @@ export function MealSlotCard({
 }: {
   slot: MealSlot;
   disabled: boolean;
+  swapping?: boolean;
+  picking?: boolean;
   onSwap: (slot: MealSlot) => void;
   onPick: (slot: MealSlot) => void;
   /** Mở nguyên liệu cần mua của riêng bữa này (chỉ hiện khi ô đã có món). */
@@ -139,9 +143,18 @@ export function MealSlotCard({
             accessibilityRole="button"
             disabled={disabled}
             onPress={() => onSwap(slot)}
-            className="min-h-11 flex-row items-center gap-1.5 rounded-xl border border-input px-3 active:bg-muted">
-            <Shuffle size={14} color={colors.mutedForeground} />
-            <Text className="text-xs font-medium text-foreground">Đổi món</Text>
+            className={cn(
+              'min-h-11 flex-row items-center gap-1.5 rounded-xl border border-input px-3 active:bg-muted',
+              disabled ? 'opacity-60' : ''
+            )}>
+            {swapping ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Shuffle size={14} color={colors.mutedForeground} />
+            )}
+            <Text className="text-xs font-medium text-foreground">
+              {swapping ? 'Đang đổi...' : 'Đổi món'}
+            </Text>
           </Pressable>
         ) : null}
         <Pressable
@@ -150,10 +163,17 @@ export function MealSlotCard({
           onPress={() => onPick(slot)}
           className={cn(
             'min-h-11 flex-row items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/5 px-3 active:bg-primary/10',
-            slot.filled ? 'ml-auto flex-1' : 'flex-1'
+            slot.filled ? 'ml-auto flex-1' : 'flex-1',
+            disabled ? 'opacity-60' : ''
           )}>
-          <Plus size={14} color={colors.primary} />
-          <Text className="text-xs font-semibold text-primary">{slot.filled ? 'Chọn món' : 'Thêm món vào ô này'}</Text>
+          {picking ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Plus size={14} color={colors.primary} />
+          )}
+          <Text className="text-xs font-semibold text-primary">
+            {picking ? 'Đang lưu...' : slot.filled ? 'Chọn món' : 'Thêm món vào ô này'}
+          </Text>
         </Pressable>
       </View>
     </View>

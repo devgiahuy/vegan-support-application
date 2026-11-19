@@ -9,7 +9,6 @@ import {
   Scale,
   ShoppingBag,
   SlidersHorizontal,
-  Sparkles,
   TrendingUp,
   UtensilsCrossed,
   Warehouse,
@@ -268,25 +267,6 @@ export default function HomeScreen() {
         </View>
 
         <View className="mt-2.5 gap-2">
-          <Link href={'/assistant' as Href} asChild>
-            <Pressable
-              accessibilityRole="button"
-              className="min-h-14 flex-row items-center gap-3 rounded-2xl border border-border bg-card px-3.5 py-3 active:bg-muted/60">
-              <View className="h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                <Sparkles size={18} color={colors.primary} />
-              </View>
-              <View className="min-w-0 flex-1">
-                <Text numberOfLines={1} className="text-sm font-bold text-foreground">
-                  Trợ lý AI dinh dưỡng
-                </Text>
-                <Text numberOfLines={1} className="mt-0.5 text-xs text-muted-foreground">
-                  Hỏi thay thế nguyên liệu, vi chất & khẩu phần
-                </Text>
-              </View>
-              <ChevronRight size={18} color={colors.mutedForeground} />
-            </Pressable>
-          </Link>
-
           <Link href={'/food-data' as Href} asChild>
             <Pressable
               accessibilityRole="button"
