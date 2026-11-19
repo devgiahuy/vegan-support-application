@@ -1,10 +1,12 @@
 # Backend Implementation Phases
 
-**Version:** 3.28
+**Version:** 3.29
 
 **Updated:** 2026-11-19
 
 **Stack:** Node.js · Express · TypeScript · MongoDB replica set · Prisma · Zod · OpenAPI
+
+**payOS production opt-in maintenance — 2026-11-19 (IN_PROGRESS):** User explicitly approves the existing payOS purchase/webhook flow on the production VPS. Remove environment-only rejection; production activation requires BILLING_ENABLED, all merchant keys and HTTPS public/return URLs. Preserve signed SDK verification, authoritative query, immutable order snapshots, ownership/idempotency and once-only grants. No schema/seed/consumer DTO changes or new backend test infrastructure. Backend lint/typecheck/build/OpenAPI and the existing billing acceptance pass, including production opt-in/required keys/HTTPS and signed unknown samples. Live VPS signed channel-registration verification remains pending; no real transfer is performed.
 
 **Direct dietary allowances maintenance — 2026-11-19 (READY):** Approved dev-only replacement of pattern/tradition/calendar by eggs/dairy/honey/five-pungent allowances and reviewed transitive food groups. No legacy-data/client compatibility. Backend, web and mobile implement impact preview, keep-with-warnings, selective replacement preview/apply, live compatibility and linked confirmed-program DRAFT revisions. Mongo provisioning/validators/seed, backend lint/typecheck/build/OpenAPI, existing meal-plan/analysis acceptance, all 16 combinations and live keep/repair/no-candidates/historical/catalog-conflict/idempotency/confirmed-revision checks pass. Web consumer gates and authenticated browser QA pass; mobile typecheck/lint/166 tests/iOS export pass. Authenticated native iOS/Android E2E remains unrun due missing Simulator.app GUI/native driver and Android tooling; bundle success is not native E2E proof. See docs/DIETARY_PREFERENCES_VERIFICATION.md. No new numbered phase or backend test infrastructure; unrelated phase statuses remain unchanged.
 

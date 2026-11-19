@@ -154,7 +154,24 @@ const environmentSchema = z
   })
   .superRefine((environment, context) => {
     if (environment.BILLING_ENABLED && environment.NODE_ENV === 'production') {
-      context.addIssue({ code: 'custom', path: ['BILLING_ENABLED'], message: 'billing rollout is development/test only; payOS itself processes real transfers' });
+      for (const key of ['PAYOS_CLIENT_ID', 'PAYOS_API_KEY', 'PAYOS_CHECKSUM_KEY'] as const) {
+        if (!environment[key]) {
+          context.addIssue({
+            code: 'custom',
+            path: [key],
+            message: 'required when production billing is enabled',
+          });
+        }
+      }
+      for (const key of ['BILLING_PUBLIC_URL', 'BILLING_RETURN_URL'] as const) {
+        if (!URL.canParse(environment[key]) || new URL(environment[key]).protocol !== 'https:') {
+          context.addIssue({
+            code: 'custom',
+            path: [key],
+            message: 'must use HTTPS when production billing is enabled',
+          });
+        }
+      }
     }
     const macroEnergyPercent =
       environment.MEAL_PLAN_PROTEIN_ENERGY_PERCENT +

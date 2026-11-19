@@ -148,7 +148,7 @@ export class BillingProviders {
   }
 
   private ensurePayos(): PayOS {
-    if (!this.config.billing.enabled || this.config.nodeEnv === 'production' || !this.client)
+    if (!this.config.billing.enabled || !this.client)
       throw paymentError(
         'BILLING_PROVIDER_UNAVAILABLE',
         'Thanh toán payOS chưa được cấu hình.',
