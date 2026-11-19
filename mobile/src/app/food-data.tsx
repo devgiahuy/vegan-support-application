@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type LayoutChangeEvent } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   Activity,
   AlertTriangle,
@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Sparkles,
   X,
+  type LucideIcon,
 } from 'lucide-react-native';
 import * as Linking from 'expo-linking';
 import { useColorScheme } from 'nativewind';
@@ -23,6 +24,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { DropdownField, type DropdownOption } from '@/components/ui/dropdown-field';
 import { PaginationBar } from '@/components/ui/pagination-bar';
+import { PrimaryButton } from '@/components/ui/primary-button';
 import { getAllergenName } from '@/common/constants/diet-labels';
 import {
   FOOD_GROUP_ORDER,
@@ -46,6 +48,7 @@ import type {
 } from '@/features/food-data/types/food-data.model';
 import { FoodGroup } from '@/common/enums';
 import { useIconColors } from '@/lib/theme-colors';
+import { cn } from '@/lib/utils';
 
 const INGREDIENT_PAGE_SIZE = 12;
 
@@ -61,14 +64,26 @@ const SCOPE_OPTIONS: DropdownOption<InteractionScope | 'ALL'>[] = [
   { value: 'SAME_DAY', label: 'Cùng ngày' },
 ];
 
-/** Màu nhãn phạm vi, đồng bộ bảng tương tác của web: cùng bữa (xanh dương), cùng món (hồng), cùng ngày (tím). */
 const SCOPE_COLORS: Record<InteractionScope, { light: string; dark: string }> = {
   SAME_MEAL: { light: '#0284c7', dark: '#38bdf8' },
   SAME_DISH: { light: '#e11d48', dark: '#fb7185' },
   SAME_DAY: { light: '#7c3aed', dark: '#a78bfa' },
 };
 
-/** Tiêu đề + mô tả của một khối tra cứu, dùng đúng chữ của các khối trên web. */
+type SectionKey = 'INGREDIENT' | 'INTERACTION' | 'COOKING';
+
+const FOOD_TABS: { key: SectionKey; label: string; icon: LucideIcon }[] = [
+  { key: 'INGREDIENT', label: 'Nguyên liệu 100g', icon: Scale },
+  { key: 'INTERACTION', label: 'Kiêng kỵ', icon: Layers },
+  { key: 'COOKING', label: 'Chế biến', icon: ChefHat },
+];
+
+function resolveInitialTab(tabParam: string | undefined): SectionKey {
+  if (tabParam === 'INTERACTION') return 'INTERACTION';
+  if (tabParam === 'COOKING') return 'COOKING';
+  return 'INGREDIENT';
+}
+
 function SectionHeader({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <View>
@@ -78,7 +93,6 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle: string })
   );
 }
 
-/** Ô tìm kiếm cao 52dp, cùng chiều cao với ô chọn bên cạnh. */
 function SearchBox({
   value,
   onChangeText,
@@ -90,7 +104,7 @@ function SearchBox({
 }) {
   const colors = useIconColors();
   return (
-    <View className="h-[52px] flex-1 flex-row items-center gap-2 rounded-xl border border-input bg-card px-3.5">
+    <View className="h-[52px] flex-1 flex-row items-center gap-2 rounded-xl border border-input bg-card pl-3.5 pr-1">
       <Search size={16} color={colors.mutedForeground} />
       <TextInput
         value={value}
@@ -99,6 +113,15 @@ function SearchBox({
         placeholderTextColor={colors.mutedForeground}
         className="flex-1 text-sm text-foreground"
       />
+      {value.length > 0 ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Xóa tìm kiếm"
+          onPress={() => onChangeText('')}
+          className="h-10 w-10 items-center justify-center rounded-full">
+          <X size={15} color={colors.mutedForeground} />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -115,11 +138,9 @@ function SectionLoading() {
 
 function SectionError({ onRetry }: { onRetry: () => void }) {
   return (
-    <View className="items-center rounded-2xl border border-dashed border-border p-6">
+    <View className="items-center gap-3 rounded-2xl border border-dashed border-border p-6">
       <Text className="text-center text-sm text-muted-foreground">Không tải được dữ liệu. Kiểm tra kết nối mạng và thử lại.</Text>
-      <Pressable onPress={onRetry} className="mt-3 rounded-xl border border-input px-4 py-2">
-        <Text className="text-sm font-semibold text-foreground">Thử lại</Text>
-      </Pressable>
+      <PrimaryButton label="Thử lại" variant="outline" onPress={onRetry} className="w-full" />
     </View>
   );
 }
@@ -166,7 +187,7 @@ function NutritionFactsView({ ingredientId, colors }: { ingredientId: string; co
     return (
       <SectionEmpty
         title="Chưa có hồ sơ dinh dưỡng kiểm định"
-        description="Dữ liệu thành phần trên 100g cho nguyên liệu này đang được chuẩn hoá và kiểm định."
+        description="Dữ liệu thành phần trên 100g cho nguyên liệu này đang được chuẩn hóa và kiểm định."
       />
     );
   }
@@ -241,8 +262,9 @@ function SourceBadge({ provenance, colors }: { provenance: ProvenanceInfo; color
   return (
     <>
       <Pressable
+        accessibilityRole="button"
         onPress={() => setOpen(true)}
-        className="flex-row items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5"
+        className="min-h-8 flex-row items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1"
       >
         <ShieldCheck size={12} color="#059669" />
         <Text numberOfLines={1} className="max-w-[110px] text-[11px] font-medium text-emerald-800">
@@ -253,32 +275,32 @@ function SourceBadge({ provenance, colors }: { provenance: ProvenanceInfo; color
         <View className="flex-1 items-center justify-center bg-black/50 px-6">
           <View className="w-full max-w-sm rounded-2xl bg-card p-5">
             <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center gap-2">
+              <View className="flex-1 flex-row items-center gap-2">
                 <View className="h-9 w-9 items-center justify-center rounded-lg bg-emerald-100">
                   <Award size={18} color="#059669" />
                 </View>
-                <Text className="text-base font-semibold text-foreground">Minh bạch xuất xứ dữ liệu</Text>
+                <Text className="flex-1 text-base font-semibold text-foreground">Minh bạch xuất xứ dữ liệu</Text>
               </View>
-              <Pressable onPress={() => setOpen(false)}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Đóng" onPress={() => setOpen(false)} className="h-11 w-11 items-center justify-center rounded-full">
                 <X size={18} color={colors.mutedForeground} />
               </Pressable>
             </View>
 
             <View className="mt-3 gap-2 rounded-lg border border-border bg-muted/30 p-3">
-              <View className="flex-row justify-between">
+              <View className="flex-row justify-between gap-2">
                 <Text className="text-xs text-muted-foreground">Nguồn xuất bản:</Text>
                 <Text className="text-xs font-semibold text-foreground">{provenance.sourceName}</Text>
               </View>
-              <View className="flex-row justify-between">
+              <View className="flex-row justify-between gap-2">
                 <Text className="text-xs text-muted-foreground">Nhà cung cấp:</Text>
                 <Text className="text-xs font-medium text-foreground">{provenance.provider}</Text>
               </View>
-              <View className="flex-row justify-between">
+              <View className="flex-row justify-between gap-2">
                 <Text className="text-xs text-muted-foreground">Phiên bản kiểm định:</Text>
                 <Text className="font-mono text-xs text-foreground">{provenance.sourceVersion}</Text>
               </View>
               {provenance.effectiveFrom ? (
-                <View className="flex-row justify-between">
+                <View className="flex-row justify-between gap-2">
                   <Text className="text-xs text-muted-foreground">Hiệu lực từ:</Text>
                   <Text className="font-mono text-xs text-foreground">{provenance.effectiveFrom}</Text>
                 </View>
@@ -292,14 +314,15 @@ function SourceBadge({ provenance, colors }: { provenance: ProvenanceInfo; color
               </View>
             ) : null}
 
-            <View className="mt-3 flex-row items-center justify-between">
-              <Text className="text-xs text-muted-foreground">
+            <View className="mt-3 flex-row items-center justify-between gap-2">
+              <Text className="flex-1 text-xs text-muted-foreground">
                 Giấy phép: <Text className="font-semibold text-foreground">{provenance.licenseName}</Text>
               </Text>
               {provenance.sourceUrl ? (
                 <Pressable
+                  accessibilityRole="link"
                   onPress={() => void Linking.openURL(provenance.sourceUrl as string)}
-                  className="flex-row items-center gap-1 rounded-lg border border-input px-2.5 py-1"
+                  className="min-h-10 flex-row items-center gap-1 rounded-lg border border-input px-3"
                 >
                   <Text className="text-xs font-semibold text-foreground">Xem nguồn</Text>
                   <ExternalLink size={12} color={colors.foreground} />
@@ -308,7 +331,7 @@ function SourceBadge({ provenance, colors }: { provenance: ProvenanceInfo; color
             </View>
 
             <Text className="mt-3 border-t border-border pt-2 text-[11px] italic text-muted-foreground">
-              Dữ liệu dinh dưỡng chuẩn hoá trên 100g phần ăn được, phục vụ giáo dục dinh dưỡng, không thay thế chẩn đoán y khoa.
+              Dữ liệu dinh dưỡng chuẩn hóa trên 100g phần ăn được, phục vụ giáo dục dinh dưỡng, không thay thế chẩn đoán y khoa.
             </Text>
           </View>
         </View>
@@ -368,7 +391,7 @@ function IngredientTab({ colors }: { colors: ReturnType<typeof useIconColors> })
       ) : isError ? (
         <SectionError onRetry={() => void refetch()} />
       ) : items.length === 0 ? (
-        <SectionEmpty title="Không tìm thấy nguyên liệu" description="Thử từ khoá khác hoặc đổi nhóm thực phẩm." />
+        <SectionEmpty title="Không tìm thấy nguyên liệu" description="Thử từ khóa khác hoặc đổi nhóm thực phẩm." />
       ) : (
         <View className="gap-5">
           {groups.map(({ theme, items: groupItems }) => {
@@ -438,9 +461,9 @@ function IngredientTab({ colors }: { colors: ReturnType<typeof useIconColors> })
                       accessibilityRole="button"
                       accessibilityLabel={`Xem dinh dưỡng 100g của ${item.canonicalName}`}
                       onPress={() => setSelected({ id: item.id, name: item.canonicalName })}
-                      className="flex-row items-center justify-end gap-1.5 pt-1">
-                      <Flame size={14} color="#f59e0b" />
-                      <Text className="text-sm font-semibold text-primary">Dinh dưỡng (100g)</Text>
+                      className="min-h-11 flex-row items-center justify-end gap-1.5 px-1">
+                      <Flame size={15} color="#f59e0b" />
+                      <Text className="text-sm font-semibold text-primary">Xem dinh dưỡng (100g)</Text>
                     </Pressable>
                   </View>
                 ))}
@@ -460,10 +483,15 @@ function IngredientTab({ colors }: { colors: ReturnType<typeof useIconColors> })
         <View className="flex-1 items-center justify-center bg-black/60 px-5">
           <Pressable accessibilityLabel="Đóng" onPress={() => setSelected(null)} style={StyleSheet.absoluteFill} />
           <View className="max-h-[85%] w-full max-w-md overflow-hidden rounded-3xl border border-border bg-background p-5">
-            <View className="mb-2 flex-row items-center justify-between">
+            <View className="mb-2 flex-row items-center justify-between gap-2">
               <Text className="flex-1 text-sm font-semibold text-muted-foreground">{selected?.name}</Text>
-              <Pressable accessibilityLabel="Đóng" onPress={() => setSelected(null)} hitSlop={8}>
-                <X size={20} color={colors.mutedForeground} />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Đóng"
+                onPress={() => setSelected(null)}
+                hitSlop={6}
+                className="h-11 w-11 items-center justify-center rounded-full bg-muted">
+                <X size={18} color={colors.foreground} />
               </Pressable>
             </View>
             {selected ? <NutritionFactsView ingredientId={selected.id} colors={colors} /> : null}
@@ -618,7 +646,6 @@ function InteractionCard({ rule }: { rule: FoodInteractionRuleItem }) {
 }
 
 function InteractionTab() {
-  const colors = useIconColors();
   const [scope, setScope] = React.useState<InteractionScope | 'ALL'>('ALL');
   const [keyword, setKeyword] = React.useState('');
 
@@ -640,16 +667,11 @@ function InteractionTab() {
   }, [data?.items, keyword]);
 
   return (
-    <View className="gap-4 rounded-3xl border border-border bg-card p-4">
-      <View>
-        <View className="flex-row items-center gap-2">
-          <Layers size={18} color={colors.primary} />
-          <Text className="flex-1 text-lg font-bold tracking-tight text-foreground">Tra cứu Kiêng kỵ & Tương tác Thực phẩm</Text>
-        </View>
-        <Text className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          Quy tắc phối hợp nguyên liệu khoa học theo 3 cấp độ phạm vi: Cùng món, Cùng bữa ăn hoặc Cùng ngày.
-        </Text>
-      </View>
+    <View className="gap-4">
+      <SectionHeader
+        title="Tra cứu Kiêng kỵ & Tương tác Thực phẩm"
+        subtitle="Quy tắc phối hợp nguyên liệu khoa học theo 3 cấp độ phạm vi: Cùng món, Cùng bữa ăn hoặc Cùng ngày."
+      />
       <View className="flex-row items-stretch gap-2">
         <SearchBox value={keyword} onChangeText={setKeyword} placeholder="Tìm theo tên nguyên liệu..." />
         <DropdownField
@@ -666,7 +688,7 @@ function InteractionTab() {
       ) : isError ? (
         <SectionError onRetry={() => void refetch()} />
       ) : items.length === 0 ? (
-        <SectionEmpty title="Không tìm thấy quy tắc tương tác phù hợp" description="Thử từ khoá khác hoặc đổi phạm vi." />
+        <SectionEmpty title="Không tìm thấy quy tắc tương tác phù hợp" description="Thử từ khóa khác hoặc đổi phạm vi." />
       ) : (
         <View className="gap-2.5">
           {items.map((rule) => (
@@ -678,46 +700,58 @@ function InteractionTab() {
   );
 }
 
-type SectionKey = 'INGREDIENT' | 'INTERACTION' | 'COOKING';
-
 /**
- * Tra cứu nguyên liệu & dinh dưỡng 100g — một trang gồm ba khối giống `categories/page.tsx` của web:
- * nguyên liệu → kiêng kỵ & tương tác → phương pháp chế biến & bảo tồn. Tham số `?tab=` (từ thẻ ở trang chủ)
- * cuộn thẳng tới khối tương ứng.
+ * Tra cứu nguyên liệu & kiến thức dinh dưỡng — chuyển đổi 3 tab trực tiếp trên điện thoại
+ * (`Nguyên liệu 100g`, `Kiêng kỵ`, `Chế biến`), mở đúng tab từ tham số `?tab=`.
  */
 export default function FoodDataScreen() {
   const colors = useIconColors();
   const params = useLocalSearchParams<{ tab?: string }>();
-  const scrollRef = React.useRef<ScrollView>(null);
-  const target: SectionKey | null =
-    params.tab === 'INTERACTION' ? 'INTERACTION' : params.tab === 'COOKING' ? 'COOKING' : null;
-  // Khối nguyên liệu tải xong sẽ đẩy các khối dưới xuống nên vị trí đích đổi theo; cuộn lại vài lần đầu cho đúng chỗ.
-  const scrollCount = React.useRef(0);
-
-  /** Khi khối đích có vị trí (sau khi bố cục xong) thì cuộn tới đó. */
-  const onSectionLayout = (key: SectionKey, y: number) => {
-    if (target === key && scrollCount.current < 4) {
-      scrollCount.current += 1;
-      scrollRef.current?.scrollTo({ y: Math.max(0, y - 8), animated: true });
-    }
-  };
+  const [activeTab, setActiveTab] = React.useState<SectionKey>(() => resolveInitialTab(params.tab));
+  const [seenTabParam, setSeenTabParam] = React.useState(params.tab);
+  if (seenTabParam !== params.tab) {
+    setSeenTabParam(params.tab);
+    setActiveTab(resolveInitialTab(params.tab));
+  }
 
   return (
-    <SiteScreen scrollRef={scrollRef}>
-      <View className="gap-6 px-5 pt-4">
-        <View onLayout={(event: LayoutChangeEvent) => onSectionLayout('INGREDIENT', event.nativeEvent.layout.y)}>
-          <IngredientTab colors={colors} />
-        </View>
-
-        <View onLayout={(event: LayoutChangeEvent) => onSectionLayout('INTERACTION', event.nativeEvent.layout.y)}>
-          <InteractionTab />
-        </View>
-
+    <SiteScreen title="Tra cứu dinh dưỡng">
+      <View className="gap-4 px-5 pt-4">
         <View
-          onLayout={(event: LayoutChangeEvent) => onSectionLayout('COOKING', event.nativeEvent.layout.y)}
-          className="border-t border-border pt-6">
-          <CookingMethodTab />
+          accessibilityRole="tablist"
+          className="flex-row gap-1 rounded-2xl border border-border bg-muted/70 p-1">
+          {FOOD_TABS.map((item) => {
+            const active = activeTab === item.key;
+            const Icon = item.icon;
+            return (
+              <Pressable
+                key={item.key}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+                onPress={() => setActiveTab(item.key)}
+                className={cn(
+                  'min-h-11 flex-1 flex-row items-center justify-center gap-1 rounded-xl px-2',
+                  active ? 'border border-border/60 bg-background' : 'active:bg-background/50'
+                )}>
+                <Icon size={15} color={active ? colors.primary : colors.mutedForeground} />
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                  className={cn(
+                    'text-xs',
+                    active ? 'font-bold text-primary' : 'font-medium text-muted-foreground'
+                  )}>
+                  {item.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
+
+        {activeTab === 'INGREDIENT' ? <IngredientTab colors={colors} /> : null}
+        {activeTab === 'INTERACTION' ? <InteractionTab /> : null}
+        {activeTab === 'COOKING' ? <CookingMethodTab /> : null}
       </View>
     </SiteScreen>
   );

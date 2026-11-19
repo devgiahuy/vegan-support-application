@@ -40,6 +40,13 @@ export interface NutritionFactDto {
   vitaminB12Mcg?: number | string | null;
 }
 
+export interface RecipeAllergyWarningDto {
+  kind?: string | null;
+  identifier?: string | null;
+  label?: string | null;
+  ingredientNames?: (string | null)[] | null;
+}
+
 export interface RecipeDetailDto extends BasePostDto {
   recipe?: {
     servings?: number;
@@ -51,6 +58,8 @@ export interface RecipeDetailDto extends BasePostDto {
     authorNutrition?: NutritionFactDto | null;
     mealPlannerEligible?: boolean;
     allergenCodes?: string[];
+    /** Cảnh báo dị ứng khớp riêng với hồ sơ người xem hiện tại. */
+    allergyWarnings?: (RecipeAllergyWarningDto | null)[] | null;
     dietaryGroups?: string[];
     dietCompatibilities?: DietCompatibilityDto[];
     ingredients?: RecipeIngredientDto[];

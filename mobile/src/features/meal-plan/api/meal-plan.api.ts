@@ -10,11 +10,14 @@ import type {
   MealPlanListQueryParams,
 } from '../types/meal-plan.model';
 
+export const GENERATE_MEAL_PLAN_TIMEOUT_MS = 60_000;
+
 export const mealPlanApi = {
   generate: async (input: GenerateMealPlanInput): Promise<MealPlan> => {
     const res = await api.post<MealPlanResponseDto>(
       API_ENDPOINTS.MEAL_PLANS.GENERATE,
-      mealPlanMapper.toGenerateDto(input)
+      mealPlanMapper.toGenerateDto(input),
+      { timeout: GENERATE_MEAL_PLAN_TIMEOUT_MS, silent: true }
     );
     return mealPlanMapper.toDetailModel(res.data);
   },

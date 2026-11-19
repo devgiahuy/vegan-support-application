@@ -1,3 +1,4 @@
+import { getAllergenName } from '@/common/constants/diet-labels';
 import { dietaryGroupLabel } from '@/common/constants/dietary-groups';
 import { FALLBACK_RECIPE_COVER_URL } from '@/lib/env';
 import { BaseMapper, pickField, safeString, safeDate, safeNumber, safeBoolean, safeArray } from '@/lib/mapper';
@@ -12,6 +13,7 @@ import {
   revisionStatusFromDto,
 } from '@/features/post/mappers/post-shared';
 import type {
+  RecipeAllergyWarningDto,
   RecipeDetailDto,
   RecipeIngredientDto,
   RecipeStepDto,
@@ -22,6 +24,7 @@ import type {
 import type { PostMediaDto, PostRevisionDto } from '@/features/post/types/post.dto';
 import type {
   Recipe,
+  RecipeAllergyWarning,
   RecipeIngredient,
   RecipeInstructionStep,
   NutritionFact,
@@ -158,6 +161,27 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       reasonCodes: safeArray<string>(c?.reasonCodes),
     }));
 
+    const allergenCodes = safeArray<string>(detail?.allergenCodes);
+    const allergyWarnings = safeArray<RecipeAllergyWarningDto | null>(
+      pickField(detail, ['allergyWarnings'], null)
+    ).flatMap<RecipeAllergyWarning>((warning) => {
+      const kind = safeString(warning?.kind);
+      const identifier = safeString(warning?.identifier).trim();
+      if ((kind !== 'ALLERGEN' && kind !== 'INGREDIENT') || !identifier) return [];
+      const label = safeString(warning?.label).trim();
+      if (kind === 'INGREDIENT' && !label) return [];
+      return [
+        {
+          kind,
+          identifier,
+          label: kind === 'ALLERGEN' ? getAllergenName(label || identifier) : label,
+          ingredientNames: safeArray<unknown>(warning?.ingredientNames)
+            .filter((name): name is string => typeof name === 'string' && Boolean(name.trim()))
+            .map((name) => name.trim()),
+        },
+      ];
+    });
+
     return {
       id: safeString(pickField(dto, ['id'], '')),
       title: safeString(revision?.title, 'Công thức chưa có tên'),
@@ -190,7 +214,8 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       publishedAt,
       formattedPublishedAt: formatDate(publishedAt),
       description: safeString(revision?.excerpt, ''),
-      allergenCodes: safeArray<string>(detail?.allergenCodes),
+      allergenCodes,
+      allergyWarnings,
       dietaryGroups,
       dietaryGroupLabels: dietaryGroups.map(dietaryGroupLabel),
       dietCompatibilities,

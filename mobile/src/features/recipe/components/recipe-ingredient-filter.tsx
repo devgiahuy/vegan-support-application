@@ -17,27 +17,25 @@ export const MAX_FILTER_INGREDIENTS = 20;
 
 const EMPTY_VALUE: IngredientPickerValue = { displayName: '', ingredientId: null };
 
-function FilterSheet({
-  initial,
-  onApply,
-  onClose,
+/** Trình chọn nguyên liệu chuẩn dạng nội tuyến để nhúng thẳng vào FormSheet mà không mở modal lồng nhau. */
+export function IngredientFilterEditor({
+  items,
+  onChange,
 }: {
-  initial: IngredientFilterItem[];
-  onApply: (items: IngredientFilterItem[]) => void;
-  onClose: () => void;
+  items: IngredientFilterItem[];
+  onChange: (items: IngredientFilterItem[]) => void;
 }) {
   const colors = useIconColors();
-  const [items, setItems] = React.useState(initial);
   const [value, setValue] = React.useState(EMPTY_VALUE);
 
   const handleChange = (next: IngredientPickerValue) => {
     // Chỉ nguyên liệu chuẩn (có id) mới lọc được; chọn xong thì thêm thành chip và xoá ô nhập để chọn tiếp.
     if (next.ingredientId) {
       const id = next.ingredientId;
-      setItems((current) =>
-        current.some((item) => item.id === id) || current.length >= MAX_FILTER_INGREDIENTS
-          ? current
-          : [...current, { id, name: next.displayName }]
+      onChange(
+        items.some((item) => item.id === id) || items.length >= MAX_FILTER_INGREDIENTS
+          ? items
+          : [...items, { id, name: next.displayName }]
       );
       setValue(EMPTY_VALUE);
       return;
@@ -46,13 +44,9 @@ function FilterSheet({
   };
 
   return (
-    <FormSheet title="Lọc theo nguyên liệu" onClose={onClose} variant="popup">
-      <Text className="text-xs leading-relaxed text-muted-foreground">
-        Chọn các nguyên liệu bạn đang có. Danh sách chỉ hiện công thức chứa đủ tất cả nguyên liệu đã chọn (tối đa{' '}
-        {MAX_FILTER_INGREDIENTS}).
-      </Text>
+    <View className="gap-3">
       <IngredientPicker
-        label="Thêm nguyên liệu"
+        label="Thêm nguyên liệu đang có"
         placeholder="Gõ tên rồi chọn gợi ý"
         value={value}
         onChange={handleChange}
@@ -64,8 +58,8 @@ function FilterSheet({
               key={item.id}
               accessibilityRole="button"
               accessibilityLabel={`Bỏ ${item.name}`}
-              onPress={() => setItems((current) => current.filter((entry) => entry.id !== item.id))}
-              className="min-h-9 flex-row items-center gap-1.5 rounded-full bg-primary/10 pl-3 pr-2">
+              onPress={() => onChange(items.filter((entry) => entry.id !== item.id))}
+              className="min-h-10 flex-row items-center gap-1.5 rounded-full bg-primary/10 pl-3 pr-2.5">
               <Text className="text-xs font-medium text-primary">{item.name}</Text>
               <X size={13} color={colors.primary} />
             </Pressable>
@@ -74,6 +68,28 @@ function FilterSheet({
       ) : (
         <Text className="text-xs text-muted-foreground">Chưa chọn nguyên liệu nào.</Text>
       )}
+    </View>
+  );
+}
+
+function FilterSheet({
+  initial,
+  onApply,
+  onClose,
+}: {
+  initial: IngredientFilterItem[];
+  onApply: (items: IngredientFilterItem[]) => void;
+  onClose: () => void;
+}) {
+  const [items, setItems] = React.useState(initial);
+
+  return (
+    <FormSheet title="Lọc theo nguyên liệu" onClose={onClose} variant="popup">
+      <Text className="text-xs leading-relaxed text-muted-foreground">
+        Chọn các nguyên liệu bạn đang có. Danh sách chỉ hiện công thức chứa đủ tất cả nguyên liệu đã chọn (tối đa{' '}
+        {MAX_FILTER_INGREDIENTS}).
+      </Text>
+      <IngredientFilterEditor items={items} onChange={setItems} />
       <View className="flex-row gap-2">
         <PrimaryButton
           label="Xoá hết"

@@ -15,8 +15,8 @@ export interface DropdownOption<T> {
 }
 
 /**
- * Ô chọn gọn: nhãn nhỏ + giá trị đang chọn + mũi tên. Bấm mở popup giữa màn hình liệt kê đủ các mục (cuộn khi dài).
- * Đặt nhiều ô cạnh nhau bằng `className="flex-1"` trong một hàng `flex-row`.
+ * Ô chọn gọn chuẩn mobile (cao tối thiểu 44dp ở mọi biến thể): nhãn + giá trị đang chọn + mũi tên.
+ * Bấm mở bảng chọn liệt kê đủ các mục (cuộn khi dài).
  */
 export function DropdownField<T extends string | number | null>({
   label,
@@ -28,7 +28,7 @@ export function DropdownField<T extends string | number | null>({
   onRetry,
   variant = 'compact',
 }: {
-  /** `compact`: nhãn nhỏ nằm trong ô (bộ lọc); `field`: nhãn phía trên, ô cao như ô nhập liệu (form). */
+  /** `compact`: nhãn nhỏ nằm trong ô (bộ lọc); `field`: nhãn phía trên, ô cao 48dp (form). */
   variant?: 'compact' | 'field';
   label: string;
   value: T;
@@ -46,9 +46,7 @@ export function DropdownField<T extends string | number | null>({
   const display =
     status === 'loading' ? 'Đang tải...' : status === 'error' ? 'Lỗi · Thử lại' : (selected?.shortLabel ?? selected?.label ?? 'Chọn');
 
-  // Danh sách có mục con thì mục gốc in đậm để dễ phân biệt với mục con.
   const hasHierarchy = options.some((option) => (option.depth ?? 0) > 0);
-
   const onPressTrigger = () => (status === 'error' ? onRetry?.() : setOpen(true));
 
   return (
@@ -62,7 +60,7 @@ export function DropdownField<T extends string | number | null>({
             disabled={status === 'loading'}
             onPress={onPressTrigger}
             className={cn(
-              'h-12 flex-row items-center gap-2 rounded-xl border bg-background px-4',
+              'h-12 flex-row items-center gap-2 rounded-xl border bg-background px-4 active:bg-muted/50',
               status === 'error' ? 'border-destructive/50' : 'border-input',
               status === 'loading' ? 'opacity-60' : ''
             )}>
@@ -79,7 +77,7 @@ export function DropdownField<T extends string | number | null>({
           disabled={status === 'loading'}
           onPress={onPressTrigger}
           className={cn(
-            'rounded-xl border bg-card px-3 py-2',
+            'min-h-11 justify-center rounded-xl border bg-card px-3 py-1.5 active:bg-muted/50',
             status === 'error' ? 'border-destructive/50' : 'border-input',
             status === 'loading' ? 'opacity-60' : ''
           )}>
@@ -108,12 +106,13 @@ export function DropdownField<T extends string | number | null>({
             style={{ maxHeight: Math.round(windowHeight * 0.75) }}
             className="w-full max-w-md overflow-hidden rounded-3xl border border-border bg-background">
             <View className="flex-row items-center justify-between border-b border-border px-5 py-3">
-              <Text className="text-base font-bold text-foreground">{label}</Text>
+              <Text className="flex-1 text-base font-bold text-foreground">{label}</Text>
               <Pressable
+                accessibilityRole="button"
                 accessibilityLabel="Đóng"
                 onPress={() => setOpen(false)}
-                hitSlop={8}
-                className="h-9 w-9 items-center justify-center">
+                hitSlop={6}
+                className="h-11 w-11 items-center justify-center rounded-full">
                 <X size={18} color={colors.foreground} />
               </Pressable>
             </View>
@@ -136,7 +135,7 @@ export function DropdownField<T extends string | number | null>({
                     style={{ paddingLeft: 12 + (option.depth ?? 0) * 16 }}
                     className={cn(
                       'min-h-12 flex-row items-center gap-2 rounded-xl py-2.5 pr-3',
-                      isSelected ? 'bg-primary/10' : ''
+                      isSelected ? 'bg-primary/10' : 'active:bg-muted/60'
                     )}>
                     {isChild ? <Plus size={12} color={isSelected ? colors.primary : colors.mutedForeground} /> : null}
                     <Text

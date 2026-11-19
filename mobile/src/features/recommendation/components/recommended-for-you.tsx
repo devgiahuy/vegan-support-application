@@ -2,9 +2,8 @@ import * as React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Link, type Href } from 'expo-router';
-import { ArrowRight, CircleHelp, Clock, Flame, Sparkles, Star } from 'lucide-react-native';
+import { ChevronRight, CircleHelp, Clock, Flame, Sparkles } from 'lucide-react-native';
 
-import { ImageBadge } from '@/components/ui/image-badge';
 import { FALLBACK_RECIPE_COVER_URL } from '@/lib/env';
 import { useIconColors } from '@/lib/theme-colors';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -15,14 +14,13 @@ import type { Recommendation, RecommendationMeta } from '../types/recommendation
 /** Dòng ngữ cảnh chấm điểm: gợi ý riêng kèm ràng buộc đã lọc, hoặc gợi ý phổ biến khi chưa cá nhân hóa (đồng bộ web). */
 function constraintsNote(meta: RecommendationMeta | undefined): string {
   if (!meta) return '';
-  const version = meta.scoringVersion ? ` · ${meta.scoringVersion}` : '';
-  if (!meta.personalized) return `Gợi ý phổ biến cho mọi người${version}`;
-  return `Gợi ý dành riêng cho bạn${version}${meta.constraintsSummary ? ` · ${meta.constraintsSummary}` : ''}`;
+  if (!meta.personalized) return 'Gợi ý phổ biến cho mọi người';
+  return `Phù hợp hồ sơ ăn uống${meta.constraintsSummary ? ` · ${meta.constraintsSummary}` : ''}`;
 }
 
 /**
- * Một món gợi ý, cùng kích thước và bố cục với `RecipeCard` (lưới 2 cột): ảnh 4:3 kèm thời gian, calo/đánh giá,
- * tên món, tối đa 2 chip lý do.
+ * Thẻ gợi ý dạng hàng ngang gọn nhẹ cho Trang chủ: ảnh món, tên món (tối đa 2 dòng),
+ * thời gian nấu, năng lượng và tối đa 1 nhãn lý do.
  */
 function RecommendationCard({ item }: { item: Recommendation }) {
   const colors = useIconColors();
@@ -34,8 +32,8 @@ function RecommendationCard({ item }: { item: Recommendation }) {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Xem công thức ${item.title}`}
-        className="w-[47%] overflow-hidden rounded-2xl border border-border bg-card">
-        <View className="relative aspect-[4/3] bg-muted">
+        className="min-h-[88px] flex-row items-center gap-3.5 rounded-2xl border border-border bg-card p-2.5 active:bg-muted/50">
+        <View className="overflow-hidden rounded-xl bg-muted" style={{ width: 80, height: 72 }}>
           {source ? (
             <Image
               source={{ uri: source }}
@@ -44,55 +42,35 @@ function RecommendationCard({ item }: { item: Recommendation }) {
               onError={() => setImageFailed(true)}
             />
           ) : null}
-          {item.cookTimeMinutes > 0 ? (
-            <ImageBadge
-              label={`${item.cookTimeMinutes} phút`}
-              icon={(color) => <Clock size={12} color={color} />}
-              style={{ position: 'absolute', left: 10, top: 10 }}
-            />
-          ) : null}
         </View>
 
-        <View className="flex-1 gap-2 p-3.5">
-          {item.calories !== null || item.ratingCount > 0 ? (
-            <View className="flex-row flex-wrap items-center gap-x-3 gap-y-1">
-              {item.calories !== null ? (
-                <View className="flex-row items-center gap-1">
-                  <Flame size={13} color={colors.mutedForeground} />
-                  <Text className="text-xs text-muted-foreground">{item.calories} kcal</Text>
-                </View>
-              ) : null}
-              {item.ratingCount > 0 ? (
-                <View className="flex-row items-center gap-1">
-                  <Star size={12} color="#fbbf24" fill="#fbbf24" />
-                  <Text className="text-xs text-muted-foreground">
-                    {item.ratingAverage.toFixed(1)} ({item.ratingCount})
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-          ) : null}
-
-          <Text numberOfLines={2} className="text-sm font-semibold leading-snug text-foreground">
+        <View className="min-w-0 flex-1 gap-1.5">
+          <Text numberOfLines={2} className="text-sm font-bold leading-snug text-foreground">
             {item.title}
           </Text>
 
+          <View className="flex-row flex-wrap items-center gap-x-3 gap-y-1">
+            {item.cookTimeMinutes > 0 ? (
+              <View className="flex-row items-center gap-1">
+                <Clock size={12} color={colors.mutedForeground} />
+                <Text className="text-xs text-muted-foreground">{item.cookTimeMinutes} phút</Text>
+              </View>
+            ) : null}
+            {item.calories !== null ? (
+              <View className="flex-row items-center gap-1">
+                <Flame size={12} color={colors.mutedForeground} />
+                <Text className="text-xs text-muted-foreground">{item.calories} kcal</Text>
+              </View>
+            ) : null}
+          </View>
+
           {item.reasonLabels.length > 0 ? (
-            <View className="flex-row flex-wrap gap-1">
-              {item.reasonLabels.slice(0, 2).map((label) => (
-                <View key={label} className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5">
-                  <Text className="text-[10px] font-medium text-primary">{label}</Text>
-                </View>
-              ))}
+            <View className="self-start rounded-full bg-primary/10 px-2.5 py-0.5">
+              <Text numberOfLines={1} className="text-xs font-medium text-primary">
+                {item.reasonLabels[0]}
+              </Text>
             </View>
           ) : null}
-
-          <View className="mt-auto flex-row items-center justify-between border-t border-border pt-2.5">
-            <Text numberOfLines={1} className="flex-1 text-xs font-medium text-muted-foreground">
-              Xem công thức
-            </Text>
-            <ArrowRight size={14} color={colors.mutedForeground} />
-          </View>
         </View>
       </Pressable>
     </Link>
@@ -100,13 +78,13 @@ function RecommendationCard({ item }: { item: Recommendation }) {
 }
 
 /**
- * Khối gợi ý ở trang chủ — đồng bộ `RecommendedForYou` của web: chỉ dành cho thành viên đã đăng nhập (khách và lỗi tải
- * thì ẩn hẳn), có skeleton khi tải và thông báo khi không còn món hợp lệ. Bật/tắt cá nhân hóa nằm ở Hồ sơ.
+ * Khối gợi ý ở trang chủ — hiển thị tối đa 3 món gọn cho thành viên đã đăng nhập,
+ * có lối dẫn "Xem tất cả" sang Khám phá và giải thích cách chọn gợi ý.
  */
 export function RecommendedForYou() {
   const colors = useIconColors();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const { data, isLoading, isError } = useHomeRecommendationsQuery({ limit: 4 });
+  const { data, isLoading, isError } = useHomeRecommendationsQuery({ limit: 3 });
   const [whyOpen, setWhyOpen] = React.useState(false);
 
   if (!isAuthenticated) return null;
@@ -115,39 +93,58 @@ export function RecommendedForYou() {
   const items = data?.items ?? [];
 
   return (
-    <View className="mt-8 px-5">
-      <View className="flex-row items-center gap-1.5">
-        <Sparkles size={14} color={colors.primary} />
-        <Text className="text-xs font-semibold uppercase tracking-wide text-primary">Dành riêng cho bạn</Text>
+    <View className="mt-7 px-5">
+      <View className="flex-row items-end justify-between gap-2">
+        <View className="min-w-0 flex-1">
+          <View className="flex-row items-center gap-1.5">
+            <Sparkles size={14} color={colors.primary} />
+            <Text className="text-xs font-semibold uppercase tracking-wide text-primary">
+              Gợi ý cho bạn
+            </Text>
+          </View>
+          <Text className="mt-0.5 text-lg font-bold text-foreground">Món chay hợp khẩu vị</Text>
+        </View>
+
+        <Link href={'/recipes' as Href} asChild>
+          <Pressable
+            accessibilityRole="link"
+            hitSlop={6}
+            className="min-h-11 flex-row items-center gap-0.5 px-1">
+            <Text className="text-xs font-semibold text-primary">Xem tất cả</Text>
+            <ChevronRight size={14} color={colors.primary} />
+          </Pressable>
+        </Link>
       </View>
-      <Text className="mt-1 text-xl font-bold text-foreground">Món chay hợp khẩu vị</Text>
-      {data ? <Text className="mt-1 text-xs text-muted-foreground">{constraintsNote(data.meta)}</Text> : null}
+
       {data ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Vì sao tôi thấy gợi ý này?"
-          onPress={() => setWhyOpen(true)}
-          hitSlop={8}
-          className="mt-2 flex-row items-center gap-1.5 self-start">
-          <CircleHelp size={13} color={colors.primary} />
-          <Text className="text-xs font-semibold text-primary">Vì sao tôi thấy gợi ý này?</Text>
-        </Pressable>
+        <View className="mt-1 flex-row flex-wrap items-center gap-x-2 gap-y-1">
+          <Text className="text-xs text-muted-foreground">{constraintsNote(data.meta)}</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Vì sao tôi thấy gợi ý này?"
+            onPress={() => setWhyOpen(true)}
+            hitSlop={8}
+            className="min-h-8 flex-row items-center gap-1">
+            <CircleHelp size={13} color={colors.primary} />
+            <Text className="text-xs font-semibold text-primary">Vì sao?</Text>
+          </Pressable>
+        </View>
       ) : null}
 
-      <View className="mt-4 flex-row flex-wrap gap-3">
+      <View className="mt-3 gap-2.5">
         {isLoading ? (
           [1, 2].map((index) => (
-            <View key={index} className="h-52 w-[47%] rounded-2xl border border-border bg-muted" />
+            <View key={index} className="h-[88px] w-full rounded-2xl border border-border bg-muted" />
           ))
         ) : items.length === 0 ? (
-          <View className="w-full rounded-2xl border border-dashed border-border p-5">
-            <Text className="font-semibold text-foreground">Chưa có gợi ý phù hợp</Text>
-            <Text className="mt-1 text-sm text-muted-foreground">
-              Không còn món nào hợp với luật ăn hiện tại của bạn. Hãy nới lỏng bộ lọc hoặc khám phá thêm các món chay khác.
+          <View className="w-full rounded-2xl border border-dashed border-border p-4">
+            <Text className="text-sm font-semibold text-foreground">Chưa có gợi ý phù hợp</Text>
+            <Text className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Không còn món nào hợp với thiết lập ăn hiện tại. Hãy khám phá thêm hoặc kiểm tra bộ lọc ăn uống.
             </Text>
           </View>
         ) : (
-          items.slice(0, 4).map((item) => <RecommendationCard key={item.id} item={item} />)
+          items.slice(0, 3).map((item) => <RecommendationCard key={item.id} item={item} />)
         )}
       </View>
       {whyOpen ? <WhyRecommendedSheet meta={data?.meta} onClose={() => setWhyOpen(false)} /> : null}

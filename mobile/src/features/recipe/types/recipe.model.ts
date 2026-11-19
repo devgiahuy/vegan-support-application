@@ -77,6 +77,13 @@ export interface RecipeIneligibilityReason {
 }
 
 /** Chỉ có khi danh sách được gọi với `eligibility=INELIGIBLE`. */
+export interface RecipeAllergyWarning {
+  kind: 'ALLERGEN' | 'INGREDIENT';
+  identifier: string;
+  label: string;
+  ingredientNames: string[];
+}
+
 export interface RecipeEligibility {
   eligible: boolean;
   reasons: RecipeIneligibilityReason[];
@@ -115,6 +122,7 @@ export interface Recipe {
   formattedPublishedAt: string;
   description: string;
   allergenCodes: string[];
+  allergyWarnings: RecipeAllergyWarning[];
   dietaryGroups: string[];
   dietaryGroupLabels: string[];
   dietCompatibilities: DietCompatibility[];

@@ -2,10 +2,22 @@ import * as React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 import { Link, type Href } from 'expo-router';
-import { ArrowLeft, ArrowUpRight, ClipboardList, Compass, MapPin, Navigation, Plus, RefreshCw, RotateCcw } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  ClipboardList,
+  Compass,
+  List,
+  Map as MapIcon,
+  MapPin,
+  Navigation,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+} from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
-import { ErrorState } from '@/components/shared/state-views';
+import { EmptyState, ErrorState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { AdvancedFiltersSheet } from '@/features/restaurant/components/advanced-filters-sheet';
 import { LocationPanel } from '@/features/restaurant/components/location-panel';
@@ -31,6 +43,7 @@ import { emptyStateCopy } from '@/features/restaurant/utils/restaurant-search-co
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { getApiErrorCode, getApiErrorMessage } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
+import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
 
 interface UserLocation {
@@ -39,6 +52,8 @@ interface UserLocation {
   label: string;
   source: LocationSource;
 }
+
+type ViewMode = 'LIST' | 'MAP';
 
 function discoveryErrorMessage(error: unknown): string {
   const code = getApiErrorCode(error);
@@ -51,9 +66,9 @@ function discoveryErrorMessage(error: unknown): string {
 }
 
 /**
- * "Quán chay gần bạn" — đồng bộ `frontend/src/app/(site)/restaurants/page.tsx`: chọn khu vực (vị trí thiết bị hoặc địa chỉ)
- * → bộ lọc tên quán/món ăn, bán kính, loại quán chay, bộ lọc nâng cao → danh sách quán và sơ đồ vị trí (chuyển qua lại bằng
- * "Danh sách / Bản đồ") → đề xuất quán mới. Vị trí chỉ gửi theo từng yêu cầu, backend không lưu lại.
+ * "Quán chay gần bạn" — tối ưu cho điện thoại với chuyển đổi nhanh Danh sách / Bản đồ:
+ * chọn khu vực -> bộ lọc -> chuyển tab Danh sách (mặc định) / Bản đồ -> bấm ghim trên thẻ tự nhảy sang Bản đồ.
+ * Giữ nguyên quy tắc: không tự áp hồ sơ ăn uống cá nhân lên khám phá quán.
  */
 export default function RestaurantsScreen() {
   const colors = useIconColors();
@@ -69,7 +84,8 @@ export default function RestaurantsScreen() {
   const [advanced, setAdvanced] = React.useState<RestaurantAdvancedFilters>({});
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
-  // Khung vùng đang xem trên sơ đồ (luôn cập nhật) và khung đã chốt khi bấm "Tìm trong vùng đang xem".
+  const [viewMode, setViewMode] = React.useState<ViewMode>('LIST');
+
   const viewBoundsRef = React.useRef<RestaurantBounds | null>(null);
   const [hasViewBounds, setHasViewBounds] = React.useState(false);
   const [activeBounds, setActiveBounds] = React.useState<RestaurantBounds | undefined>(undefined);
@@ -92,7 +108,6 @@ export default function RestaurantsScreen() {
             radiusM,
             query: debouncedKeyword,
             dietPattern,
-            // Bộ lọc nâng cao chỉ thuộc endpoint `search`, nên bỏ khỏi khóa truy vấn khi chưa có từ khóa.
             advanced: keywordActive ? advanced : undefined,
             bounds: searchingArea ? activeBounds : undefined,
             source: location.source,
@@ -126,7 +141,6 @@ export default function RestaurantsScreen() {
   const externalDataUnavailable = data?.pages.some((page) => page.meta.externalDataUnavailable) ?? false;
   const emptyCopy = emptyStateCopy(resolvedMode, externalResultsSuppressed, externalDataUnavailable);
 
-  /** Đổi vị trí tìm kiếm thì bỏ khung vùng đã chốt, quay về tìm quanh vị trí mới. */
   const applyLocation = (next: UserLocation) => {
     setLocation(next);
     setLocationError(null);
@@ -227,53 +241,65 @@ export default function RestaurantsScreen() {
     return true;
   });
 
-  const resultTitle = resolvedMode === 'KEYWORD' ? 'Kết quả tìm kiếm' : searchingArea ? 'Quán trong vùng đang xem' : 'Gợi ý quanh bạn';
+  const resultTitle = resolvedMode === 'KEYWORD' ? 'Kết quả tìm kiếm' : searchingArea ? 'Quán trong vùng đang xem' : 'Quán chay quanh bạn';
   const contributeHref = (isAuthenticated ? '/restaurants/new' : '/(auth)/login') as Href;
 
   return (
-    <SiteScreen>
-      <View className="gap-5 px-5 pt-4">
-        <View className="gap-3">
+    <SiteScreen onRefresh={location ? () => refetch() : undefined}>
+      <View className="gap-4 px-5 pt-4">
+        <View className="gap-2.5">
           {!location ? (
-            <View className="flex-row items-center gap-2">
-              <Compass size={16} color={colors.primary} />
-              <Text className="text-sm font-medium text-primary">Khám phá địa điểm</Text>
-            </View>
-          ) : null}
-          {location ? (
-            <Text className="text-3xl font-semibold leading-tight text-foreground">Quán chay gần bạn</Text>
-          ) : (
-            <Text className="text-3xl font-semibold leading-tight text-foreground">
-              Khám phá quán chay,{'\n'}
-              <Text className="text-primary">ngay gần bạn.</Text>
-            </Text>
-          )}
-          {!location ? (
-            <Text className="text-sm leading-6 text-muted-foreground">Tìm một địa điểm hợp ý, xem đánh giá và chọn đường đi cho bữa chay tiếp theo.</Text>
-          ) : (
-            <View className="flex-row items-center gap-2">
-              <MapPin size={16} color={colors.primary} />
-              <Text numberOfLines={1} className="shrink text-sm text-muted-foreground">
-                {location.label}
+            <>
+              <View className="flex-row items-center gap-2">
+                <Compass size={16} color={colors.primary} />
+                <Text className="text-sm font-medium text-primary">Khám phá địa điểm</Text>
+              </View>
+              <Text className="text-2xl font-bold leading-tight text-foreground">
+                Khám phá quán chay,{'\n'}
+                <Text className="text-primary">ngay gần bạn.</Text>
               </Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Đổi khu vực tìm kiếm" onPress={() => setIsChangingLocation(true)} hitSlop={8} className="h-11 shrink-0 flex-row items-center gap-1.5 px-2">
-                <RotateCcw size={16} color={colors.primary} />
-                <Text className="text-sm font-medium text-primary">Đổi khu vực</Text>
-              </Pressable>
+              <Text className="text-sm leading-6 text-muted-foreground">
+                Tìm địa điểm hợp ý, xem đánh giá và mở chỉ đường cho bữa chay tiếp theo.
+              </Text>
+            </>
+          ) : (
+            <View className="gap-2">
+              <Text className="text-2xl font-bold leading-tight text-foreground">Quán chay gần bạn</Text>
+              <View className="flex-row items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 py-1.5">
+                <View className="min-w-0 flex-1 flex-row items-center gap-2">
+                  <MapPin size={16} color={colors.primary} />
+                  <Text numberOfLines={1} className="flex-1 text-sm text-foreground">
+                    {location.label}
+                  </Text>
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Đổi khu vực tìm kiếm"
+                  onPress={() => setIsChangingLocation(true)}
+                  className="h-10 shrink-0 flex-row items-center gap-1.5 rounded-lg px-2.5 active:bg-muted">
+                  <RotateCcw size={14} color={colors.primary} />
+                  <Text className="text-xs font-semibold text-primary">Đổi khu vực</Text>
+                </Pressable>
+              </View>
             </View>
           )}
-          <View className="flex-row flex-wrap items-center gap-x-4 gap-y-2">
+
+          <View className="flex-row flex-wrap items-center gap-2">
             <Link href={contributeHref} asChild>
-              <Pressable accessibilityRole="button" className="h-11 flex-row items-center gap-2 rounded-xl border border-input bg-card px-4 active:bg-muted">
+              <Pressable
+                accessibilityRole="button"
+                className="h-11 flex-row items-center gap-1.5 rounded-xl border border-input bg-card px-3.5 active:bg-muted">
                 <Plus size={16} color={colors.foreground} />
-                <Text className="text-sm font-medium text-foreground">Đề xuất quán</Text>
+                <Text className="text-xs font-semibold text-foreground">Đề xuất quán mới</Text>
               </Pressable>
             </Link>
             {isAuthenticated ? (
               <Link href={'/restaurants/mine' as Href} asChild>
-                <Pressable className="flex-row items-center gap-1.5">
-                  <ClipboardList size={14} color={colors.primary} />
-                  <Text className="text-xs font-semibold text-primary">Quán tôi đã đề xuất</Text>
+                <Pressable
+                  accessibilityRole="link"
+                  className="h-11 flex-row items-center gap-1.5 rounded-xl border border-input bg-card px-3.5 active:bg-muted">
+                  <ClipboardList size={15} color={colors.primary} />
+                  <Text className="text-xs font-semibold text-primary">Quán đã đề xuất</Text>
                 </Pressable>
               </Link>
             ) : null}
@@ -312,98 +338,167 @@ export default function RestaurantsScreen() {
             />
 
             {searchingArea && activeBounds ? (
-              <View className="gap-1 rounded-xl border border-border bg-muted/30 px-4 py-2">
+              <View className="gap-1 rounded-xl border border-border bg-muted/30 px-4 py-2.5">
                 <Text className="text-xs leading-5 text-foreground">{formatBoundsLabel(activeBounds)}</Text>
-                <Pressable accessibilityRole="button" onPress={handleBackToNearby} className="h-11 flex-row items-center gap-1.5 self-start">
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handleBackToNearby}
+                  className="h-11 flex-row items-center gap-1.5 self-start">
                   <ArrowLeft size={16} color={colors.primary} />
                   <Text className="text-sm font-medium text-primary">Quay lại vị trí tìm kiếm</Text>
                 </Pressable>
               </View>
             ) : null}
 
-            <View className="gap-3">
+            {/* Tiêu đề kết quả + Thanh chuyển đổi Danh sách / Bản đồ */}
+            <View className="gap-2.5">
               <View>
-                <Text className="text-xl font-semibold text-foreground">{resultTitle}</Text>
-                <Text accessibilityLiveRegion="polite" className="mt-1 text-sm text-muted-foreground">
-                  {isLoading ? 'Đang tìm các địa điểm quanh đây…' : isError ? 'Chưa nhận được dữ liệu quán.' : `${totalFound} địa điểm được tìm thấy`}
+                <Text className="text-lg font-bold text-foreground">{resultTitle}</Text>
+                <Text accessibilityLiveRegion="polite" className="mt-0.5 text-xs text-muted-foreground">
+                  {isLoading
+                    ? 'Đang tìm các địa điểm quanh đây…'
+                    : isError
+                      ? 'Chưa nhận được dữ liệu quán.'
+                      : `${totalFound} địa điểm được tìm thấy`}
                 </Text>
               </View>
-            </View>
 
-            <View accessibilityLabel="Bản đồ các quán">
-              <RestaurantMap
-                items={restaurants}
-                center={{ lat: location.lat, lng: location.lng }}
-                radiusM={radiusM}
-                isLoading={isLoading || isRefreshing}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-                onRadiusChange={searchingArea ? undefined : setRadiusM}
-                onBoundsChange={handleBoundsChange}
-                onSearchThisArea={handleSearchThisArea}
-                canSearchThisArea={hasViewBounds}
-                isSearchingArea={searchingArea}
-                emptyTitle={isError ? 'Chưa tải được vị trí các quán' : emptyCopy.title}
-                emptyDescription={isError ? 'Thử tải lại ở phần danh sách quán.' : emptyCopy.description}
-              />
-              <View className="mt-3 flex-row items-center justify-between gap-3 px-1">
-                <Text className="flex-1 text-xs leading-5 text-muted-foreground">Vị trí và khoảng cách mang tính tham khảo.</Text>
-                <Navigation size={16} color={colors.mutedForeground} />
+              <View
+                accessibilityRole="tablist"
+                accessibilityLabel="Chế độ xem quán chay"
+                className="flex-row gap-1 rounded-2xl border border-border bg-muted/70 p-1">
+                {(
+                  [
+                    { key: 'LIST', label: `Danh sách (${totalFound})`, icon: List },
+                    { key: 'MAP', label: 'Bản đồ', icon: MapIcon },
+                  ] as const
+                ).map((item) => {
+                  const active = viewMode === item.key;
+                  const Icon = item.icon;
+                  return (
+                    <Pressable
+                      key={item.key}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: active }}
+                      onPress={() => setViewMode(item.key)}
+                      className={cn(
+                        'min-h-11 flex-1 flex-row items-center justify-center gap-1.5 rounded-xl px-3',
+                        active ? 'border border-border/60 bg-background' : 'active:bg-background/50'
+                      )}>
+                      <Icon size={16} color={active ? colors.primary : colors.mutedForeground} />
+                      <Text
+                        numberOfLines={1}
+                        className={cn(
+                          'text-xs',
+                          active ? 'font-bold text-primary' : 'font-medium text-muted-foreground'
+                        )}>
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             </View>
 
-            <View accessibilityLabel="Kết quả tìm quán" className="gap-4">
-              {isLoading ? null : isError ? (
-                <ErrorState title="Chưa tải được danh sách quán. Vui lòng thử lại." description={discoveryErrorMessage(error)} onRetry={() => void refetch()} />
-              ) : (
-                <>
-                  <ResultNotice notices={notices} />
-                  {isRefreshing ? (
-                    <View accessibilityRole="progressbar" className="flex-row items-center gap-2">
-                      <RefreshCw size={14} color={colors.mutedForeground} />
-                      <Text className="text-xs text-muted-foreground">Đang cập nhật danh sách quán…</Text>
-                    </View>
-                  ) : null}
-                  {restaurants.length === 0 ? (
-                    <View className="items-center rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-8">
-                      <Text className="text-center font-semibold text-foreground">{emptyCopy.title}</Text>
-                      <Text className="mt-1 text-center text-sm leading-5 text-muted-foreground">{emptyCopy.description}</Text>
-                      <View className="mt-4 flex-row flex-wrap justify-center gap-2">
-                        <Pressable accessibilityRole="button" onPress={() => void refetch()} className="h-11 justify-center rounded-xl border border-input bg-card px-4 active:bg-muted">
-                          <Text className="text-sm font-medium text-foreground">Thử lại</Text>
-                        </Pressable>
-                        {emptyActions.map((label) => (
-                          <Pressable key={label} accessibilityRole="button" onPress={emptyHandlers[label] ?? clearAllFilters} className="h-11 justify-center rounded-xl border border-input bg-card px-4 active:bg-muted">
-                            <Text className="text-sm font-medium text-foreground">{label}</Text>
-                          </Pressable>
-                        ))}
-                      </View>
-                    </View>
-                  ) : (
-                    <View accessibilityLabel="Danh sách quán chay" className="gap-4">
-                      {restaurants.map((restaurant) => (
-                        <RestaurantCard
-                          key={restaurant.id}
-                          restaurant={restaurant}
-                          isSelected={selectedId === restaurant.id}
-                          onSelect={setSelectedId}
-                        />
-                      ))}
-                      {hasNextPage ? (
-                        <PrimaryButton
-                          label={isFetchingNextPage ? 'Đang tải...' : `Tải thêm (${restaurants.length}/${totalFound})`}
-                          variant="outline"
-                          loading={isFetchingNextPage}
-                          onPress={() => void fetchNextPage()}
-                        />
-                      ) : null}
-                    </View>
-                  )}
-                </>
-              )}
-            </View>
+            <ResultNotice notices={notices} />
 
-            <View className="flex-row items-center justify-between gap-4 border-t border-border py-4">
+            {viewMode === 'MAP' ? (
+              <View accessibilityLabel="Bản đồ các quán">
+                <RestaurantMap
+                  items={restaurants}
+                  center={{ lat: location.lat, lng: location.lng }}
+                  radiusM={radiusM}
+                  isLoading={isLoading || isRefreshing}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  onRadiusChange={searchingArea ? undefined : setRadiusM}
+                  onBoundsChange={handleBoundsChange}
+                  onSearchThisArea={handleSearchThisArea}
+                  canSearchThisArea={hasViewBounds}
+                  isSearchingArea={searchingArea}
+                  emptyTitle={isError ? 'Chưa tải được vị trí các quán' : emptyCopy.title}
+                  emptyDescription={isError ? 'Thử tải lại ở danh sách quán.' : emptyCopy.description}
+                />
+                <View className="mt-2.5 flex-row items-center justify-between gap-3 px-1">
+                  <Text className="flex-1 text-xs leading-5 text-muted-foreground">
+                    Vị trí và khoảng cách mang tính tham khảo.
+                  </Text>
+                  <Navigation size={15} color={colors.mutedForeground} />
+                </View>
+              </View>
+            ) : (
+              <View accessibilityLabel="Kết quả tìm quán" className="gap-3.5">
+                {isLoading ? (
+                  [1, 2, 3].map((i) => (
+                    <View key={i} className="h-44 rounded-2xl border border-border bg-muted" />
+                  ))
+                ) : isError ? (
+                  <ErrorState
+                    title="Chưa tải được danh sách quán. Vui lòng thử lại."
+                    description={discoveryErrorMessage(error)}
+                    onRetry={() => void refetch()}
+                  />
+                ) : (
+                  <>
+                    {isRefreshing ? (
+                      <View accessibilityRole="progressbar" className="flex-row items-center gap-2">
+                        <RefreshCw size={14} color={colors.mutedForeground} />
+                        <Text className="text-xs text-muted-foreground">Đang cập nhật danh sách quán…</Text>
+                      </View>
+                    ) : null}
+                    {restaurants.length === 0 ? (
+                      <EmptyState
+                        title={emptyCopy.title}
+                        description={emptyCopy.description}
+                        action={
+                          <View className="flex-row flex-wrap justify-center gap-2">
+                            <Pressable
+                              accessibilityRole="button"
+                              onPress={() => void refetch()}
+                              className="h-11 justify-center rounded-xl border border-input bg-card px-4 active:bg-muted">
+                              <Text className="text-sm font-medium text-foreground">Thử lại</Text>
+                            </Pressable>
+                            {emptyActions.map((label) => (
+                              <Pressable
+                                key={label}
+                                accessibilityRole="button"
+                                onPress={emptyHandlers[label] ?? clearAllFilters}
+                                className="h-11 justify-center rounded-xl border border-input bg-card px-4 active:bg-muted">
+                                <Text className="text-sm font-medium text-foreground">{label}</Text>
+                              </Pressable>
+                            ))}
+                          </View>
+                        }
+                      />
+                    ) : (
+                      <View accessibilityLabel="Danh sách quán chay" className="gap-3.5">
+                        {restaurants.map((restaurant) => (
+                          <RestaurantCard
+                            key={restaurant.id}
+                            restaurant={restaurant}
+                            isSelected={selectedId === restaurant.id}
+                            onSelect={(id) => {
+                              setSelectedId(id);
+                              setViewMode('MAP');
+                            }}
+                          />
+                        ))}
+                        {hasNextPage ? (
+                          <PrimaryButton
+                            label={isFetchingNextPage ? 'Đang tải...' : `Tải thêm (${restaurants.length}/${totalFound})`}
+                            variant="outline"
+                            loading={isFetchingNextPage}
+                            onPress={() => void fetchNextPage()}
+                          />
+                        ) : null}
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
+            )}
+
+            <View className="flex-row items-center justify-between gap-4 border-t border-border py-3">
               <Text className="flex-1 text-sm text-muted-foreground">Bạn biết một địa điểm chay khác?</Text>
               <Link href={contributeHref} asChild>
                 <Pressable accessibilityRole="link" className="h-11 flex-row items-center gap-1">

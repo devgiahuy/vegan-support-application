@@ -119,3 +119,37 @@ test('authorNutrition keeps the author-typed numbers separate from published nut
   assert.equal(recipe.authorNutrition?.vitaminB12Mcg, 0);
   assert.equal(recipeMapper.toModel(dto({ recipe: { servings: 1, ingredients: [], steps: [] } })).authorNutrition, null);
 });
+
+test('allergyWarnings maps viewer-specific allergen and ingredient matches and ignores invalid entries', () => {
+  const recipe = recipeMapper.toModel(
+    dto({
+      recipe: {
+        servings: 2,
+        ingredients: [],
+        steps: [],
+        allergenCodes: ['SOY', 'PEANUT'],
+        allergyWarnings: [
+          { kind: 'ALLERGEN', identifier: 'PEANUT', label: 'PEANUT', ingredientNames: ['Đậu phộng rang'] },
+          { kind: 'INGREDIENT', identifier: 'ing-1', label: 'Hạt điều', ingredientNames: ['Hạt điều tươi', '  '] },
+          { kind: 'INGREDIENT', identifier: 'ing-2', label: '', ingredientNames: ['X'] },
+          null,
+        ],
+      },
+    })
+  );
+  assert.deepEqual(recipe.allergyWarnings, [
+    {
+      kind: 'ALLERGEN',
+      identifier: 'PEANUT',
+      label: 'Đậu phộng (lạc)',
+      ingredientNames: ['Đậu phộng rang'],
+    },
+    {
+      kind: 'INGREDIENT',
+      identifier: 'ing-1',
+      label: 'Hạt điều',
+      ingredientNames: ['Hạt điều tươi'],
+    },
+  ]);
+  assert.deepEqual(recipeMapper.toModel(dto()).allergyWarnings, []);
+});
