@@ -1,6 +1,28 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
-<<<<<<< HEAD
+## [2026-11-19] — Bổ sung hiển thị Chất xơ (Fiber) vào bảng phân tích dinh dưỡng nấu nướng (/recipes/:id)
+
+- **Yêu cầu:** Bảng phân tích dinh dưỡng ở trang `/recipes/:id` đang hiển thị thiếu chất xơ, kiểm tra và fix.
+- **Nguyên nhân:**
+  1. `MacroDistributionModel` và hàm `calculateMacroDistribution` trong `recipe-nutrition.mapper.ts` chỉ trích xuất Calo, Protein, Carb, Fat mà bỏ sót Chất xơ (`FIBER`/`FIBTG`/`FIB`).
+  2. `MacroDistributionBar` chỉ render 3 cột cho Đạm, Tinh bột, Béo (`grid-cols-3`), thiếu thẻ thông số Chất xơ (Fiber).
+  3. Thành phần bảng chi tiết vi chất `<NutrientListTable />` trong `recipe-nutrition-card.tsx` và `recipe-nutrition-preview-drawer.tsx` trước đó bị comment out, khiến toàn bộ danh sách vi chất và chất xơ không hiển thị trên giao diện.
+- **Đã làm:**
+  - Cập nhật `MacroDistributionModel`: Bổ sung trường `fiberGrams: number`.
+  - Cập nhật `recipe-nutrition.mapper.ts`:
+    - Trích xuất `fiberGrams` từ `perServingNutrients` thông qua các alias `FIBER`, `FIBTG`, `FIB`, `FIBRE`, `DIETARY_FIBER`.
+    - Bổ sung tên tiếng Việt dự phòng cho các mã vi chất phổ biến (`FIBER` -> `Chất xơ`).
+    - Cập nhật `createFallbackModel` gán `fiberGrams: 0`.
+  - Cập nhật `MacroDistributionBar` (`macro-distribution-bar.tsx`):
+    - Đổi layout lưới thành 4 cột `grid-cols-2 sm:grid-cols-4`.
+    - Bổ sung thẻ Chất xơ (Fiber) màu tím (`bg-purple-50/60 dark:bg-purple-950/30`, badge/dot tím, nhãn "Hỗ trợ tiêu hóa"), đồng bộ với layout chuẩn của `/meal-plans/:id` và `/meal-programs/:id`.
+  - Uncomment `<NutrientListTable />` trong `recipe-nutrition-card.tsx` và `recipe-nutrition-preview-drawer.tsx` để bảng chi tiết các vi chất và chất xơ hiển thị đầy đủ kèm nguồn gốc dữ liệu (Canonical / AI ước lượng).
+  - Cập nhật unit test `recipe-nutrition.mapper.test.ts` (13 tests pass 100%).
+- **Kiểm chứng:**
+  - `npx tsc --noEmit` đạt 0 lỗi type.
+  - Vitest: toàn bộ test suite frontend (120 test files, 933 tests) pass 100%.
+  - `git diff --check` sạch sẽ.
+
 ## [2026-11-19] — Khắc phục lỗi timeout khi gọi API generate meal plan (POST /meal-plans/generate)
 
 - **Yêu cầu:** Thiết lập thêm thời gian timeout cho endpoint tạo thực đơn tuần (generate meal plan) do request đang bị timeout.
@@ -28,12 +50,11 @@
   - `npx tsc --noEmit` đạt 0 lỗi type.
   - Vitest: 5 test suites (48 tests) của `src/features/meal-plan` pass 100%.
   - `npm run build` Next.js pass.
-=======
+
 ## [2026-11-19] — Điều hướng payOS sau thanh toán
 
 - Xác nhận VPS trả 303 tới Vercel với mã đơn. Thêm đích web/mobile tùy chọn cho đơn mới, giữ đích khi retry và khôi phục checkout. Thêm trang mở app và web fallback từ `/billing`, đồng thời giữ đúng mã đơn khi mobile nhận liên kết.
 - Mongo provisioning trên DB thử nghiệm, backend lint/typecheck/build/OpenAPI và acceptance payOS giả lập đạt. Web build, 922 test và Chrome smoke đạt. Mobile typecheck/lint, 166 test và bundle iOS/Android đạt. Chưa kiểm tra mở app trên thiết bị hoặc phát hành thay đổi.
->>>>>>> d28e7e85e5d2b61e7b8a9b0335686a1e7916bde6
 
 ## [2026-11-19] — Khôi phục đăng nhập mobile trên Device Hub qua ngrok
 

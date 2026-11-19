@@ -27,9 +27,9 @@ export function ConsentSwitch() {
         <Label className="text-sm font-semibold text-foreground">
           Gợi ý món theo hành vi của bạn
         </Label>
-        <p className="text-xs text-muted-foreground leading-relaxed">
+        <p className="text-xs leading-relaxed text-muted-foreground">
           Cho phép dùng món bạn xem, lưu, đánh giá và chủ đề quan tâm để tinh chỉnh gợi ý. Khi tắt,
-          bạn vẫn thấy gợi ý phổ biến. Phiên bản điều khoản: {consent.consentVersion || '—'}.
+          bạn vẫn thấy gợi ý phổ biến.
         </p>
       </div>
       <Switch

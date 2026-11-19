@@ -47,13 +47,21 @@ export function ContribQueueTable() {
     limit: 50,
   });
 
-  const apps = (data?.items ?? []).filter((app) =>
-    query.trim().length === 0
-      ? true
-      : `${app.applicantName} ${app.applicantEmail} ${app.organizationClaim ?? ''}`
-          .toLowerCase()
-          .includes(query.trim().toLowerCase())
-  );
+  const apps = React.useMemo(() => {
+    return (data?.items ?? [])
+      .filter((app) =>
+        query.trim().length === 0
+          ? true
+          : `${app.applicantName} ${app.applicantEmail} ${app.organizationClaim ?? ''}`
+              .toLowerCase()
+              .includes(query.trim().toLowerCase())
+      )
+      .sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeB - timeA;
+      });
+  }, [data?.items, query]);
 
   return (
     <div className="space-y-3">
@@ -147,6 +155,15 @@ export function ContribQueueTable() {
                   </TableCell>
                   <TableCell>
                     <span className="text-xs text-muted-foreground">{app.sourceLabel}</span>
+                    {app.createdAt && (
+                      <p className="text-[11px] text-muted-foreground/80">
+                        {app.createdAt.toLocaleDateString('vi-VN', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        })}
+                      </p>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge

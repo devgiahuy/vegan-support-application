@@ -18,6 +18,7 @@ export interface MacroDistributionModel {
   proteinGrams: number;
   carbsGrams: number;
   fatGrams: number;
+  fiberGrams: number;
   proteinCaloriesPercent: number;
   carbsCaloriesPercent: number;
   fatCaloriesPercent: number;

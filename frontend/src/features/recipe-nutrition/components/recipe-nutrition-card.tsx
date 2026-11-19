@@ -270,7 +270,7 @@ export function RecipeNutritionCard({
       )}
 
       {/* Bảng chi tiết vi chất */}
-      {/* <NutrientListTable nutrients={nutrition.perServingNutrients} /> */}
+      <NutrientListTable nutrients={nutrition.perServingNutrients} />
 
       {/* Footer Disclaimer & Ghi chú */}
       <div className="pt-3 border-t border-border/50 flex items-start gap-2 text-[11px] text-muted-foreground leading-relaxed">

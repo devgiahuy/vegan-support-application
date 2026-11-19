@@ -132,8 +132,8 @@ export class ModerationRepository {
     candidates.sort(
       (left, right) =>
         rank(left.status) - rank(right.status) ||
-        left.createdAt.getTime() - right.createdAt.getTime() ||
-        left.id.localeCompare(right.id),
+        right.createdAt.getTime() - left.createdAt.getTime() ||
+        right.id.localeCompare(left.id),
     );
     const page = candidates.slice((query.page - 1) * query.limit, query.page * query.limit);
     return {
@@ -513,7 +513,7 @@ export class ModerationRepository {
         transaction.report.findMany({
           where,
           include: reportInclude,
-          orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+          orderBy: [{ priority: 'asc' }, { createdAt: 'desc' }, { id: 'desc' }],
           skip: (query.page - 1) * query.limit,
           take: query.limit,
         }),

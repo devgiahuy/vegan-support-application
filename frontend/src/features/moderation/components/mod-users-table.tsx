@@ -43,7 +43,14 @@ export function ModUsersTable() {
     status: status || undefined,
     limit: 20,
   });
-  const users = data?.items ?? [];
+  const users = React.useMemo(() => {
+    const raw = data?.items ?? [];
+    return [...raw].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
+  }, [data?.items]);
 
   return (
     <div className="space-y-3">
