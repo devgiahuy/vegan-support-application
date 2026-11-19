@@ -4,6 +4,8 @@
 
 **Cập nhật 16/11/2026 (bổ sung kỹ thuật):** thêm [chiến lược tổng duyệt](07_CHIEN_LUOC_TONG_DUYET.md), [bản đồ luồng code](08_LUONG_CODE_CHI_TIET.md) và [ngân hàng câu hỏi](09_NGAN_HANG_CAU_HOI.md), đối chiếu `dev` @ `3c6c59c`, SRS 1.8, BACKEND_INTEGRATION 4.78. Ghi chú đính chính: AI recipe draft hiện `READY` (2026-11-07), không còn `IN_PROGRESS` như dòng tổng kết cũ bên dưới; scan ảnh vẫn `IN_PROGRESS`.
 
+> **ĐỌC TRƯỚC — cập nhật 19/11/2026:** dùng [Tổng ôn toàn diện](00_TONG_ON_TOAN_DIEN.md) làm tài liệu chính. Mô hình chế độ ăn đã thay đổi ngày 18/11/2026: bỏ `dietPattern`/`tradition`/lịch ăn, thay bằng bốn quyền `allowEggs`/`allowDairy`/`allowHoney`/`allowFivePungent`. Các tài liệu [01](01_SO_DO_NGHIEP_VU.md), [02](02_LUONG_NGHIEP_VU.md), [13](13_THONG_TIN_CHE_DO_AN.md), [14](14_NOI_DON_GIAN_VE_CHE_DO_AN.md) là snapshot trước thay đổi đó; không dùng phần diet pattern/tradition của chúng khi trả lời hội đồng.
+
 ## Đọc theo thứ tự
 
 1. [Sơ đồ và nguyên tắc nghiệp vụ](01_SO_DO_NGHIEP_VU.md): học thuộc tác nhân, các ranh giới an toàn và vòng đời dữ liệu.

@@ -3,6 +3,7 @@ import {
   getPantryItemIdentityKey,
   findPantryDuplicateGroups,
   isDuplicatePantryItem,
+  isExpiringSoon,
 } from '../pantry-helpers';
 import type { PantryItem } from '../../types/pantry.model';
 
@@ -92,6 +93,33 @@ describe('pantry-helpers', () => {
 
       expect(isDuplicatePantryItem(itemA, [itemA, itemB, itemC])).toBe(true);
       expect(isDuplicatePantryItem(itemC, [itemA, itemB, itemC])).toBe(false);
+    });
+  });
+
+  describe('isExpiringSoon', () => {
+    it('returns true for items with 3 days remaining or less (WARNING, ALERT, EXPIRED)', () => {
+      expect(isExpiringSoon(mockItem({ daysRemaining: 3, expiryStatus: 'WARNING' }))).toBe(true);
+      expect(isExpiringSoon(mockItem({ daysRemaining: 2, expiryStatus: 'WARNING' }))).toBe(true);
+      expect(isExpiringSoon(mockItem({ daysRemaining: 1, expiryStatus: 'ALERT' }))).toBe(true);
+      expect(isExpiringSoon(mockItem({ daysRemaining: 0, expiryStatus: 'ALERT' }))).toBe(true);
+      expect(isExpiringSoon(mockItem({ daysRemaining: -1, expiryStatus: 'EXPIRED' }))).toBe(true);
+    });
+
+    it('returns false for items with over 3 days remaining (GOOD / SAFE - green tag)', () => {
+      expect(isExpiringSoon(mockItem({ daysRemaining: 4, expiryStatus: 'SAFE' }))).toBe(false);
+      expect(isExpiringSoon(mockItem({ daysRemaining: 5, expiryStatus: 'SAFE' }))).toBe(false);
+      expect(isExpiringSoon(mockItem({ daysRemaining: 7, expiryStatus: 'SAFE' }))).toBe(false);
+      expect(isExpiringSoon(mockItem({ daysRemaining: 10, expiryStatus: 'SAFE' }))).toBe(false);
+    });
+
+    it('falls back to expiryStatus when daysRemaining is null', () => {
+      expect(isExpiringSoon(mockItem({ daysRemaining: null, expiryStatus: 'WARNING' }))).toBe(true);
+      expect(isExpiringSoon(mockItem({ daysRemaining: null, expiryStatus: 'ALERT' }))).toBe(true);
+      expect(isExpiringSoon(mockItem({ daysRemaining: null, expiryStatus: 'EXPIRED' }))).toBe(true);
+      expect(isExpiringSoon(mockItem({ daysRemaining: null, expiryStatus: 'SAFE' }))).toBe(false);
+      expect(isExpiringSoon(mockItem({ daysRemaining: null, expiryStatus: 'UNKNOWN' }))).toBe(
+        false
+      );
     });
   });
 });

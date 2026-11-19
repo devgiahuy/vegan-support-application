@@ -1,7 +1,7 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "../backend/openapi.json",
-  "generatedAt": "2026-11-18T18:49:49.102Z",
+  "source": "..\\backend\\openapi.json",
+  "generatedAt": "2026-11-19T05:52:03.158Z",
   "stats": {
     "operations": 198,
     "groups": 43,

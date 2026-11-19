@@ -62,3 +62,19 @@ export function isDuplicatePantryItem(item: PantryItem, allItems: PantryItem[]):
   }
   return false;
 }
+
+/**
+ * Kiểm tra xem nguyên liệu có thuộc nhóm sắp hết hạn hay không theo chuẩn backend:
+ * - An toàn (> 3 ngày / GOOD): không thuộc diện sắp hết hạn.
+ * - Sắp hết hạn (<= 3 ngày / WARNING, ALERT, EXPIRED): thuộc diện sắp hết hạn.
+ */
+export function isExpiringSoon(item: PantryItem): boolean {
+  if (item.daysRemaining !== null && item.daysRemaining !== undefined) {
+    return item.daysRemaining <= 3;
+  }
+  return (
+    item.expiryStatus === 'WARNING' ||
+    item.expiryStatus === 'ALERT' ||
+    item.expiryStatus === 'EXPIRED'
+  );
+}

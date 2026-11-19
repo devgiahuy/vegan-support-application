@@ -44,17 +44,30 @@ export function PantryClientView() {
   });
 
   const expiringQuery = useExpiringSoonQuery({
-    days: 7,
+    days: 3,
     limit: 100,
   });
 
-  const allItems = itemsQuery.data?.items || [];
-  const expiringItems = expiringQuery.data?.items || [];
+  const allItems = useMemo(() => itemsQuery.data?.items || [], [itemsQuery.data?.items]);
+  const expiringItems = useMemo(() => expiringQuery.data?.items || [], [expiringQuery.data?.items]);
 
   // Nhóm các nguyên liệu trùng lặp trong kho
   const duplicateGroups = useMemo(() => findPantryDuplicateGroups(allItems), [allItems]);
 
-  const displayedItems = activeTab === 'all' ? allItems : expiringItems;
+  // Lọc danh sách sắp hết hạn theo tìm kiếm và nguồn
+  const filteredExpiringItems = useMemo(() => {
+    return expiringItems.filter((item) => {
+      if (search && !item.displayName.toLowerCase().includes(search.toLowerCase())) {
+        return false;
+      }
+      if (sourceFilter !== 'ALL' && item.source !== sourceFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [expiringItems, search, sourceFilter]);
+
+  const displayedItems = activeTab === 'all' ? allItems : filteredExpiringItems;
   const isCurrentLoading = activeTab === 'all' ? itemsQuery.isLoading : expiringQuery.isLoading;
   const isCurrentError = activeTab === 'all' ? itemsQuery.isError : expiringQuery.isError;
   const handleRetry = () => {
