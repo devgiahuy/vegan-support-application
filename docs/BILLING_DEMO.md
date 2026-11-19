@@ -1,14 +1,14 @@
 # payOS billing and usage allowances
 
-Updated: 2026-10-27 (combo durations); 2026-10-14. Backend: `codex/sandbox-billing`; web/mobile clients: `codex/sandbox-billing-ui` in a separate worktree.
+Updated: 2026-11-19 (production opt-in); 2026-10-27 (combo durations); 2026-10-14. Backend: `codex/sandbox-billing`; web/mobile clients: `codex/sandbox-billing-ui` in a separate worktree.
 
 ## Scope and payment mode
 
 New purchases use payOS exclusively. Hosted checkout offers bank transfer/QR with integer VND prices. **payOS has no sandbox: transfers are real money, including when checkout is opened from this development application.** Credentialed checkout and PENDING reconciliation were verified on 2026-10-14; no bank transfer was performed. See [verification record](BILLING_PAYOS_VERIFICATION_20261014.md).
 
-One-time packages retain the existing snapshotted credits/capacity. Default trial: three fridge/receipt jobs each and Pantry baseline 20 items. Single-pack allowances accumulate without expiry. Since 2026-10-27 the combo is sold as `combo-1m` / `combo-3m` / `combo-12m`: each 30-day period grants its credits once, unused period credits expire, +50 Pantry slots apply while active, and buying while active appends (see IMPLEMENTATION_PLAN BL-20.1). Rerun `npm run prisma:push` and seed to add the new collection/validators and deactivate the old one-time `combo`. Free daily chat is consumed first; one bounded successful/partially successful scan job consumes one credit; total failure releases it. Results still require confirmation. Package purchases do not change roles or media storage.
+One-time packages retain the existing snapshotted credits/capacity. Current baseline (approved 2026-11-09): 3 free chat messages and 1 job of each scan type daily; Pantry baseline 10 items. Existing trial balances remain usable; new accounts have no one-time scan trial. Single-pack allowances accumulate without expiry. Since 2026-10-27 the combo is sold as `combo-1m` / `combo-3m` / `combo-12m`: each 30-day period grants its credits once, unused period credits expire, +50 Pantry slots apply while active, and buying while active appends (see IMPLEMENTATION_PLAN BL-20.1). Rerun `npm run prisma:push` and seed to add the new collection/validators and deactivate the old one-time `combo`. Free daily chat is consumed first; one bounded successful/partially successful scan job consumes one credit; total failure releases it. Results still require confirmation. Package purchases do not change roles or media storage.
 
-App production rollout remains disabled by configuration; subscriptions, invoices, automatic refunds, media purchases and app-store distribution remain deferred. Historical local/VNPAY orders retain their provider identity and balances, but cannot resume checkout or receive new settlements. Their routes have been removed.
+Production activation of the existing packages is user-approved 2026-11-19. BILLING_ENABLED remains opt-in; production requires all three payOS merchant keys and HTTPS public/return URLs at startup. Webhooks, checkout and reconciliation retain signature, ownership, reference/amount and grant-once checks. Recurring subscriptions, invoices, automatic refunds, media purchases and app-store distribution remain deferred. Historical local/VNPAY orders retain their provider identity and balances, but cannot resume checkout or receive new settlements. Their routes have been removed.
 
 ## Run without credentials
 
@@ -57,7 +57,7 @@ PAYOS_API_KEY=<channel-api-key>
 PAYOS_CHECKSUM_KEY=<channel-checksum-key>
 ```
 
-Remove old `BILLING_PROVIDER=sandbox|vnpay` and VNPAY settings. Blank/missing keys leave purchases unavailable. Regular backend requires `BILLING_ENABLED=true`; the isolated demo helper sets it. Configure a public HTTPS API via `BILLING_DEMO_PUBLIC_URL` (or `BILLING_PUBLIC_URL` in regular startup), and the app return via `BILLING_DEMO_RETURN_URL` / `BILLING_RETURN_URL`.
+Remove old `BILLING_PROVIDER=sandbox|vnpay` and VNPAY settings. Blank/missing keys leave purchases unavailable. Regular backend requires `BILLING_ENABLED=true`; the isolated demo helper sets it. On production, all merchant keys and HTTPS `BILLING_PUBLIC_URL`/`BILLING_RETURN_URL` are mandatory. `NODE_ENV=production` keeps secure session cookies. Configure a public HTTPS API via `BILLING_DEMO_PUBLIC_URL` (or `BILLING_PUBLIC_URL` in regular startup), and the app return via `BILLING_DEMO_RETURN_URL` / `BILLING_RETURN_URL`.
 
 Register the channel webhook URL `https://<api-host>/api/v1/billing/payos/webhook` in payOS. A signed registration sample is acknowledged without a grant. Native opens the system browser; close it to return to the app and refresh account state. Web returns to its selected order; mobile web's default checkout return is the web page, so reopen the mobile preview afterward. For mobile-only preview set the helper return URL to http://127.0.0.1:8090/billing.
 

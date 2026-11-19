@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.27
+**Version:** 4.28
 
-**Updated:** 2026-11-19
+**Updated:** 2026-11-20
 
 **Status:** Approved implementation baseline
 
@@ -40,7 +40,7 @@ The current API contract may still contain legacy Contributor subtype fields unt
 | D20 | Certificates | No certificate verification in MVP. Future evidence badges do not silently introduce Contributor permission tiers. |
 | D21 | Documentation | `docs/SRS.md` is canonical; runtime capability status stays in frontend integration docs; roadmap is separate from implementation phases. |
 | D22 | Safety | Nutrition, freshness, compatibility, BMI, and AI answers are educational support, not diagnosis or guaranteed safety. |
-| D23 | Usage billing | User-approved 2026-10-13 and payOS conversion 2026-10-14: payOS exclusively for new one-time cumulative AI usage/Pantry capacity packages and, since 2026-10-27, a non-renewing combo with 1-month/3-month/1-year durations (BL-20.1). App rollout remains development/test; payOS checkout is real money, without sandbox or mock fallback. No recurring or media-storage purchase. |
+| D23 | Usage billing | User-approved 2026-10-13 and payOS conversion 2026-10-14: payOS exclusively for new one-time cumulative AI usage/Pantry capacity packages and, since 2026-10-27, a non-renewing combo with 1-month/3-month/1-year durations (BL-20.1). Production opt-in approved 2026-11-19 with complete merchant credentials and HTTPS public/return URLs; payOS checkout is real money, without sandbox or mock fallback. No recurring or media-storage purchase. |
 | D24 | AI recipe draft | Accept ordered ingredient names and optional author-supplied title, description, servings and preparation/cooking times. Preserve supplied values and suggest missing values; return an editable draft for the existing DRAFT content flow. Cover images are supplied separately. AI output does not publish or become canonical nutrition data. Updated at user request 2026-11-07. |
 | D25 | Restaurant map | User-approved 2026-11-14: web street map uses key-free MapLibre/OpenFreeMap with all bounded discovery results together, clustered pins, distinct attribution, explicit area-search action and accessible list/chooser. Web removes pagination and diet-type filtering; radius selection defaults to 3km and is capped at 5km. SerpApi radius choices up to 5km share a bounded candidate snapshot for the same center/phrase/filters and apply exact distance locally, preserving known nearby places during partial retries. Provider/internal caps and incomplete-result notices remain. No new location persistence or verified dietary claim. |
 
@@ -421,7 +421,7 @@ Maintenance clarification 2026-10-26: titles and bodies need not be unique. Auto
 ### BL-20 — Approved usage billing extension (2026-10-13; payOS conversion 2026-10-14)
 
 - payOS checkout expires after configured TTL (default 15 minutes); expired application orders hide the checkout URL. Retired local/VNPAY checkout and notification routes are removed; the old expiry recovery behavior is historical only.
-- Billing is opt-in and app rollout remains development/test. The provider is now payOS, whose transfers are real even from a development app. Missing Client ID/API key/checksum disables purchases, without mock fallback. Historical balances/orders retain original identity. Application production rollout remains deferred.
+- Billing is opt-in. Production activation is user-approved 2026-11-19: BILLING_ENABLED=true requires Client ID, API key, checksum key and HTTPS BILLING_PUBLIC_URL/BILLING_RETURN_URL at startup. Disabled billing stays unavailable; development/test retain missing-credential graceful unavailability. Production keeps secure cookies and the same signed webhook/query verification, owner/version/idempotency checks and grant-once settlement. payOS transfers are real; there is no mock fallback. Historical balances/orders retain original identity. This approval does not add recurring billing, invoices, storage purchases or automatic refunds.
 - Signed payOS webhooks trigger an authoritative signed payment-request query. PAID with sufficient received money grants once; UNDERPAID/PROCESSING map to PENDING. Expected order amount/link/reference must match. Extra payment does not change package benefits and requires manual merchant handling. Late fully verified payment may supersede an unfulfilled terminal order; PAID never downgrades.
 - New payOS order code/link/checkout URL are persisted, distinct from application UUID. Ambiguous creates retry/recover the same code. Reconciliation uses an owner-scoped 30-second cooldown. Signed unknown webhook confirmation samples ACK without grants. Browser return/cancel claims are ignored for settlement.
 - The initiating client is snapshotted when checkout is created. Web returns to the configured HTTPS billing page with `orderId`. Installed mobile returns through that same HTTPS page with `returnTo=app`, which opens the app's billing screen for the order and provides a web fallback. Expo Go and mobile web use web checkout. Idempotent retries and provider checkout recovery reuse the original destination. Apply additive Mongo provisioning; no backfill or reseed is required.
@@ -666,3 +666,5 @@ A phase is complete only when:
 - **4.1 — 2026-10-07:** User-approved persistence replacement with MongoDB. Preserve existing API shapes, dietary constraints, authorization and state machines; move SQL checks/indexes, transactional event dispatch and concurrency controls to MongoDB/application equivalents. Fresh schema + seed is the acceptance baseline; historical PostgreSQL data is optional. See `backend/docs/MONGODB_MIGRATION.md`.
 - **4.1 — 2026-09-28:** Clarified four-macro estimated weekly planning/analysis, target provenance, non-blocking manual over-target warnings, and explicit 21-slot/unresolved behavior.
 - **4.0 — 2026-09-18:** Consolidated product decisions after Phase 11 review; added food database, cooking-aware nutrition, unified Contributor, quota, video parity, custom meals/tags, compatibility, multi-week planning, pantry, fridge and receipt workflows; expanded phases to 27; moved all deferred work into the complete Phase 2 roadmap.
+
+- **4.26 — 2026-11-19:** User explicitly approves enabling existing payOS checkout/webhook on the production VPS. Remove environment-only rejection, retain opt-in, require complete merchant keys and HTTPS URLs, preserve verification/settlement guards. No bank transfer is performed by deployment QA.

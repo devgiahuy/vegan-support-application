@@ -88,11 +88,11 @@ NGROK_AUTHTOKEN=<your-ngrok-agent-authtoken>
 NGROK_URL=https://<your-assigned-ngrok-domain>
 NGROK_UPSTREAM=http://backend:4000
 NGROK_INSPECTOR_PORT=4040
-NODE_ENV=development
+NODE_ENV=production
 BILLING_ENABLED=true
 BILLING_PROVIDER=payos
 BILLING_PUBLIC_URL=https://<your-assigned-ngrok-domain>
-BILLING_RETURN_URL=http://localhost:3000/billing
+BILLING_RETURN_URL=https://your-frontend.example/billing
 PAYOS_CLIENT_ID=<channel-client-id>
 PAYOS_API_KEY=<channel-api-key>
 PAYOS_CHECKSUM_KEY=<channel-checksum-key>
@@ -100,8 +100,7 @@ PAYOS_CHECKSUM_KEY=<channel-checksum-key>
 
 Get the agent authtoken and assigned domain from the [ngrok dashboard](https://dashboard.ngrok.com/).
 Use your actual values, not the placeholders. Compose forwards billing settings into the
-backend container. Billing opt-in requires `NODE_ENV=development` or `test`; the backend
-rejects billing in production. payOS processes real transfers even in development.
+backend container. Production billing opt-in is approved (2026-11-19). Set `BILLING_ENABLED=true`, provide all three payOS keys, and use HTTPS `BILLING_PUBLIC_URL`/`BILLING_RETURN_URL`; startup rejects incomplete production configuration. Keep `NODE_ENV=production` for secure session cookies. payOS processes real transfers even in development.
 Keep both ngrok and payOS credentials in `.env`, never in the tracked agent config.
 
 ```bash

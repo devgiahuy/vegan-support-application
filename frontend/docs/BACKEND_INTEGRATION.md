@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.84
+**Version:** 4.85
 
-**Cập nhật:** 19/11/2026
+**Cập nhật:** 20/11/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -17,6 +17,10 @@
 Audit records include existing moderation decisions, automated moderation flags, restaurant reviews and edits, AI capability toggles, billing catalog changes, and storage adjustments. Only source, action, target, actor ID/display name and occurrence time are returned. Stored reasons, emails, prompts, and before/after snapshots are excluded. Sort is time descending with stable source and ID tie-breakers. `limit` defaults to 25 and is limited to 50. Invalid input returns `VALIDATION_ERROR` (400). Authentication is required (401) and non-admin users receive `FORBIDDEN` (403). Apply `npm run prisma:push` for six additive indexes. Existing records and seeds require no data migration.
 
 Changelog 2026-11-19 (4.84): Dashboard audit tab reads the real API with loading, pagination, empty and retry states. Backend lint/typecheck/build/OpenAPI, isolated Mongo provisioning and role/pagination smoke, Swagger sync, web typecheck/tests/build, and authenticated Chromium verification passed locally.
+
+## payOS production opt-in — 2026-11-19 (VPS release, READY)
+
+User explicitly authorizes production activation of existing payOS checkout/webhook/reconciliation. BILLING_ENABLED remains the opt-in switch. Production startup requires PAYOS_CLIENT_ID, PAYOS_API_KEY, PAYOS_CHECKSUM_KEY and HTTPS BILLING_PUBLIC_URL/BILLING_RETURN_URL; NODE_ENV remains production with secure cookies. BILLING_DISABLED (503) now means the feature is off, rather than an environment-only ban. Missing/invalid provider connectivity and invalid signature codes remain unchanged. No route/DTO/enum/auth/state/schema/seed or web/mobile payload migration; consumers already use catalog.enabled and existing errors. No bank transfer or checkout is performed by deployment QA. Backend lint/typecheck/build/OpenAPI, catalog sync and existing billing acceptance pass, including production credential/HTTPS guards, signed unknown samples, replay and disabled billing. The user requested no additional payOS tests after acceptance. Live merchant registration and real transfer are not run. VPS activation is complete on image vps-89ac87b; production/billing/key presence and IP/ngrok deployment health are verified. Existing web/mobile catalog/error consumers require no payload migration. This supersedes historical production-billing rejection notes only; other capability status records retain their scope.
 
 ## Native mobile street map — 2026-11-19 (4.83, consumer-only)
 
@@ -1865,3 +1869,5 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 | PROGRAM_HORIZON_INVALID   | 400  | Horizon weeks must be between 2 and 12      |
 | PROGRAM_ALREADY_CONFIRMED | 409  | Confirmed programs cannot be edited         |
 | PROGRAM_VERSION_MISMATCH  | 409  | Concurrent program modification detected    |
+
+Changelog 2026-11-19 (4.82): user-approved production payOS opt-in with required merchant keys/HTTPS URLs, unchanged signature/settlement guarantees and disabled-billing errors; existing acceptance passes. No new consumer payload/schema migration. Additional payOS tests stopped at user request.

@@ -53210,6 +53210,7 @@
     "/api/v1/billing/products": {
       "get": {
         "summary": "List packages and payOS checkout availability",
+        "description": "Purchases are opt-in via BILLING_ENABLED, including production. Production activation requires all three payOS merchant credentials and HTTPS public/return URLs. Payment settlement always requires verified provider evidence.",
         "tags": [
           "Billing"
         ],
@@ -53315,6 +53316,7 @@
     "/api/v1/entitlements/me": {
       "get": {
         "summary": "Owned allowances, Pantry capacity and recent ledger",
+        "description": "Purchases are opt-in via BILLING_ENABLED, including production. Production activation requires all three payOS merchant credentials and HTTPS public/return URLs. Payment settlement always requires verified provider evidence.",
         "tags": [
           "Billing"
         ],
@@ -53420,6 +53422,7 @@
     "/api/v1/billing/orders": {
       "get": {
         "summary": "Paginated owned payment history",
+        "description": "Purchases are opt-in via BILLING_ENABLED, including production. Production activation requires all three payOS merchant credentials and HTTPS public/return URLs. Payment settlement always requires verified provider evidence.",
         "tags": [
           "Billing"
         ],
@@ -53536,7 +53539,7 @@
       },
       "post": {
         "summary": "Create idempotent package order with web or mobile payOS return",
-        "description": "Confirm the displayed product version for new orders. checkoutClient defaults to web; mobile adds returnTo=app to the configured billing URL. An idempotent retry retains the original return destination.",
+        "description": "Purchases are opt-in via BILLING_ENABLED, including production. Production activation requires all three payOS merchant credentials and HTTPS public/return URLs. Payment settlement always requires verified provider evidence. Confirm the displayed product version for new orders. checkoutClient defaults to web; mobile adds returnTo=app to the configured billing URL. An idempotent retry retains the original return destination.",
         "tags": [
           "Billing"
         ],
@@ -53697,6 +53700,7 @@
     "/api/v1/billing/orders/{id}": {
       "get": {
         "summary": "Read owned order; return page does not settle it",
+        "description": "Purchases are opt-in via BILLING_ENABLED, including production. Production activation requires all three payOS merchant credentials and HTTPS public/return URLs. Payment settlement always requires verified provider evidence.",
         "tags": [
           "Billing"
         ],
@@ -53813,7 +53817,7 @@
     "/api/v1/billing/orders/{id}/reconcile": {
       "post": {
         "summary": "Recover same payOS checkout if needed, verify query and settle once; 30-second throttle",
-        "description": "Checkout recovery uses the original order’s return destination.",
+        "description": "Purchases are opt-in via BILLING_ENABLED, including production. Production activation requires all three payOS merchant credentials and HTTPS public/return URLs. Payment settlement always requires verified provider evidence. Checkout recovery uses the original order’s return destination.",
         "tags": [
           "Billing"
         ],
@@ -53951,7 +53955,7 @@
           "Billing"
         ],
         "summary": "Verify signed payOS notification and authoritative payment query; grant once",
-        "description": "Channel confirmation samples may omit the unsigned success envelope field. Data and signature remain required; verified unknown samples are acknowledged without granting benefits.",
+        "description": "Requires BILLING_ENABLED, including on production deployments with configured merchant credentials and HTTPS URLs. Channel confirmation samples may omit the unsigned success envelope field. Data and signature remain required; verified unknown samples are acknowledged without granting benefits. Disabled billing returns BILLING_DISABLED (503); invalid signatures are rejected.",
         "security": [],
         "requestBody": {
           "content": {
