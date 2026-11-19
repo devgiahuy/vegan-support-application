@@ -33079,6 +33079,108 @@
           "meta"
         ],
         "additionalProperties": false
+      },
+      "AdminAuditPageResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z0-9_-]{1,64}$"
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "AI_CONTROL",
+                        "AI_FLAG",
+                        "BILLING",
+                        "MODERATION",
+                        "RESTAURANT",
+                        "STORAGE"
+                      ]
+                    },
+                    "action": {
+                      "type": "string"
+                    },
+                    "targetType": {
+                      "type": "string"
+                    },
+                    "targetId": {
+                      "type": "string"
+                    },
+                    "actor": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "displayName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "displayName"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "occurredAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "source",
+                    "action",
+                    "targetType",
+                    "targetId",
+                    "actor",
+                    "occurredAt"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "nextCursor": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 112,
+                "description": "Opaque continuation token returned by the preceding page"
+              }
+            },
+            "required": [
+              "items",
+              "nextCursor"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -69628,6 +69730,90 @@
           },
           "422": {
             "description": "Invalid input or AI_GOVERNANCE_WINDOW_INVALID / AI_PROVIDER_NOT_CONFIGURED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/logs": {
+      "get": {
+        "tags": [
+          "Admin Insights"
+        ],
+        "operationId": "listAdminAuditLogs",
+        "summary": "Read the recent administrative and automated moderation audit timeline",
+        "description": "Newest first. Pass nextCursor to read older entries. Includes recorded moderation, AI flags and controls, restaurant decisions and edits, billing catalog changes and storage adjustments. Only event metadata and actor display names are returned.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 25
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 112,
+              "description": "Opaque continuation token returned by the preceding page"
+            },
+            "required": false,
+            "description": "Opaque continuation token returned by the preceding page",
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit log page and optional continuation token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAuditPageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor, limit or query parameter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator role required",
             "content": {
               "application/json": {
                 "schema": {

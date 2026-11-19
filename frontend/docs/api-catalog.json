@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "../backend/openapi.json",
-  "generatedAt": "2026-11-19T10:51:32.093Z",
+  "generatedAt": "2026-11-19T15:48:47.718Z",
   "stats": {
-    "operations": 198,
+    "operations": 199,
     "groups": 43,
-    "schemas": 164
+    "schemas": 165
   },
   "operations": [
     {
@@ -9440,6 +9440,34 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "422": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/logs",
+      "group": "Admin Insights",
+      "summary": "Read the recent administrative and automated moderation audit timeline",
+      "operationId": "listAdminAuditLogs",
+      "params": [
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "cursor",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "AdminAuditPageResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
       }
     },
     {

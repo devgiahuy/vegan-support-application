@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { requireRole } from '../../common/auth/authorization.js';
 import { getValidatedQuery, validateQuery } from '../../common/validation/validate-request.js';
 import type { AuthenticationMiddleware } from '../auth/authentication.middleware.js';
+import { auditQuerySchema, type AuditQuery } from './admin-audit.schemas.js';
 import type { AdminInsightsService } from './admin-insights.service.js';
 import {
   revenueQuerySchema,
@@ -17,6 +18,10 @@ export function createAdminInsightsRouter(
 ): Router {
   const router = Router();
   const admin = [authentication.authenticate, requireRole(Role.ADMIN)];
+  router.get('/logs', ...admin, validateQuery(auditQuerySchema), async (req, res) => {
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json({ success: true, data: await service.audit(getValidatedQuery<AuditQuery>(req)) });
+  });
   router.get('/billing/revenue', ...admin, validateQuery(revenueQuerySchema), async (req, res) => {
     res.setHeader('Cache-Control', 'private, no-store');
     res.json({

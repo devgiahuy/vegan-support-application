@@ -1,10 +1,12 @@
 # Backend Implementation Phases
 
-**Version:** 3.29
+**Version:** 3.30
 
 **Updated:** 2026-11-19
 
 **Stack:** Node.js · Express · TypeScript · MongoDB replica set · Prisma · Zod · OpenAPI
+
+**Admin audit timeline — 2026-11-19 (READY):** Admin-only `GET /api/v1/admin/logs` reads six existing audit sources in one cursor-paginated timeline. The read model exposes event metadata and actor display names. Mongo provisioning adds six indexes and preserves existing records. Backend lint, typecheck, build, OpenAPI sync, and isolated HTTP smoke passed. The smoke covered authentication, role restrictions, invalid input, tie ordering, pagination, redaction, and the empty response. The web dashboard consumes the endpoint.
 
 **Direct dietary allowances maintenance — 2026-11-19 (READY):** Approved dev-only replacement of pattern/tradition/calendar by eggs/dairy/honey/five-pungent allowances and reviewed transitive food groups. No legacy-data/client compatibility. Backend, web and mobile implement impact preview, keep-with-warnings, selective replacement preview/apply, live compatibility and linked confirmed-program DRAFT revisions. Mongo provisioning/validators/seed, backend lint/typecheck/build/OpenAPI, existing meal-plan/analysis acceptance, all 16 combinations and live keep/repair/no-candidates/historical/catalog-conflict/idempotency/confirmed-revision checks pass. Web consumer gates and authenticated browser QA pass; mobile typecheck/lint/166 tests/iOS export pass. Authenticated native iOS/Android E2E remains unrun due missing Simulator.app GUI/native driver and Android tooling; bundle success is not native E2E proof. See docs/DIETARY_PREFERENCES_VERIFICATION.md. No new numbered phase or backend test infrastructure; unrelated phase statuses remain unchanged.
 
