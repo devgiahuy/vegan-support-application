@@ -21,6 +21,9 @@
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
@@ -55,14 +58,25 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Cho phép VeggieConnect truy cập vị trí để tìm quán chay gần bạn."
         }
-      ]
+      ],
+      "@maplibre/maplibre-react-native"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": false
     },
     "extra": {
-      "router": {}
+      "router": {},
+      "eas": {
+        "projectId": "3e88062c-f4e6-4864-9458-00305dc0ee61"
+      }
+    },
+    "owner": "huypg",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/3e88062c-f4e6-4864-9458-00305dc0ee61"
     }
   }
 }

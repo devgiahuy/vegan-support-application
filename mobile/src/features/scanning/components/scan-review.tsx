@@ -235,14 +235,14 @@ export function ScanReview({ job, busy, error, reviewDecision, onReviewDecision,
                   {draft.rejected && !fridge ? <View className="rounded-md bg-destructive/10 px-1.5 py-0.5"><Text className="text-[11px] text-destructive">Đã loại bỏ</Text></View> : null}
                   {!draft.rejected && !fridge && isScanDraftDirty(draft) ? <View className="rounded-md border border-input px-1.5 py-0.5"><Text className="text-[11px] text-primary">Đã sửa</Text></View> : null}
                   {candidate.ingredient && !draft.rejected ? (
-                    <View className="flex-row items-center gap-1 rounded-full border border-emerald-200/60 bg-emerald-50 px-2 py-0.5 dark:border-emerald-800/60 dark:bg-emerald-950/40"><Check size={12} color={colors.primary} /><Text className="text-[11px] text-emerald-700 dark:text-emerald-300">Khớp: {candidate.ingredient.name}</Text></View>
+                    <View className="max-w-full flex-row items-center gap-1 rounded-full border border-emerald-200/60 bg-emerald-50 px-2 py-0.5 dark:border-emerald-800/60 dark:bg-emerald-950/40"><Check size={12} color={colors.primary} /><Text className="shrink text-[11px] text-emerald-700 dark:text-emerald-300">Khớp: {candidate.ingredient.name}</Text></View>
                   ) : null}
                   {!fridge && candidate.duplicateOfJobId ? <View className="rounded-md bg-amber-500/10 px-1.5 py-0.5"><Text className="text-[11px] text-amber-700 dark:text-amber-400">Đã có trong hóa đơn khác</Text></View> : null}
                   {!fridge && candidate.classification === 'READY_TO_EAT' ? <View className="rounded-md bg-muted px-1.5 py-0.5"><Text className="text-[11px] text-muted-foreground">Đồ ăn sẵn</Text></View> : null}
-                  {!fridge && candidate.classification === 'UNCERTAIN' ? <View className="rounded-md bg-amber-500/10 px-1.5 py-0.5"><Text className="text-[11px] text-amber-700 dark:text-amber-400">Chưa chắc là thực phẩm{candidate.classificationReason ? ` — ${candidate.classificationReason}` : ''}</Text></View> : null}
+                  {!fridge && candidate.classification === 'UNCERTAIN' ? <View className="max-w-full rounded-md bg-amber-500/10 px-1.5 py-0.5"><Text className="shrink text-[11px] text-amber-700 dark:text-amber-400">Chưa chắc là thực phẩm{candidate.classificationReason ? ` — ${candidate.classificationReason}` : ''}</Text></View> : null}
                   {fridge && !candidate.ingredient ? <Text className="text-[11px] text-muted-foreground">Độ tin cậy: {Math.round(candidate.confidence * 100)}%</Text> : null}
                   {fridge && candidate.freshness ? <Text className="text-[11px] text-warning">· {candidate.freshness}</Text> : null}
-                  {candidate.uncertainty && !draft.rejected ? <View className="flex-row items-center gap-1"><CircleAlert size={12} color={colors.cta} /><Text className="text-[11px] text-warning">{candidate.uncertainty}</Text></View> : null}
+                  {candidate.uncertainty && !draft.rejected ? <View className="max-w-full flex-row items-center gap-1"><CircleAlert size={12} color={colors.cta} /><Text className="shrink text-[11px] text-warning">{candidate.uncertainty}</Text></View> : null}
                 </View>
               </View>
               <View className="flex-row items-end gap-2">
