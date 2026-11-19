@@ -12,7 +12,6 @@ import {
 import { Link, type Href } from "expo-router";
 import { Compass, History, Plus, Sparkles } from "lucide-react-native";
 
-import { useKeyboardVisible } from "@/components/layout/bottom-tab-bar";
 import { SiteHeader } from "@/components/layout/site-header";
 import { ErrorState, LoadingState } from "@/components/shared/state-views";
 import { ChatWelcome } from "@/features/chat/components/chat-welcome";
@@ -132,7 +131,6 @@ export default function AssistantScreen() {
     }
   };
 
-  const keyboardVisible = useKeyboardVisible();
   const quotaExhausted = sendState.quota?.exhausted === true;
   const composerDisabled = sendState.maintenance || quotaExhausted;
 
@@ -164,25 +162,30 @@ export default function AssistantScreen() {
           </View>
           <Pressable
             onPress={() => setSessionsOpen(true)}
+            accessibilityRole="button"
             accessibilityLabel="Danh sách đoạn chat"
-            className="h-9 w-9 items-center justify-center rounded-full bg-muted"
+            className="h-11 w-11 items-center justify-center rounded-full bg-muted active:opacity-80"
           >
-            <History size={16} color={colors.foreground} />
+            <History size={18} color={colors.foreground} />
           </Pressable>
           <Pressable
             onPress={startNewChat}
+            accessibilityRole="button"
             accessibilityLabel="Đoạn chat mới"
-            className="h-9 w-9 items-center justify-center rounded-full bg-primary"
+            className="h-11 w-11 items-center justify-center rounded-full bg-primary active:opacity-80"
           >
-            <Plus size={16} color={colors.primaryForeground} />
+            <Plus size={18} color={colors.primaryForeground} />
           </Pressable>
         </View>
 
         <View className="flex-row items-center justify-between gap-2">
           <QuotaPill quota={sendState.quota} />
           <Link href={"/ai-knowledge" as Href} asChild>
-            <Pressable className="ml-auto flex-row items-center gap-1.5 rounded-full border border-border px-3 py-1.5">
-              <Compass size={12} color={colors.primary} />
+            <Pressable
+              accessibilityRole="link"
+              className="ml-auto min-h-11 flex-row items-center gap-1.5 rounded-full border border-border px-3.5 py-2 active:bg-muted"
+            >
+              <Compass size={13} color={colors.primary} />
               <Text className="text-xs font-semibold text-primary">
                 Khám phá tri thức AI
               </Text>
@@ -244,10 +247,7 @@ export default function AssistantScreen() {
           ) : null}
         </ScrollView>
 
-        {/* Nút "Thêm" của thanh tab nổi lên 24dp phía trên thanh nên chừa chỗ để không che lời nhắc; khi bàn phím mở thì thanh tab ẩn. */}
-        <View
-          className={`gap-2 border-t border-border bg-background px-4 pt-2.5 ${keyboardVisible ? "pb-3" : "pb-9"}`}
-        >
+        <View className="gap-2 border-t border-border bg-background px-4 pb-3 pt-2.5">
           <Composer
             isStreaming={sendState.isStreaming}
             disabled={composerDisabled}

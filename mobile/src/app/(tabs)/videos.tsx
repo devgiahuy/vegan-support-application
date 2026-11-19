@@ -1,16 +1,18 @@
 import * as React from 'react';
-import { Alert, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { PlayCircle, Plus, Search, Video } from 'lucide-react-native';
+import { Plus, Search, X } from 'lucide-react-native';
 
+import { ExploreContentTabs } from '@/components/layout/explore-content-tabs';
 import { SiteScreen } from '@/components/layout/site-screen';
-import { PrimaryButton } from '@/components/ui/primary-button';
+import { EmptyState, ErrorState } from '@/components/shared/state-views';
+import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { CategoryType } from '@/common/enums';
 import { DropdownField } from '@/components/ui/dropdown-field';
+import { PrimaryButton } from '@/components/ui/primary-button';
 import { buildCategoryOptions } from '@/features/category/utils/category-options';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { VideoCard } from '@/features/video/components/video-card';
-import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { useInfiniteVideosQuery } from '@/features/video/queries/video.queries';
 import { useIconColors } from '@/lib/theme-colors';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -62,43 +64,45 @@ export default function VideosScreen() {
     router.push('/videos/new');
   };
 
-  return (
-    <SiteScreen>
-      <View className="gap-6 px-5 pt-4">
-        <View className="rounded-3xl border border-primary/20 bg-primary/10 p-5">
-          <View className="flex-row items-center gap-1.5 self-start rounded-full bg-primary/20 px-2.5 py-1">
-            <PlayCircle size={13} color={colors.primary} />
-            <Text className="text-xs font-semibold text-primary">Video nấu ăn chay</Text>
-          </View>
-          <Text className="mt-3 text-2xl font-extrabold tracking-tight text-foreground">
-            Học nấu món chay bằng video thực tế
-          </Text>
-          <Text className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Xem các video hướng dẫn nấu ăn chay công khai từ cộng đồng VeggieConnect, kèm tóm tắt công thức khi có sẵn.
-          </Text>
-          <View className="mt-3 flex-row items-center gap-2 self-start rounded-full bg-background/70 px-3 py-1.5">
-            <Video size={14} color={colors.primary} />
-            <Text className="text-xs font-semibold text-foreground">{totalItems} video hướng dẫn đang có sẵn</Text>
-          </View>
-          <View className="mt-4 gap-2.5">
-            <PrimaryButton
-              label="Đăng video mới"
-              icon={<Plus size={16} color={colors.primaryForeground} />}
-              onPress={goToCreateVideo}
-            />
-          </View>
-        </View>
+  const headerAction = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Đăng video mới"
+      onPress={goToCreateVideo}
+      className="h-10 flex-row items-center gap-1 rounded-full bg-primary px-3.5 active:opacity-90">
+      <Plus size={15} color={colors.primaryForeground} />
+      <Text numberOfLines={1} style={{ flexShrink: 0 }} className="text-xs font-semibold text-primary-foreground">
+        Đăng video
+      </Text>
+    </Pressable>
+  );
 
-        <View className="flex-row items-center gap-2 rounded-2xl border border-input bg-card px-3.5">
-          <Search size={16} color={colors.mutedForeground} />
+  return (
+    <SiteScreen onRefresh={() => refetchVideos()} headerRight={headerAction}>
+      <View className="gap-3 px-5 pt-3.5">
+        {/* Tìm kiếm có nút xóa nhanh ở đầu */}
+        <View className="h-12 flex-row items-center gap-2 rounded-2xl border border-input bg-card pl-3.5 pr-1.5">
+          <Search size={18} color={colors.primary} />
           <TextInput
             value={query}
             onChangeText={setQuery}
             placeholder="Tìm video, món ăn, nguyên liệu..."
             placeholderTextColor={colors.mutedForeground}
-            className="h-11 flex-1 text-sm text-foreground"
+            returnKeyType="search"
+            className="h-full flex-1 text-sm text-foreground"
           />
+          {query.length > 0 ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Xóa từ khóa"
+              onPress={() => setQuery('')}
+              className="h-11 w-11 items-center justify-center rounded-full active:bg-muted">
+              <X size={16} color={colors.mutedForeground} />
+            </Pressable>
+          ) : null}
         </View>
+
+        <ExploreContentTabs />
 
         <DropdownField
           label="Chủ đề"
@@ -109,31 +113,39 @@ export default function VideosScreen() {
           onRetry={() => void refetchCategories()}
         />
 
+        <View className="flex-row items-center justify-between gap-2">
+          <Text className="text-xs font-semibold text-muted-foreground">{totalItems} video</Text>
+          {hasFilters ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={resetFilters}
+              hitSlop={6}
+              className="min-h-8 flex-row items-center gap-1 px-1">
+              <X size={13} color={colors.primary} />
+              <Text className="text-xs font-semibold text-primary">Xóa bộ lọc</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
         <View className="gap-4">
           {isVideosLoading ? (
             [1, 2, 3].map((i) => <View key={i} className="h-72 rounded-2xl border border-border bg-muted" />)
           ) : isVideosError ? (
-            <View className="items-center rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
-              <Text className="font-semibold text-destructive">Không thể tải danh sách video.</Text>
-              <Text className="mt-1 text-center text-sm text-muted-foreground">
-                Đã có lỗi xảy ra khi kết nối tới máy chủ. Vui lòng thử lại.
-              </Text>
-              <View className="mt-4">
-                <PrimaryButton label="Thử lại" variant="outline" onPress={() => void refetchVideos()} />
-              </View>
-            </View>
+            <ErrorState
+              title="Không thể tải danh sách video."
+              description="Đã có lỗi xảy ra khi kết nối tới máy chủ. Vui lòng thử lại."
+              onRetry={() => void refetchVideos()}
+            />
           ) : videos.length === 0 ? (
-            <View className="items-center rounded-2xl border border-dashed border-border p-8">
-              <Text className="text-lg font-bold text-foreground">Không tìm thấy video phù hợp</Text>
-              <Text className="mt-1 text-center text-sm text-muted-foreground">
-                Hãy thử từ khóa khác hoặc xóa bộ lọc chủ đề để xem nhiều video hơn.
-              </Text>
-              {hasFilters ? (
-                <View className="mt-4">
+            <EmptyState
+              title="Không tìm thấy video phù hợp"
+              description="Hãy thử từ khóa khác hoặc xóa bộ lọc chủ đề để xem nhiều video hơn."
+              action={
+                hasFilters ? (
                   <PrimaryButton label="Đặt lại bộ lọc" variant="outline" onPress={resetFilters} />
-                </View>
-              ) : null}
-            </View>
+                ) : undefined
+              }
+            />
           ) : (
             <>
               {videos.map((video) => (

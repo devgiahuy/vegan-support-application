@@ -4,19 +4,21 @@ import { Alert, Pressable, Switch, Text, TextInput, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
 import {
   Camera,
-  ChevronLeft,
-  ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Info,
   Merge,
   Plus,
   Receipt,
   Search,
   ShoppingCart,
+  X,
   type LucideIcon,
 } from 'lucide-react-native';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/state-views';
 import { DropdownField, type DropdownOption } from '@/components/ui/dropdown-field';
+import { PaginationBar } from '@/components/ui/pagination-bar';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { PantryAdjustmentSheet } from '@/features/pantry/components/pantry-adjustment-sheet';
 import { PantryItemCard } from '@/features/pantry/components/pantry-item-card';
@@ -44,7 +46,6 @@ import { SCANS_ENABLED } from '@/features/scanning/lib/scan-access';
 type Tab = 'all' | 'expiring' | 'expired';
 type SourceFilter = 'ALL' | PantryItemSource;
 
-/** Số ngày tới được coi là "sắp hết hạn" (khớp `GET /pantry/items/expiring-soon`, mặc định 7 ngày). */
 const EXPIRING_DAYS = 7;
 const PAGE_SIZE = 20;
 
@@ -59,14 +60,12 @@ const SOURCE_OPTIONS: DropdownOption<SourceFilter>[] = [
   { value: 'RECEIPT', label: 'Quét hóa đơn', shortLabel: 'Hóa đơn' },
 ];
 
-/** Ngày `YYYY-MM-DD` theo UTC cách hôm nay `offsetDays` ngày — cùng mốc "hôm nay" mà backend dùng để tính hạn. */
 function utcDay(offsetDays: number): string {
   const now = new Date();
   const base = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   return new Date(base + offsetDays * 86_400_000).toISOString().slice(0, 10);
 }
 
-/** Điều kiện lọc theo hạn dùng của từng tab (chỉ tính mục đã xác nhận ở hai tab theo hạn). */
 function tabFilters(tab: Tab): PantryListFilters {
   if (tab === 'expiring') {
     return {
@@ -79,7 +78,6 @@ function tabFilters(tab: Tab): PantryListFilters {
   return {};
 }
 
-/** Nút thao tác nhanh dạng ô dọc (icon trên, nhãn dưới); `flex-1` để các nút chia đều một hàng. */
 function HeaderAction({
   label,
   icon: Icon,
@@ -98,12 +96,12 @@ function HeaderAction({
       accessibilityLabel={label}
       onPress={onPress}
       className={cn(
-        'min-h-[60px] flex-1 items-center justify-center gap-1 rounded-2xl border px-1 py-2',
+        'min-h-[64px] flex-1 items-center justify-center gap-1.5 rounded-2xl border px-1.5 py-2 active:opacity-80',
         active ? 'border-primary bg-primary/10' : 'border-input bg-card'
       )}
     >
       <Icon size={18} color={active ? colors.primary : colors.foreground} />
-      <Text numberOfLines={1} className="text-[11px] font-semibold text-foreground">
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} className="text-[11px] font-semibold text-foreground">
         {label}
       </Text>
     </Pressable>
@@ -137,6 +135,7 @@ export default function PantryScreen() {
   const [source, setSource] = React.useState<SourceFilter>('ALL');
   const [page, setPage] = React.useState(1);
   const [includeZero, setIncludeZero] = React.useState(false);
+  const [safetyExpanded, setSafetyExpanded] = React.useState(false);
   const [creating, setCreating] = React.useState(false);
   const [active, setActive] = React.useState<{
     item: PantryItem;
@@ -158,7 +157,6 @@ export default function PantryScreen() {
     },
     authenticated
   );
-  // Số lượng hiển thị trên 3 tab: lấy `metadata.totalItems` của truy vấn 1 mục, không phụ thuộc ô tìm kiếm/bộ lọc nguồn.
   const allCount = usePantryItemsQuery({ page: 1, limit: 1, ...tabFilters('all') }, authenticated);
   const expiringCount = usePantryItemsQuery(
     { page: 1, limit: 1, ...tabFilters('expiring') },
@@ -220,18 +218,19 @@ export default function PantryScreen() {
     setSelected([]);
   };
 
-  if (!authenticated)
+  if (!authenticated) {
     return (
-      <SiteScreen>
+      <SiteScreen title="Tủ bếp gia đình">
         <View className="gap-4 p-5">
           <Text className="text-xl font-bold text-foreground">Tủ bếp gia đình</Text>
-          <Text className="text-muted-foreground">Đăng nhập để quản lý nguyên liệu cá nhân.</Text>
+          <Text className="text-sm text-muted-foreground">Đăng nhập để quản lý nguyên liệu cá nhân.</Text>
           <Link href="/(auth)/login" asChild>
             <PrimaryButton label="Đăng nhập" />
           </Link>
         </View>
       </SiteScreen>
     );
+  }
 
   const emptyText: Record<Tab, { title: string; description: string }> = {
     all: {
@@ -249,25 +248,10 @@ export default function PantryScreen() {
   };
 
   return (
-    <SiteScreen>
-      <View className="gap-4 px-5 pt-4">
-        <AllowanceNotice />
-        <View className="flex-row items-start gap-2.5 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3.5">
-          <Info size={16} color="#d97706" />
-          <View className="flex-1">
-            <Text className="text-sm font-bold text-amber-700">
-              Khuyến cáo quản lý an toàn thực phẩm
-            </Text>
-            <Text className="mt-1 text-xs leading-relaxed text-foreground">
-              Hạn sử dụng và ghi chú độ tươi là các quan sát do bạn ghi nhận hoặc thu thập từ bao
-              bì. Hệ thống không thay thế việc kiểm tra màu sắc, mùi vị và cảm quan thực tế của thực
-              phẩm trước khi chế biến nhằm đảm bảo an toàn vệ sinh tối đa.
-            </Text>
-          </View>
-        </View>
-
+    <SiteScreen title="Tủ bếp gia đình" onRefresh={() => query.refetch()}>
+      <View className="gap-3.5 px-5 pt-4">
         <View>
-          <Text className="text-3xl font-bold tracking-tight text-foreground">Tủ bếp gia đình</Text>
+          <Text className="text-2xl font-bold tracking-tight text-foreground">Tủ bếp gia đình</Text>
           <Text className="mt-1 text-sm leading-relaxed text-muted-foreground">
             Quản lý nguyên liệu hiện có, theo dõi hạn sử dụng và kiểm soát tồn kho.
           </Text>
@@ -275,9 +259,11 @@ export default function PantryScreen() {
 
         <PrimaryButton
           label="Thêm nguyên liệu"
+          iconPosition="left"
           icon={<Plus size={18} color={colors.primaryForeground} />}
           onPress={() => setCreating(true)}
         />
+
         <View className="flex-row gap-2">
           {SCANS_ENABLED ? (
             <>
@@ -293,12 +279,38 @@ export default function PantryScreen() {
             <HeaderAction label="Cần mua" icon={ShoppingCart} onPress={() => undefined} />
           </Link>
           <HeaderAction
-            label="Gộp trùng lặp"
+            label="Gộp trùng"
             icon={Merge}
             active={selectMode}
             onPress={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
           />
         </View>
+
+        {/* Thanh khuyến cáo an toàn thực phẩm thu gọn — chạm để xem đầy đủ */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded: safetyExpanded }}
+          onPress={() => setSafetyExpanded((v) => !v)}
+          className="rounded-2xl border border-amber-500/35 bg-amber-500/10 px-3.5 py-2.5 active:opacity-85">
+          <View className="min-h-8 flex-row items-center gap-2">
+            <Info size={16} color="#d97706" />
+            <Text className="flex-1 text-xs font-bold text-amber-800 dark:text-amber-300">
+              Khuyến cáo an toàn thực phẩm
+            </Text>
+            {safetyExpanded ? (
+              <ChevronUp size={16} color="#d97706" />
+            ) : (
+              <ChevronDown size={16} color="#d97706" />
+            )}
+          </View>
+          {safetyExpanded ? (
+            <Text className="mt-2 text-xs leading-relaxed text-foreground">
+              Hạn sử dụng và ghi chú độ tươi là các quan sát do bạn ghi nhận hoặc thu thập từ bao bì. Hệ thống không thay thế việc kiểm tra màu sắc, mùi vị và cảm quan thực tế của thực phẩm trước khi chế biến nhằm đảm bảo an toàn vệ sinh tối đa.
+            </Text>
+          ) : null}
+        </Pressable>
+
+        <AllowanceNotice />
 
         {selectMode ? (
           <View className="gap-2 rounded-2xl border border-primary/30 bg-primary/5 p-3.5">
@@ -324,8 +336,9 @@ export default function PantryScreen() {
           </View>
         ) : null}
 
+        {/* Tìm kiếm & Nguồn */}
         <View className="flex-row items-stretch gap-2">
-          <View className="h-[52px] flex-1 flex-row items-center gap-2 rounded-xl border border-input bg-card px-3.5">
+          <View className="h-[52px] flex-1 flex-row items-center gap-2 rounded-xl border border-input bg-card pl-3.5 pr-1">
             <Search size={16} color={colors.mutedForeground} />
             <TextInput
               value={search}
@@ -337,6 +350,18 @@ export default function PantryScreen() {
               placeholderTextColor={colors.mutedForeground}
               className="flex-1 text-sm text-foreground"
             />
+            {search.length > 0 ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Xóa tìm kiếm"
+                onPress={() => {
+                  setSearch('');
+                  resetView();
+                }}
+                className="h-10 w-10 items-center justify-center rounded-full">
+                <X size={15} color={colors.mutedForeground} />
+              </Pressable>
+            ) : null}
           </View>
           <DropdownField
             className="w-[116px]"
@@ -350,7 +375,8 @@ export default function PantryScreen() {
           />
         </View>
 
-        <View className="flex-row gap-1 rounded-full border border-border bg-muted p-1">
+        {/* Tabs trạng thái hạn dùng */}
+        <View className="flex-row gap-1 rounded-2xl border border-border bg-muted p-1">
           {(
             [
               { value: 'all', label: 'Tất cả', urgent: false },
@@ -369,13 +395,15 @@ export default function PantryScreen() {
                   resetView();
                 }}
                 className={cn(
-                  'h-10 flex-1 flex-row items-center justify-center gap-1.5 rounded-full',
+                  'min-h-11 flex-1 flex-row items-center justify-center gap-1 rounded-xl px-1.5',
                   selectedTab ? 'bg-background' : ''
                 )}
               >
                 <Text
                   numberOfLines={1}
-                  style={{ flexShrink: 0 }}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
+                  style={{ flexShrink: 1 }}
                   className={cn(
                     'text-xs font-semibold',
                     selectedTab ? 'text-foreground' : 'text-muted-foreground'
@@ -389,7 +417,7 @@ export default function PantryScreen() {
           })}
         </View>
 
-        <View className="flex-row items-center justify-between gap-3">
+        <View className="min-h-11 flex-row items-center justify-between gap-3">
           <Text className="flex-1 text-sm text-foreground">Hiện cả nguyên liệu đã dùng hết</Text>
           <Switch
             accessibilityLabel="Hiện nguyên liệu đã hết"
@@ -436,29 +464,17 @@ export default function PantryScreen() {
         )}
 
         {query.data && query.data.metadata.totalPages > 1 ? (
-          <View className="flex-row items-center justify-between">
-            <Pressable
-              accessibilityLabel="Trang trước"
-              disabled={page <= 1 || query.isFetching}
-              onPress={() => setPage(page - 1)}
-              className="h-12 w-12 items-center justify-center"
-            >
-              <ChevronLeft color={page <= 1 ? colors.mutedForeground : colors.primary} />
-            </Pressable>
-            <Text className="text-sm text-foreground">
-              Trang {page}/{query.data.metadata.totalPages}
-            </Text>
-            <Pressable
-              accessibilityLabel="Trang sau"
-              disabled={!query.data.metadata.hasNextPage || query.isFetching}
-              onPress={() => setPage(page + 1)}
-              className="h-12 w-12 items-center justify-center"
-            >
-              <ChevronRight color={colors.primary} />
-            </Pressable>
+          <View className="pt-1">
+            <PaginationBar
+              page={page}
+              totalPages={query.data.metadata.totalPages}
+              onChange={setPage}
+              disabled={query.isFetching}
+            />
           </View>
         ) : null}
       </View>
+
       {creating ? <PantryCreateSheet onClose={() => setCreating(false)} /> : null}
       {active && active.mode === 'QUANTITY' ? (
         <PantryAdjustmentSheet

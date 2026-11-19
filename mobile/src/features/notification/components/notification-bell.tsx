@@ -8,8 +8,8 @@ import { useUnreadCountQuery } from '../queries/notification.queries';
 import { NotificationPopup } from './notification-popup';
 
 /**
- * Chuông ở header: badge số chưa đọc (`9+` khi lớn), bấm mở hộp thông báo dạng popup.
- * Chỉ hiện khi đã đăng nhập (query cũng chỉ chạy khi đã đăng nhập).
+ * Chuông ở header: badge số chưa đọc (`9+` khi lớn), bấm mở hộp thông báo.
+ * Chỉ hiện khi đã đăng nhập; vùng chạm 44dp chuẩn di động.
  */
 export function NotificationBell() {
   const colors = useIconColors();
@@ -27,10 +27,10 @@ export function NotificationBell() {
         accessibilityRole="button"
         accessibilityLabel={count > 0 ? `Thông báo (${count} chưa đọc)` : 'Thông báo'}
         onPress={() => setOpen(true)}
-        className="h-9 w-9 items-center justify-center rounded-full bg-muted">
-        <Bell size={15} color={colors.foreground} />
+        className="h-11 w-11 items-center justify-center rounded-full bg-muted active:opacity-80">
+        <Bell size={18} color={colors.foreground} />
         {unread?.capped ? (
-          <View className="absolute -right-1 -top-1 h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1">
+          <View className="absolute right-0.5 top-0.5 h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1">
             <Text className="text-[10px] font-bold text-white">{unread.capped}</Text>
           </View>
         ) : null}

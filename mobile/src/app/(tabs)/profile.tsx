@@ -7,25 +7,38 @@ import {
   AlertTriangle,
   Award,
   BadgeCheck,
-  Info,
   BookOpen,
   CalendarDays,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   ClipboardCheck,
+  Database,
+  FileText,
+  HelpCircle,
+  Info,
   Leaf,
   LogOut,
+  MessageSquare,
+  Moon,
   Package,
+  Pencil,
+  Phone,
   RefreshCw,
+  Shield,
   ShieldCheck,
+  ShoppingBag,
   Sparkles,
   Store,
+  Sun,
   Target,
   Trash2,
-  UtensilsCrossed,
   UserRound,
+  UtensilsCrossed,
   Warehouse,
   type LucideIcon,
 } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import { useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -69,13 +82,27 @@ const ACTIVITY_OPTIONS: DropdownOption<ActivityLevel>[] = [
   { value: ActivityLevel.EXTRA_ACTIVE, label: 'Vận động rất nhiều (lao động nặng / 2 buổi mỗi ngày)' },
 ];
 
-/** Một dòng trong danh sách "Nội dung của bạn". */
+type ProfileTab = 'MAIN' | 'HEALTH' | 'STORAGE';
+
+/** Một dòng trong danh sách liên kết ở màn Hồ sơ. */
 interface ProfileMenuEntry {
   href: Href;
   title: string;
   note: string;
   icon: LucideIcon;
 }
+
+const GUEST_SUPPORT_ITEMS: ProfileMenuEntry[] = [
+  { href: '/food-data' as Href, icon: Database, title: 'Tra cứu dữ liệu thực phẩm', note: 'Dinh dưỡng 100g, kiêng kỵ và giữ chất chế biến.' },
+  { href: '/ai-knowledge' as Href, icon: Sparkles, title: 'Khám phá Tri thức AI', note: 'Câu trả lời AI do cộng đồng chia sẻ và thẩm định.' },
+  { href: '/help' as Href, icon: HelpCircle, title: 'Hướng dẫn sử dụng', note: 'Cách dùng thực đơn tuần, tủ bếp và bộ lọc an toàn.' },
+  { href: '/guidelines' as Href, icon: BookOpen, title: 'Quy chuẩn cộng đồng', note: 'Nguyên tắc đăng công thức, bài viết và đề xuất quán.' },
+  { href: '/about' as Href, icon: Info, title: 'Về VeggieConnect', note: 'Giới thiệu ứng dụng, phạm vi hỗ trợ và nguồn dữ liệu.' },
+  { href: '/feedback' as Href, icon: MessageSquare, title: 'Gửi góp ý', note: 'Phản hồi trải nghiệm và báo lỗi ứng dụng.' },
+  { href: '/contact' as Href, icon: Phone, title: 'Liên hệ', note: 'Kênh tiếp nhận hỗ trợ từ đội ngũ vận hành.' },
+  { href: '/privacy' as Href, icon: Shield, title: 'Chính sách bảo mật', note: 'Cách lưu trữ và bảo vệ dữ liệu cá nhân.' },
+  { href: '/terms' as Href, icon: FileText, title: 'Điều khoản sử dụng', note: 'Quy định sử dụng và lưu ý thông tin tham khảo.' },
+];
 
 function toNumber(value: string): number {
   return Number(value.replace(',', '.').trim());
@@ -121,15 +148,17 @@ export default function ProfileScreen() {
 
   const [displayName, setDisplayName] = React.useState('');
   const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
-  const [profileTab, setProfileTab] = React.useState<'PROFILE' | 'STORAGE'>(
-    tabParam === 'storage' ? 'STORAGE' : 'PROFILE'
+  const [profileTab, setProfileTab] = React.useState<ProfileTab>(
+    tabParam === 'storage' ? 'STORAGE' : tabParam === 'health' ? 'HEALTH' : 'MAIN'
   );
-  // Thông báo dung lượng mở thẳng tab "Lưu trữ" kể cả khi màn Hồ sơ đã được mở sẵn (đổi state ngay lúc render).
+  // Thông báo dung lượng hoặc liên kết sâu mở thẳng tab đích kể cả khi màn Hồ sơ đã được mở sẵn.
   const [seenTabParam, setSeenTabParam] = React.useState(tabParam);
   if (seenTabParam !== tabParam) {
     setSeenTabParam(tabParam);
     if (tabParam === 'storage') setProfileTab('STORAGE');
+    else if (tabParam === 'health') setProfileTab('HEALTH');
   }
+  const [editingBasic, setEditingBasic] = React.useState(false);
   const [avatarEditing, setAvatarEditing] = React.useState(false);
   const [height, setHeight] = React.useState('');
   const [weight, setWeight] = React.useState('');
@@ -155,6 +184,7 @@ export default function ProfileScreen() {
 
     try {
       await updateProfile.mutateAsync({ displayName: nextName });
+      setEditingBasic(false);
       Alert.alert('Đã cập nhật', 'Hồ sơ cá nhân của bạn đã được lưu.');
     } catch {
       Alert.alert('Không thể cập nhật', 'Vui lòng kiểm tra kết nối và thử lại.');
@@ -204,21 +234,31 @@ export default function ProfileScreen() {
   if (!isAuthenticated) {
     return (
       <SiteScreen>
-        <View className="px-5 pt-8">
+        <View className="px-5 pt-6">
           <View className="items-center rounded-3xl border border-border bg-card p-6">
             <View className="h-16 w-16 items-center justify-center rounded-full bg-primary/10">
               <UserRound size={28} color={colors.primary} />
             </View>
-            <Text className="mt-4 text-center text-2xl font-bold text-foreground">Đăng nhập để xem hồ sơ</Text>
+            <Text className="mt-4 text-center text-2xl font-bold text-foreground">Tài khoản VeggieConnect</Text>
             <Text className="mt-2 text-center text-sm leading-relaxed text-muted-foreground">
-              Hồ sơ cá nhân giúp VeggieConnect tính BMI, ghi nhớ chế độ ăn và gợi ý thực đơn phù hợp hơn.
+              Đăng nhập để tính chỉ số sức khỏe, lưu chế độ ăn, quản lý tủ bếp và đồng bộ thực đơn cá nhân.
             </Text>
-            <View className="mt-5 w-full">
+            <View className="mt-5 w-full gap-2.5">
               <Link href="/(auth)/login" asChild>
                 <PrimaryButton label="Đăng nhập ngay" />
               </Link>
+              <Link href="/(auth)/register" asChild>
+                <PrimaryButton label="Tạo tài khoản mới" variant="outline" />
+              </Link>
             </View>
           </View>
+
+          <SectionTitle title="Giao diện ứng dụng" subtitle="Chọn chế độ hiển thị phù hợp khi sử dụng." />
+          <AppearanceSettingCard />
+
+          <SectionTitle title="Tra cứu & Hỗ trợ" subtitle="Thông tin mở dùng ngay không cần đăng nhập." />
+          <MenuGroup items={GUEST_SUPPORT_ITEMS} />
+          <View className="h-4" />
         </View>
       </SiteScreen>
     );
@@ -237,7 +277,7 @@ export default function ProfileScreen() {
 
   if (isError || !profile) {
     return (
-      <SiteScreen>
+      <SiteScreen onRefresh={() => refetch()}>
         <View className="px-5 pt-8">
           <View className="items-center rounded-3xl border border-destructive/30 bg-destructive/5 p-6">
             <AlertTriangle size={28} color={colors.destructive} />
@@ -263,22 +303,29 @@ export default function ProfileScreen() {
   const displayProfile = profile;
   const health = displayProfile.health;
   const diet = displayProfile.diet;
+  const allowedGroupCount = diet
+    ? FOOD_ALLOWANCE_OPTIONS.filter((option) => diet[option.key]).length
+    : 0;
+  const allergyCount = diet
+    ? diet.allergies.length + diet.ingredientAllergies.length
+    : 0;
   const contributionNote = displayProfile.user.contributorProfile
     ? `Đã duyệt • ${displayProfile.user.contributorProfile.approvalBasisLabel}`
     : displayProfile.user.contributorApplication
       ? `Trạng thái: ${displayProfile.user.contributorApplication.rawStatus}`
       : 'Chưa gửi nguyện vọng nào.';
-  // Cùng thứ tự/nhãn với menu tài khoản của web. Mục "Hóa đơn mua sắm" và "Tra cứu dinh dưỡng 100g" đã được web gỡ khỏi
-  // menu này nên không đặt ở đây (hóa đơn vẫn quét được từ Tủ bếp). Bảng điều khiển Contributor chỉ hiện với Contributor;
-  // app không có màn quản trị Admin.
-  const menuItems: ProfileMenuEntry[] = [
-    { href: '/my-content' as Href, icon: BookOpen, title: 'Bài viết của tôi', note: 'Công thức, cẩm nang, video bạn đã đăng — sửa, xoá, theo dõi trạng thái duyệt.' },
+
+  const kitchenItems: ProfileMenuEntry[] = [
+    { href: '/pantry' as Href, icon: Warehouse, title: 'Tủ bếp gia đình', note: 'Nguyên liệu, hạn dùng và quét tủ lạnh / hóa đơn.' },
     { href: '/meal-plans' as Href, icon: CalendarDays, title: 'Kế hoạch bữa ăn tuần', note: 'Tạo và xem thực đơn tuần theo chế độ ăn của bạn.' },
-    { href: '/meal-plans/saved' as Href, icon: UtensilsCrossed, title: 'Thực đơn đã lưu', note: 'Các thực đơn tuần bạn đã tạo, kèm cảnh báo và phân tích.' },
-    { href: '/custom-meals' as Href, icon: Leaf, title: 'Món ăn của tôi', note: 'Lưu món ăn cá nhân, thẻ phân loại và đưa vào thực đơn tuần.' },
-    { href: '/meal-programs' as Href, icon: Target, title: 'Lộ trình nhiều tuần', note: 'Tạo lộ trình 2-12 tuần và xem phân tích tích lũy.' },
-    { href: '/billing' as Href, icon: Package, title: 'Gói tiện ích', note: 'Mua thêm lượt AI và ô tủ đồ ăn.' },
-    { href: '/pantry' as Href, icon: Warehouse, title: 'Tủ bếp gia đình', note: 'Quản lý nguyên liệu đã xác nhận, số lượng và hạn dùng.' },
+    { href: '/meal-plans/saved' as Href, icon: UtensilsCrossed, title: 'Thực đơn đã lưu', note: 'Các thực đơn tuần đã tạo, kèm cảnh báo và phân tích.' },
+    { href: '/custom-meals' as Href, icon: Leaf, title: 'Món ăn của tôi', note: 'Lưu món ăn cá nhân, thẻ phân loại và đưa vào thực đơn.' },
+    { href: '/meal-programs' as Href, icon: Target, title: 'Lộ trình nhiều tuần', note: 'Tạo lộ trình 2–12 tuần và xem phân tích tích lũy.' },
+    { href: '/shopping-preview' as Href, icon: ShoppingBag, title: 'Danh sách cần mua', note: 'Tính nguyên liệu cần mua dựa trên thực đơn của bạn.' },
+  ];
+
+  const contributionItems: ProfileMenuEntry[] = [
+    { href: '/my-content' as Href, icon: BookOpen, title: 'Bài viết của tôi', note: 'Công thức, cẩm nang, video đã đăng và trạng thái duyệt.' },
     { href: '/restaurants/mine' as Href, icon: Store, title: 'Quán chay tôi đề xuất', note: 'Theo dõi trạng thái duyệt các quán bạn đã gửi.' },
     { href: '/ai-knowledge' as Href, icon: Sparkles, title: 'Khám phá Tri thức AI', note: 'Câu trả lời AI do cộng đồng chia sẻ và được thẩm định.' },
     { href: '/contributor-status' as Href, icon: BadgeCheck, title: 'Đóng góp', note: contributionNote },
@@ -287,310 +334,405 @@ export default function ProfileScreen() {
       : []),
   ];
 
+  const accountUtilityItems: ProfileMenuEntry[] = [
+    { href: '/billing' as Href, icon: Package, title: 'Gói tiện ích', note: 'Mua thêm lượt AI và mở rộng ô lưu trữ tủ đồ ăn.' },
+    { href: '/food-data' as Href, icon: Database, title: 'Tra cứu dữ liệu thực phẩm', note: 'Dinh dưỡng 100g, kiêng kỵ và giữ chất khi chế biến.' },
+  ];
+
+  const supportItems: ProfileMenuEntry[] = GUEST_SUPPORT_ITEMS.slice(2);
+
   return (
-    <SiteScreen>
+    <SiteScreen onRefresh={() => refetch()}>
       <View className="px-5 pt-4">
         <View className="rounded-3xl border border-border bg-card p-5">
-          <Text className="mb-4 text-sm text-muted-foreground">
-            Ngày tham gia: <Text className="font-bold text-primary">{displayProfile.memberSince}</Text>
-          </Text>
-          <View className="flex-row gap-4">
-            <View>
-              <View className="h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-primary/10">
-                {displayProfile.user.avatarUrl ? (
-                  <Image
-                    source={{ uri: displayProfile.user.avatarUrl }}
-                    style={{ width: 80, height: 80 }}
-                    contentFit="cover"
-                    accessibilityLabel="Ảnh đại diện"
-                  />
-                ) : (
-                  <Text className="text-2xl font-bold text-primary">{displayProfile.user.initials || 'U'}</Text>
-                )}
-              </View>
+          <View className="flex-row items-center gap-4">
+            <View className="h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-primary/10">
+              {displayProfile.user.avatarUrl ? (
+                <Image
+                  source={{ uri: displayProfile.user.avatarUrl }}
+                  style={{ width: 64, height: 64 }}
+                  contentFit="cover"
+                  accessibilityLabel="Ảnh đại diện"
+                />
+              ) : (
+                <Text className="text-2xl font-bold text-primary">{displayProfile.user.initials || 'U'}</Text>
+              )}
             </View>
 
             <View className="min-w-0 flex-1">
-              <Text className="text-xl font-bold text-foreground">{displayProfile.user.displayName}</Text>
-              <View className="mt-1.5 flex-row flex-wrap items-center gap-2">
-                <View className="flex-row items-center gap-1 rounded-full bg-amber-500/20 px-2.5 py-1">
-                  <Award size={13} color="#d97706" />
+              <Text numberOfLines={2} className="text-lg font-bold text-foreground">
+                {displayProfile.user.displayName}
+              </Text>
+              <View className="mt-1 flex-row flex-wrap items-center gap-1.5">
+                <View className="flex-row items-center gap-1 rounded-full bg-amber-500/20 px-2.5 py-0.5">
+                  <Award size={12} color="#d97706" />
                   <Text className="text-xs font-semibold text-amber-600">{displayProfile.user.role}</Text>
                 </View>
-                {diet ? (
-                  <View className="rounded-full bg-muted px-2.5 py-1">
-                    <Text className="text-xs font-semibold text-foreground">
-                      Thiết lập ăn uống mỗi ngày
-                    </Text>
-                  </View>
-                ) : null}
+                <Text className="text-xs text-muted-foreground">Tham gia: {displayProfile.memberSince}</Text>
               </View>
-              <Text className="mt-2 text-sm text-muted-foreground">{displayProfile.user.email}</Text>
+              <Text numberOfLines={1} className="mt-1 text-xs text-muted-foreground">
+                {displayProfile.user.email}
+              </Text>
             </View>
           </View>
 
+          <Pressable
+            onPress={() => setEditingBasic((prev) => !prev)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: editingBasic }}
+            className="mt-4 min-h-11 flex-row items-center justify-between rounded-xl border border-border bg-muted/40 px-3.5 py-2 active:bg-muted">
+            <View className="flex-row items-center gap-2">
+              <Pencil size={15} color={colors.foreground} />
+              <Text className="text-sm font-semibold text-foreground">Sửa tên & ảnh đại diện</Text>
+            </View>
+            {editingBasic ? (
+              <ChevronUp size={16} color={colors.mutedForeground} />
+            ) : (
+              <ChevronDown size={16} color={colors.mutedForeground} />
+            )}
+          </Pressable>
+
+          {editingBasic ? (
+            <View className="mt-3 gap-3 border-t border-border pt-3">
+              <PrimaryButton
+                label="Đổi ảnh đại diện"
+                variant="outline"
+                onPress={() => setAvatarEditing(true)}
+              />
+              <TextField
+                label="Tên hiển thị"
+                icon={UserRound}
+                value={displayName}
+                onChangeText={setDisplayName}
+                placeholder="Nhập tên của bạn"
+              />
+              <View className="flex-row gap-2">
+                <PrimaryButton
+                  label="Đóng"
+                  variant="outline"
+                  className="flex-1"
+                  onPress={() => {
+                    setDisplayName(displayProfile.user.displayName);
+                    setEditingBasic(false);
+                  }}
+                />
+                <PrimaryButton
+                  label="Lưu tên"
+                  className="flex-1"
+                  loading={updateProfile.isPending}
+                  onPress={handleSaveBasicProfile}
+                />
+              </View>
+            </View>
+          ) : null}
         </View>
 
         <View className="mt-4 flex-row gap-2">
-          {(['PROFILE', 'STORAGE'] as const).map((tab) => (
-            <Pressable
-              key={tab}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: profileTab === tab }}
-              onPress={() => setProfileTab(tab)}
-              className={`min-h-12 flex-1 items-center justify-center rounded-lg border px-3 ${profileTab === tab ? 'border-primary bg-primary/10' : 'border-border'}`}>
-              <Text className="text-sm font-semibold text-foreground">
-                {tab === 'PROFILE' ? 'Hồ sơ' : 'Lưu trữ'}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-        {profileTab === 'STORAGE' ? <StorageSection /> : <>
-        <SectionTitle title="Thông tin cá nhân" subtitle="Cập nhật tên hiển thị trên ứng dụng." />
-        <View className="rounded-2xl border border-border bg-card p-4">
-          <PrimaryButton label="Đổi ảnh đại diện" variant="outline" className="mb-4" onPress={() => setAvatarEditing(true)} />
-          <TextField
-            label="Tên hiển thị"
-            icon={UserRound}
-            value={displayName}
-            onChangeText={setDisplayName}
-            placeholder="Nhập tên của bạn"
-          />
-          <View className="mt-4">
-            <PrimaryButton
-              label="Lưu tên hiển thị"
-              loading={updateProfile.isPending}
-              onPress={handleSaveBasicProfile}
-            />
-          </View>
-        </View>
-
-        {health ? (
-          <View className="mt-6 rounded-2xl border border-border bg-card p-4">
-            <Text className="text-lg font-bold text-foreground">Kết quả sức khỏe</Text>
-            <View className="mt-4 flex-row gap-2">
-              <MetricCard label="BMI" value={health.bmi.toFixed(2)} note={health.bmiCategory} />
-              <MetricCard label="BMR" value={health.bmr.toFixed(2)} note="kcal/ngày" />
-              <MetricCard label="TDEE" value={health.tdee.toFixed(2)} note="kcal/ngày" />
-            </View>
-            <View className="mt-4 gap-1.5">
-              <Text className="text-sm text-muted-foreground">
-                {health.heightCm} cm · {health.weightKg} kg · {health.age} tuổi · {health.sexLabel} · {health.activityLevelLabel}
-              </Text>
-              <Text className="text-sm text-muted-foreground">
-                Nguồn: nhập tay · Cập nhật: {formatDate(health.updatedAt)}
-              </Text>
-            </View>
-            {health.hasAbnormalBmi ? (
-              <View
-                accessibilityRole="alert"
-                className="mt-4 flex-row items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
-                <AlertTriangle size={16} color="#d97706" />
-                <Text className="flex-1 text-sm text-foreground">
-                  Chỉ số BMI của bạn nằm ngoài khoảng thông thường (12–45). Hãy kiểm tra lại số liệu đã nhập hoặc tham khảo ý kiến chuyên gia dinh dưỡng.
-                </Text>
-              </View>
-            ) : null}
-            {health.needsDisclaimer ? (
-              <View className="mt-3 flex-row items-start gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
-                <Info size={16} color={colors.primary} />
-                <Text className="flex-1 text-sm text-foreground">
-                  Lưu ý: BMI của bạn thuộc nhóm cần quan tâm đặc biệt. Thực đơn sẽ kèm khuyến nghị phù hợp, không thay thế tư vấn y tế chuyên sâu.
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        ) : (
-          <View className="mt-6 rounded-2xl border border-dashed border-border p-4">
-            <Text className="font-semibold text-foreground">Chưa có dữ liệu sức khỏe.</Text>
-            <Text className="mt-1 text-sm text-muted-foreground">
-              Nhập chiều cao, cân nặng, tuổi, giới tính và mức vận động để xem BMI, BMR và TDEE của bạn.
-            </Text>
-          </View>
-        )}
-
-        <View className="mt-4 rounded-2xl border border-border bg-card p-4">
-          <Text className="text-lg font-bold text-foreground">Nhập chỉ số thể trạng</Text>
-          <Text className="mt-1 text-sm text-muted-foreground">
-            Lưu để xem BMI, BMR và TDEE do hệ thống tính cho bạn.
-          </Text>
-
-          <View className="mt-4 gap-3">
-            <View className="flex-row gap-3">
-              <View className="flex-1">
-                <TextField
-                  labelVariant="plain"
-                  label="Chiều cao (cm)"
-                  value={height}
-                  onChangeText={setHeight}
-                  placeholder="Ví dụ: 162"
-                  keyboardType="numeric"
-                />
-              </View>
-              <View className="flex-1">
-                <TextField
-                  labelVariant="plain"
-                  label="Cân nặng (kg)"
-                  value={weight}
-                  onChangeText={setWeight}
-                  placeholder="Ví dụ: 52.5"
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-
-            <View className="flex-row gap-3">
-              <View className="flex-1">
-                <TextField
-                  labelVariant="plain"
-                  label="Tuổi"
-                  value={age}
-                  onChangeText={setAge}
-                  placeholder="Ví dụ: 27"
-                  keyboardType="numeric"
-                />
-              </View>
-              <DropdownField
-                variant="field"
-                className="flex-1"
-                label="Giới tính"
-                value={sex}
-                options={SEX_OPTIONS}
-                onChange={setSex}
-              />
-            </View>
-
-            <DropdownField
-              variant="field"
-              label="Mức vận động"
-              value={activityLevel}
-              options={ACTIVITY_OPTIONS}
-              onChange={setActivityLevel}
-            />
-
-            <PrimaryButton
-              label="Lưu chỉ số sức khỏe"
-              loading={saveHealth.isPending}
-              style={{ alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 24 }}
-              onPress={handleSaveHealth}
-            />
-          </View>
-        </View>
-
-        <SectionTitle
-          title="Chế độ ăn & dị ứng"
-          subtitle="Dùng để lọc công thức và tránh nguyên liệu không phù hợp."
-        />
-        <View className="rounded-2xl border border-border bg-card p-4">
-          {diet ? (
-            <>
-              <View className="flex-row items-center gap-2">
-                <Leaf size={18} color={colors.primary} />
-                <Text numberOfLines={1} className="flex-1 text-base font-bold text-foreground">
-                  Thực phẩm bạn dùng
-                </Text>
-              </View>
-              <View className="mt-3 gap-2">
-                {FOOD_ALLOWANCE_OPTIONS.map((option) => (
-                  <ProfileRow key={option.key} label={option.label} value={diet[option.key] ? 'Được ăn' : 'Kiêng'} />
-                ))}
-              </View>
-
-              <Text className="mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Thực phẩm dị ứng
-              </Text>
-              <View className="mt-2 flex-row flex-wrap gap-2">
-                {diet.allergies.length || diet.ingredientAllergies.length ? (
-                  <>
-                    {diet.allergies.map((allergy) => (
-                      <View key={allergy.allergenCode} className="rounded-full bg-destructive/10 px-3 py-1.5">
-                        <Text className="text-xs font-semibold text-destructive">{allergy.label}</Text>
-                      </View>
-                    ))}
-                    {diet.ingredientAllergies.map((allergy) => (
-                      <View key={allergy.ingredientId} className="rounded-full bg-destructive/10 px-3 py-1.5">
-                        <Text className="text-xs font-semibold text-destructive">
-                          {allergy.ingredientName}
-                          {allergy.ingredientActive ? '' : ' (đã gỡ khỏi danh mục)'}
-                        </Text>
-                      </View>
-                    ))}
-                  </>
-                ) : (
-                  <Text className="text-sm text-muted-foreground">Chưa khai báo dị ứng.</Text>
-                )}
-              </View>
-              <View className="mt-4 flex-row gap-2">
-                <Link href={'/diet-preferences' as Href} asChild>
-                  <Pressable className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border border-input py-2.5">
-                    <Text className="text-sm font-semibold text-foreground">Chỉnh sửa chế độ ăn</Text>
-                  </Pressable>
-                </Link>
-
-              </View>
-            </>
-          ) : (
-            <View className="items-center rounded-2xl border border-dashed border-border p-5">
-              <Activity size={22} color={colors.primary} />
-              <Text className="mt-2 text-center font-semibold text-foreground">Chưa thiết lập chế độ ăn</Text>
-              <Text className="mt-1 text-center text-sm text-muted-foreground">
-                Thiết lập thực phẩm được ăn, dị ứng và nguyên liệu kiêng để lọc công thức phù hợp hơn.
-              </Text>
-              <Link href={'/diet-preferences' as Href} asChild>
-                <PrimaryButton label="Thiết lập ngay" className="mt-4 w-full" />
-              </Link>
-            </View>
-          )}
-        </View>
-
-        <SectionTitle title="Nội dung của bạn" subtitle="Nội dung và nguyện vọng bạn đã lưu/gửi trên VeggieConnect." />
-        <View className="overflow-hidden rounded-2xl border border-border bg-card">
-          {menuItems.map((entry, index) => {
-            const Icon = entry.icon;
+          {(
+            [
+              { key: 'MAIN', label: 'Tiện ích' },
+              { key: 'HEALTH', label: 'Sức khỏe & Ăn' },
+              { key: 'STORAGE', label: 'Lưu trữ' },
+            ] as const
+          ).map((item) => {
+            const active = profileTab === item.key;
             return (
-              <Link key={entry.title} href={entry.href} asChild>
-                <Pressable
-                  accessibilityRole="link"
-                  className={cn('flex-row items-center gap-3 p-4 active:bg-muted', index < menuItems.length - 1 ? 'border-b border-border' : '')}>
-                  <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                    <Icon size={18} color={colors.primary} />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-sm font-semibold text-foreground">{entry.title}</Text>
-                    <Text className="mt-0.5 text-xs text-muted-foreground">{entry.note}</Text>
-                  </View>
-                  <ChevronRight size={16} color={colors.mutedForeground} />
-                </Pressable>
-              </Link>
+              <Pressable
+                key={item.key}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+                onPress={() => setProfileTab(item.key)}
+                className={cn(
+                  'min-h-11 flex-1 items-center justify-center rounded-xl border px-2',
+                  active ? 'border-primary bg-primary/10' : 'border-border bg-card'
+                )}>
+                <Text
+                  numberOfLines={1}
+                  className={cn(
+                    'text-xs font-semibold',
+                    active ? 'text-primary' : 'text-foreground'
+                  )}>
+                  {item.label}
+                </Text>
+              </Pressable>
             );
           })}
         </View>
 
-        <PrivacySection />
+        {profileTab === 'STORAGE' ? (
+          <StorageSection />
+        ) : profileTab === 'MAIN' ? (
+          <>
+            <View className="mt-4 flex-row gap-2.5">
+              <Pressable
+                onPress={() => setProfileTab('HEALTH')}
+                accessibilityRole="button"
+                accessibilityLabel="Xem và chỉnh sửa chỉ số sức khỏe"
+                className="min-h-[84px] flex-1 justify-between rounded-2xl border border-border bg-card p-3.5 active:bg-muted">
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-xs font-semibold text-muted-foreground">Chỉ số BMI / TDEE</Text>
+                  <Activity size={15} color={colors.primary} />
+                </View>
+                {health ? (
+                  <View className="mt-1.5">
+                    <Text numberOfLines={1} className="text-base font-bold text-primary">
+                      BMI {health.bmi.toFixed(1)}
+                    </Text>
+                    <Text numberOfLines={1} className="text-xs text-muted-foreground">
+                      {Math.round(health.tdee)} kcal/ngày
+                    </Text>
+                  </View>
+                ) : (
+                  <Text numberOfLines={2} className="mt-1.5 text-xs font-semibold text-foreground">
+                    Nhấn để nhập chỉ số thể trạng
+                  </Text>
+                )}
+              </Pressable>
 
-        <SectionTitle title="Tài khoản & hệ thống" subtitle="Quản lý phiên đăng nhập trên thiết bị này." />
-        <View className="overflow-hidden rounded-2xl border border-border bg-card">
-          <Pressable
-            onPress={handleLogout}
-            disabled={logoutMutation.isPending}
-            className="flex-row items-center gap-3 p-4 active:bg-muted"
-          >
-            <View className="h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
-              <LogOut size={18} color={colors.destructive} />
+              <Link href={'/diet-preferences' as Href} asChild>
+                <Pressable
+                  accessibilityRole="link"
+                  accessibilityLabel="Thiết lập chế độ ăn và dị ứng"
+                  className="min-h-[84px] flex-1 justify-between rounded-2xl border border-border bg-card p-3.5 active:bg-muted">
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-xs font-semibold text-muted-foreground">Chế độ ăn</Text>
+                    <Leaf size={15} color={colors.primary} />
+                  </View>
+                  {diet ? (
+                    <View className="mt-1.5">
+                      <Text numberOfLines={1} className="text-base font-bold text-foreground">
+                        {allergyCount} dị ứng
+                      </Text>
+                      <Text numberOfLines={1} className="text-xs text-muted-foreground">
+                        {allowedGroupCount}/4 nhóm được dùng
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text numberOfLines={2} className="mt-1.5 text-xs font-semibold text-primary">
+                      Thiết lập chế độ ăn →
+                    </Text>
+                  )}
+                </Pressable>
+              </Link>
             </View>
-            <View className="flex-1">
-              <Text className="text-sm font-semibold text-destructive">
-                {logoutMutation.isPending ? 'Đang đăng xuất...' : 'Đăng xuất'}
-              </Text>
-              <Text className="mt-0.5 text-xs text-muted-foreground">
-                Thoát khỏi tài khoản trên thiết bị này.
-              </Text>
-            </View>
-            <ChevronRight size={16} color={colors.mutedForeground} />
-          </Pressable>
-        </View>
 
-        </>}
+            <SectionTitle title="Bếp & Kế hoạch" subtitle="Công cụ ăn uống hằng ngày của bạn." />
+            <MenuGroup items={kitchenItems} />
+
+            <SectionTitle title="Nội dung & Đóng góp" subtitle="Bài viết, quán chay và vai trò cộng đồng." />
+            <MenuGroup items={contributionItems} />
+
+            <SectionTitle title="Tài khoản & Tiện ích" subtitle="Nâng cấp giới hạn, giao diện và tra cứu nguyên liệu." />
+            <View className="gap-3">
+              <AppearanceSettingCard />
+              <MenuGroup items={accountUtilityItems} />
+            </View>
+
+            <SectionTitle title="Hỗ trợ & Pháp lý" subtitle="Hướng dẫn, góp ý và thông tin quy định." />
+            <MenuGroup items={supportItems} />
+
+            <SectionTitle title="Phiên đăng nhập" subtitle="Quản lý tài khoản trên thiết bị này." />
+            <View className="overflow-hidden rounded-2xl border border-border bg-card">
+              <Pressable
+                onPress={handleLogout}
+                disabled={logoutMutation.isPending}
+                accessibilityRole="button"
+                className="min-h-14 flex-row items-center gap-3 px-4 py-3.5 active:bg-muted">
+                <View className="h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+                  <LogOut size={18} color={colors.destructive} />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-semibold text-destructive">
+                    {logoutMutation.isPending ? 'Đang đăng xuất...' : 'Đăng xuất'}
+                  </Text>
+                  <Text className="mt-0.5 text-xs text-muted-foreground">
+                    Thoát khỏi tài khoản trên thiết bị này.
+                  </Text>
+                </View>
+                <ChevronRight size={16} color={colors.mutedForeground} />
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          <>
+            {health ? (
+              <View className="mt-4 rounded-2xl border border-border bg-card p-4">
+                <Text className="text-lg font-bold text-foreground">Kết quả sức khỏe</Text>
+                <View className="mt-4 flex-row gap-2">
+                  <MetricCard label="BMI" value={health.bmi.toFixed(2)} note={health.bmiCategory} />
+                  <MetricCard label="BMR" value={health.bmr.toFixed(2)} note="kcal/ngày" />
+                  <MetricCard label="TDEE" value={health.tdee.toFixed(2)} note="kcal/ngày" />
+                </View>
+                <View className="mt-4 gap-1.5">
+                  <Text className="text-sm text-muted-foreground">
+                    {health.heightCm} cm · {health.weightKg} kg · {health.age} tuổi · {health.sexLabel} · {health.activityLevelLabel}
+                  </Text>
+                  <Text className="text-sm text-muted-foreground">
+                    Nguồn: nhập tay · Cập nhật: {formatDate(health.updatedAt)}
+                  </Text>
+                </View>
+                {health.hasAbnormalBmi ? (
+                  <View
+                    accessibilityRole="alert"
+                    className="mt-4 flex-row items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
+                    <AlertTriangle size={16} color="#d97706" />
+                    <Text className="flex-1 text-sm text-foreground">
+                      Chỉ số BMI của bạn nằm ngoài khoảng thông thường (12–45). Hãy kiểm tra lại số liệu đã nhập hoặc tham khảo ý kiến chuyên gia dinh dưỡng.
+                    </Text>
+                  </View>
+                ) : null}
+                {health.needsDisclaimer ? (
+                  <View className="mt-3 flex-row items-start gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
+                    <Info size={16} color={colors.primary} />
+                    <Text className="flex-1 text-sm text-foreground">
+                      Lưu ý: BMI của bạn thuộc nhóm cần quan tâm đặc biệt. Thực đơn sẽ kèm khuyến nghị phù hợp, không thay thế tư vấn y tế chuyên sâu.
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : (
+              <View className="mt-4 rounded-2xl border border-dashed border-border p-4">
+                <Text className="font-semibold text-foreground">Chưa có dữ liệu sức khỏe.</Text>
+                <Text className="mt-1 text-sm text-muted-foreground">
+                  Nhập chiều cao, cân nặng, tuổi, giới tính và mức vận động để xem BMI, BMR và TDEE của bạn.
+                </Text>
+              </View>
+            )}
+
+            <View className="mt-4 rounded-2xl border border-border bg-card p-4">
+              <Text className="text-lg font-bold text-foreground">Nhập chỉ số thể trạng</Text>
+              <Text className="mt-1 text-sm text-muted-foreground">
+                Lưu để xem BMI, BMR và TDEE do hệ thống tính cho bạn.
+              </Text>
+
+              <View className="mt-4 gap-3">
+                <View className="flex-row gap-3">
+                  <View className="flex-1">
+                    <TextField
+                      labelVariant="plain"
+                      label="Chiều cao (cm)"
+                      value={height}
+                      onChangeText={setHeight}
+                      placeholder="Ví dụ: 162"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <TextField
+                      labelVariant="plain"
+                      label="Cân nặng (kg)"
+                      value={weight}
+                      onChangeText={setWeight}
+                      placeholder="Ví dụ: 52.5"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+
+                <View className="flex-row gap-3">
+                  <View className="flex-1">
+                    <TextField
+                      labelVariant="plain"
+                      label="Tuổi"
+                      value={age}
+                      onChangeText={setAge}
+                      placeholder="Ví dụ: 27"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <DropdownField
+                    variant="field"
+                    className="flex-1"
+                    label="Giới tính"
+                    value={sex}
+                    options={SEX_OPTIONS}
+                    onChange={setSex}
+                  />
+                </View>
+
+                <DropdownField
+                  variant="field"
+                  label="Mức vận động"
+                  value={activityLevel}
+                  options={ACTIVITY_OPTIONS}
+                  onChange={setActivityLevel}
+                />
+
+                <PrimaryButton
+                  label="Lưu chỉ số sức khỏe"
+                  loading={saveHealth.isPending}
+                  onPress={handleSaveHealth}
+                />
+              </View>
+            </View>
+
+            <SectionTitle
+              title="Chế độ ăn & dị ứng"
+              subtitle="Dùng để lọc công thức và tránh nguyên liệu không phù hợp."
+            />
+            <View className="rounded-2xl border border-border bg-card p-4">
+              {diet ? (
+                <>
+                  <View className="flex-row items-center gap-2">
+                    <Leaf size={18} color={colors.primary} />
+                    <Text numberOfLines={1} className="flex-1 text-base font-bold text-foreground">
+                      Thực phẩm bạn dùng
+                    </Text>
+                  </View>
+                  <View className="mt-3 gap-2">
+                    {FOOD_ALLOWANCE_OPTIONS.map((option) => (
+                      <ProfileRow key={option.key} label={option.label} value={diet[option.key] ? 'Được ăn' : 'Kiêng'} />
+                    ))}
+                  </View>
+
+                  <Text className="mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Thực phẩm dị ứng
+                  </Text>
+                  <View className="mt-2 flex-row flex-wrap gap-2">
+                    {diet.allergies.length || diet.ingredientAllergies.length ? (
+                      <>
+                        {diet.allergies.map((allergy) => (
+                          <View key={allergy.allergenCode} className="rounded-full bg-destructive/10 px-3 py-1.5">
+                            <Text className="text-xs font-semibold text-destructive">{allergy.label}</Text>
+                          </View>
+                        ))}
+                        {diet.ingredientAllergies.map((allergy) => (
+                          <View key={allergy.ingredientId} className="rounded-full bg-destructive/10 px-3 py-1.5">
+                            <Text className="text-xs font-semibold text-destructive">
+                              {allergy.ingredientName}
+                              {allergy.ingredientActive ? '' : ' (đã gỡ khỏi danh mục)'}
+                            </Text>
+                          </View>
+                        ))}
+                      </>
+                    ) : (
+                      <Text className="text-sm text-muted-foreground">Chưa khai báo dị ứng.</Text>
+                    )}
+                  </View>
+                  <View className="mt-4">
+                    <Link href={'/diet-preferences' as Href} asChild>
+                      <PrimaryButton label="Chỉnh sửa chế độ ăn" variant="outline" />
+                    </Link>
+                  </View>
+                </>
+              ) : (
+                <View className="items-center rounded-2xl border border-dashed border-border p-5">
+                  <Activity size={22} color={colors.primary} />
+                  <Text className="mt-2 text-center font-semibold text-foreground">Chưa thiết lập chế độ ăn</Text>
+                  <Text className="mt-1 text-center text-sm text-muted-foreground">
+                    Thiết lập thực phẩm được ăn, dị ứng và nguyên liệu kiêng để lọc công thức phù hợp hơn.
+                  </Text>
+                  <Link href={'/diet-preferences' as Href} asChild>
+                    <PrimaryButton label="Thiết lập ngay" className="mt-4 w-full" />
+                  </Link>
+                </View>
+              )}
+            </View>
+
+            <PrivacySection />
+          </>
+        )}
+
         <View className="h-6" />
       </View>
       {avatarEditing ? <AvatarEditor onClose={() => setAvatarEditing(false)} /> : null}
@@ -698,6 +840,83 @@ function PrivacySection() {
         </Pressable>
       </View>
     </>
+  );
+}
+
+function AppearanceSettingCard() {
+  const colors = useIconColors();
+  const { colorScheme, setColorScheme } = useColorScheme();
+  const current = colorScheme === 'dark' ? 'dark' : 'light';
+
+  return (
+    <View className="rounded-2xl border border-border bg-card p-4">
+      <View className="mb-3">
+        <Text className="text-sm font-semibold text-foreground">Giao diện hiển thị</Text>
+        <Text className="mt-0.5 text-xs text-muted-foreground">
+          Đang dùng chế độ {current === 'dark' ? 'Tối' : 'Sáng'}.
+        </Text>
+      </View>
+      <View className="flex-row gap-2">
+        {(
+          [
+            { value: 'light', label: 'Sáng', Icon: Sun },
+            { value: 'dark', label: 'Tối', Icon: Moon },
+          ] as const
+        ).map(({ value, label, Icon }) => {
+          const active = current === value;
+          return (
+            <Pressable
+              key={value}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              onPress={() => setColorScheme(value)}
+              className={cn(
+                'min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-xl border px-3',
+                active ? 'border-primary bg-primary/10' : 'border-input bg-background'
+              )}>
+              <Icon size={16} color={active ? colors.primary : colors.foreground} />
+              <Text className={cn('text-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function MenuGroup({ items }: { items: ProfileMenuEntry[] }) {
+  const colors = useIconColors();
+  return (
+    <View className="overflow-hidden rounded-2xl border border-border bg-card">
+      {items.map((entry, index) => {
+        const Icon = entry.icon;
+        return (
+          <Link key={entry.title} href={entry.href} asChild>
+            <Pressable
+              accessibilityRole="link"
+              className={cn(
+                'min-h-14 flex-row items-center gap-3 px-4 py-3.5 active:bg-muted',
+                index < items.length - 1 ? 'border-b border-border' : ''
+              )}>
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <Icon size={18} color={colors.primary} />
+              </View>
+              <View className="min-w-0 flex-1">
+                <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
+                  {entry.title}
+                </Text>
+                <Text numberOfLines={2} className="mt-0.5 text-xs text-muted-foreground">
+                  {entry.note}
+                </Text>
+              </View>
+              <ChevronRight size={16} color={colors.mutedForeground} />
+            </Pressable>
+          </Link>
+        );
+      })}
+    </View>
   );
 }
 

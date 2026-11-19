@@ -12,7 +12,7 @@ function pageWindow(page: number, totalPages: number, size = 5): number[] {
   return Array.from({ length: count }, (_, index) => start + index);
 }
 
-/** Thanh phân trang kiểu số trang (‹ 1 2 3 4 5 ›) như web; ẩn khi chỉ có một trang. */
+/** Thanh phân trang kiểu số trang (‹ 1 2 3 4 5 ›), vùng chạm 44dp; ẩn khi chỉ có một trang. */
 export function PaginationBar({
   page,
   totalPages,
@@ -28,24 +28,29 @@ export function PaginationBar({
   if (totalPages <= 1) return null;
 
   return (
-    <View className="flex-row items-center justify-center gap-1.5">
+    <View className="flex-row items-center justify-center gap-1">
       <Pressable
+        accessibilityRole="button"
         accessibilityLabel="Trang trước"
         disabled={disabled || page <= 1}
         onPress={() => onChange(page - 1)}
-        className="h-10 w-10 items-center justify-center rounded-full border border-border">
-        <ChevronLeft size={16} color={page <= 1 ? colors.mutedForeground : colors.foreground} />
+        className={cn(
+          'h-11 w-11 items-center justify-center rounded-full border border-border',
+          disabled || page <= 1 ? 'opacity-40' : 'active:bg-muted'
+        )}>
+        <ChevronLeft size={18} color={page <= 1 ? colors.mutedForeground : colors.foreground} />
       </Pressable>
       {pageWindow(page, totalPages).map((value) => {
         const current = value === page;
         return (
           <Pressable
             key={value}
+            accessibilityRole="button"
             accessibilityLabel={`Trang ${value}`}
             accessibilityState={{ selected: current }}
             disabled={disabled}
             onPress={() => onChange(value)}
-            className={cn('h-10 w-10 items-center justify-center rounded-xl', current ? 'bg-primary' : '')}>
+            className={cn('h-11 w-11 items-center justify-center rounded-xl', current ? 'bg-primary' : 'active:bg-muted')}>
             <Text className={cn('text-sm font-semibold', current ? 'text-primary-foreground' : 'text-foreground')}>
               {value}
             </Text>
@@ -53,11 +58,15 @@ export function PaginationBar({
         );
       })}
       <Pressable
+        accessibilityRole="button"
         accessibilityLabel="Trang sau"
         disabled={disabled || page >= totalPages}
         onPress={() => onChange(page + 1)}
-        className="h-10 w-10 items-center justify-center rounded-full border border-border">
-        <ChevronRight size={16} color={page >= totalPages ? colors.mutedForeground : colors.foreground} />
+        className={cn(
+          'h-11 w-11 items-center justify-center rounded-full border border-border',
+          disabled || page >= totalPages ? 'opacity-40' : 'active:bg-muted'
+        )}>
+        <ChevronRight size={18} color={page >= totalPages ? colors.mutedForeground : colors.foreground} />
       </Pressable>
     </View>
   );

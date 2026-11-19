@@ -127,8 +127,8 @@ export function MealSlotCard({
         <Pressable
           accessibilityRole="button"
           onPress={() => onShopping(slot)}
-          className="flex-row items-center justify-center gap-1.5 rounded-lg border border-border py-2 active:bg-muted">
-          <ShoppingCart size={14} color={colors.foreground} />
+          className="min-h-11 flex-row items-center justify-center gap-1.5 rounded-xl border border-border px-3 active:bg-muted">
+          <ShoppingCart size={15} color={colors.foreground} />
           <Text className="text-xs font-semibold text-foreground">Xem nguyên liệu cần mua</Text>
         </Pressable>
       ) : null}
@@ -136,21 +136,23 @@ export function MealSlotCard({
       <View className="flex-row items-center gap-2">
         {slot.filled ? (
           <Pressable
+            accessibilityRole="button"
             disabled={disabled}
             onPress={() => onSwap(slot)}
-            className="flex-row items-center gap-1 rounded-lg px-2 py-1.5 active:bg-muted">
-            <Shuffle size={13} color={colors.mutedForeground} />
-            <Text className="text-xs text-muted-foreground">Đổi món</Text>
+            className="min-h-11 flex-row items-center gap-1.5 rounded-xl border border-input px-3 active:bg-muted">
+            <Shuffle size={14} color={colors.mutedForeground} />
+            <Text className="text-xs font-medium text-foreground">Đổi món</Text>
           </Pressable>
         ) : null}
         <Pressable
+          accessibilityRole="button"
           disabled={disabled}
           onPress={() => onPick(slot)}
           className={cn(
-            'flex-row items-center justify-center gap-1 rounded-lg border border-primary/30 px-2.5 py-1.5',
-            slot.filled ? 'ml-auto' : 'flex-1'
+            'min-h-11 flex-row items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/5 px-3 active:bg-primary/10',
+            slot.filled ? 'ml-auto flex-1' : 'flex-1'
           )}>
-          <Plus size={13} color={colors.primary} />
+          <Plus size={14} color={colors.primary} />
           <Text className="text-xs font-semibold text-primary">{slot.filled ? 'Chọn món' : 'Thêm món vào ô này'}</Text>
         </Pressable>
       </View>

@@ -1,13 +1,14 @@
 import * as React from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { Plus, Trash2 } from 'lucide-react-native';
 
 import { MealType } from '@/common/enums';
 import { SiteScreen } from '@/components/layout/site-screen';
+import { ErrorState, LoadingState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { MealAnalysisPanel } from '@/features/meal-analysis/components/meal-analysis-panel';
-import { MealItemSelector,type SelectedMealItem } from '@/features/meal-plan/components/meal-item-selector';
+import { MealItemSelector, type SelectedMealItem } from '@/features/meal-plan/components/meal-item-selector';
 import { MealSlotCard } from '@/features/meal-plan/components/meal-slot-card';
 import { PlanDayCard } from '@/features/meal-plan/components/plan-day-card';
 import { PlanHero } from '@/features/meal-plan/components/plan-hero';
@@ -35,6 +36,7 @@ const MEAL_ORDER = [MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER];
 
 interface DayGroup {
   date: string;
+  shortLabel: string;
   label: string;
   slots: MealSlot[];
   estimatedTotals: EstimatedMacros | null;
@@ -43,14 +45,18 @@ interface DayGroup {
 function groupDays(plan: MealPlan): DayGroup[] {
   const dayInfo = new Map(plan.days.map((day) => [day.date, day]));
   const dates = Array.from(new Set(plan.items.map((item) => item.date))).sort();
-  return dates.map((date, index) => ({
-    date,
-    label: dayInfo.get(date)?.dateLabel ?? `${DAY_LABELS[index] ?? ''} ${toShortDate(date)}`.trim(),
-    slots: MEAL_ORDER.map((mealType) => plan.items.find((item) => item.date === date && item.mealType === mealType)).filter(
-      (slot): slot is MealSlot => Boolean(slot)
-    ),
-    estimatedTotals: dayInfo.get(date)?.estimatedTotals ?? null,
-  }));
+  return dates.map((date, index) => {
+    const shortWeekday = DAY_LABELS[index] ?? toShortDate(date);
+    return {
+      date,
+      shortLabel: shortWeekday,
+      label: dayInfo.get(date)?.dateLabel ?? `${DAY_LABELS[index] ?? ''} ${toShortDate(date)}`.trim(),
+      slots: MEAL_ORDER.map((mealType) => plan.items.find((item) => item.date === date && item.mealType === mealType)).filter(
+        (slot): slot is MealSlot => Boolean(slot)
+      ),
+      estimatedTotals: dayInfo.get(date)?.estimatedTotals ?? null,
+    };
+  });
 }
 
 function toShortDate(date: string): string {
@@ -59,9 +65,8 @@ function toShortDate(date: string): string {
 }
 
 /**
- * Chi tiết một thực đơn tuần — đồng bộ `frontend/src/app/(site)/meal-plans/[id]/page.tsx`: điều hướng "Lịch sử thực đơn /
- * Tạo thực đơn mới" → hero (tuần, mục tiêu, tiến độ, xóa) → tóm tắt & bảo toàn ràng buộc ăn kiêng → mục tiêu 4 chỉ số →
- * lưu ý về thực đơn → 7 ngày × 3 bữa (đổi món, chọn món, nguyên liệu cần mua).
+ * Chi tiết một thực đơn tuần — tối ưu cho điện thoại:
+ * Thanh tab "Thực đơn theo ngày" (chọn nhanh T2..CN hoặc Cả tuần) | "Tổng quan & Phân tích" (kèm badge cảnh báo).
  */
 export default function MealPlanDetailScreen() {
   const router = useRouter();
@@ -77,6 +82,8 @@ export default function MealPlanDetailScreen() {
 
   const [pickSlot, setPickSlot] = React.useState<MealSlot | null>(null);
   const [shoppingSlot, setShoppingSlot] = React.useState<MealSlot | null>(null);
+  const [viewTab, setViewTab] = React.useState<'days' | 'overview'>('days');
+  const [selectedDay, setSelectedDay] = React.useState<string>('ALL');
 
   const swapSlot = async (slot: MealSlot) => {
     if (!plan) return;
@@ -145,7 +152,7 @@ export default function MealPlanDetailScreen() {
 
   if (!isAuthenticated) {
     return (
-      <SiteScreen>
+      <SiteScreen title="Chi tiết thực đơn">
         <View className="px-5 pt-6">
           <View className="items-center rounded-2xl border border-dashed border-border p-7">
             <Text className="font-semibold text-foreground">Cần đăng nhập</Text>
@@ -165,10 +172,9 @@ export default function MealPlanDetailScreen() {
 
   if (isLoading) {
     return (
-      <SiteScreen>
-        <View className="items-center px-5 pt-12">
-          <ActivityIndicator color={colors.primary} />
-          <Text className="mt-3 text-sm text-muted-foreground">Đang tải chi tiết thực đơn...</Text>
+      <SiteScreen title="Chi tiết thực đơn">
+        <View className="px-5 pt-6">
+          <LoadingState message="Đang tải chi tiết thực đơn..." />
         </View>
       </SiteScreen>
     );
@@ -176,29 +182,30 @@ export default function MealPlanDetailScreen() {
 
   if (isError || !plan) {
     return (
-      <SiteScreen>
+      <SiteScreen title="Chi tiết thực đơn">
         <View className="px-5 pt-6">
-          <View className="items-center rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
-            <Text className="text-center font-semibold text-destructive">Không tải được thực đơn.</Text>
-            <Text className="mt-2 text-center text-sm text-muted-foreground">{getMealPlanErrorMessage(error)}</Text>
-            <View className="mt-4">
-              <PrimaryButton label="Thử lại" variant="outline" onPress={() => void refetch()} />
-            </View>
-          </View>
+          <ErrorState
+            title="Không tải được thực đơn."
+            description={getMealPlanErrorMessage(error)}
+            onRetry={() => void refetch()}
+          />
         </View>
       </SiteScreen>
     );
   }
 
   const days = groupDays(plan);
+  const visibleDays = selectedDay === 'ALL' ? days : days.filter((day) => day.date === selectedDay);
   const busy = swapMutation.isPending || deleteMutation.isPending || manualAddMutation.isPending;
-  // Backend chưa ước tính thì dùng chuẩn theo calo mục tiêu, như web.
   const targets = resolveDailyTargets(plan);
+  const noticeCount =
+    plan.warnings.filter((w) => w.code !== 'UNFILLED_SLOT' && w.code !== 'MICRONUTRIENT_DATA_PARTIAL').length +
+    (plan.compatibility?.status === 'NEEDS_REVIEW' ? 1 : 0);
 
   return (
     <SiteScreen
+      title={`Thực đơn ${plan.formattedWeekRange}`}
       onRefresh={() => refetch()}
-      // Mỗi khối là con trực tiếp của ScrollView để giữ nguyên vị trí đang xem khi lưu ý phía trên tải lại sau khi đổi món.
       contentClassName="gap-4 px-5 pt-4"
       maintainContentPosition
       fab={
@@ -210,11 +217,11 @@ export default function MealPlanDetailScreen() {
         />
       }>
       <>
-        <View className="flex-row items-center justify-between gap-3">
+        <View className="flex-row items-center justify-between gap-2">
           <Pressable
             accessibilityRole="link"
             onPress={() => router.push('/meal-plans' as Href)}
-            className="h-10 flex-row items-center gap-1.5 rounded-xl border border-border px-3 active:bg-muted">
+            className="min-h-11 flex-row items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 active:bg-muted">
             <Plus size={16} color={colors.foreground} />
             <Text className="text-sm font-medium text-foreground">Tạo thực đơn mới</Text>
           </Pressable>
@@ -223,41 +230,137 @@ export default function MealPlanDetailScreen() {
             onPress={confirmDelete}
             accessibilityRole="button"
             accessibilityLabel="Xóa thực đơn"
-            className={cn('h-10 flex-row items-center gap-1.5 rounded-xl border border-border px-3 active:bg-destructive/10', busy ? 'opacity-60' : '')}>
-            <Trash2 size={14} color={colors.mutedForeground} />
-            <Text className="text-xs text-muted-foreground">Xóa thực đơn</Text>
+            className={cn(
+              'min-h-11 flex-row items-center gap-1.5 rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 active:bg-destructive/10',
+              busy ? 'opacity-60' : ''
+            )}>
+            <Trash2 size={15} color={colors.destructive} />
+            <Text className="text-xs font-semibold text-destructive">Xóa thực đơn</Text>
           </Pressable>
         </View>
 
         <PlanHero plan={plan} />
-        <DietaryCompatibilityBanner compatibility={plan.compatibility}
-          repairHref={`/diet-repair?planIds=${encodeURIComponent(plan.id)}&revision=${plan.compatibility?.dietaryRevision ?? 0}` as Href} />
-        {plan.userSummary ? <PlanSummary summary={plan.userSummary} /> : null}
-        <PlanNutritionTargets targets={targets} />
-        <PlanWarningsBanner warnings={plan.warnings} />
-        <MealAnalysisPanel planId={plan.id} planVersion={plan.lockVersion} />
 
-        {days.map((day) => (
-          <PlanDayCard
-            key={day.date}
-            label={day.label}
-            slots={day.slots}
-            estimatedTotals={day.estimatedTotals}
-            targetCalories={plan.targetCalories}
-            targets={targets}>
-            {day.slots.map((slot) => (
-              <MealSlotCard
-                key={slot.id}
-                slot={slot}
-                dietaryWarning={plan.compatibility?.items.find((item) => item.itemId === slot.id)?.reasonLabels.join('; ')}
-                disabled={busy}
-                onSwap={(item) => void swapSlot(item)}
-                onPick={setPickSlot}
-                onShopping={setShoppingSlot}
-              />
+        <DietaryCompatibilityBanner
+          compatibility={plan.compatibility}
+          repairHref={`/diet-repair?planIds=${encodeURIComponent(plan.id)}&revision=${plan.compatibility?.dietaryRevision ?? 0}` as Href}
+        />
+
+        {/* Thanh chuyển 2 tab */}
+        <View
+          accessibilityRole="tablist"
+          className="flex-row gap-1 rounded-2xl border border-border bg-muted/70 p-1">
+          <Pressable
+            accessibilityRole="tab"
+            accessibilityState={{ selected: viewTab === 'days' }}
+            onPress={() => setViewTab('days')}
+            className={cn(
+              'min-h-11 flex-1 items-center justify-center rounded-xl px-2',
+              viewTab === 'days' ? 'border border-border/60 bg-background' : 'active:bg-background/50'
+            )}>
+            <Text className={cn('text-xs', viewTab === 'days' ? 'font-bold text-primary' : 'font-medium text-muted-foreground')}>
+              Thực đơn theo ngày
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="tab"
+            accessibilityState={{ selected: viewTab === 'overview' }}
+            onPress={() => setViewTab('overview')}
+            className={cn(
+              'min-h-11 flex-1 flex-row items-center justify-center gap-1.5 rounded-xl px-2',
+              viewTab === 'overview' ? 'border border-border/60 bg-background' : 'active:bg-background/50'
+            )}>
+            <Text className={cn('text-xs', viewTab === 'overview' ? 'font-bold text-primary' : 'font-medium text-muted-foreground')}>
+              Tổng quan & Phân tích
+            </Text>
+            {noticeCount > 0 ? (
+              <View className="h-5 min-w-5 items-center justify-center rounded-full bg-amber-500/20 px-1">
+                <Text className="text-[11px] font-bold text-amber-700 dark:text-amber-300">{noticeCount}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+        </View>
+
+        {viewTab === 'days' ? (
+          <>
+            {/* Bộ lọc chọn nhanh từng ngày */}
+            {days.length > 1 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                className="-mx-5"
+                contentContainerClassName="gap-1.5 px-5">
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: selectedDay === 'ALL' }}
+                  onPress={() => setSelectedDay('ALL')}
+                  className={cn(
+                    'min-h-11 justify-center rounded-full border px-4',
+                    selectedDay === 'ALL' ? 'border-primary bg-primary' : 'border-border bg-card'
+                  )}>
+                  <Text
+                    className={cn(
+                      'text-xs font-semibold',
+                      selectedDay === 'ALL' ? 'text-primary-foreground' : 'text-foreground'
+                    )}>
+                    Cả tuần
+                  </Text>
+                </Pressable>
+                {days.map((day) => {
+                  const active = selectedDay === day.date;
+                  return (
+                    <Pressable
+                      key={day.date}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      onPress={() => setSelectedDay(day.date)}
+                      className={cn(
+                        'min-h-11 justify-center rounded-full border px-3.5',
+                        active ? 'border-primary bg-primary' : 'border-border bg-card'
+                      )}>
+                      <Text
+                        className={cn(
+                          'text-xs font-semibold',
+                          active ? 'text-primary-foreground' : 'text-foreground'
+                        )}>
+                        {day.shortLabel} ({toShortDate(day.date)})
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            ) : null}
+
+            {visibleDays.map((day) => (
+              <PlanDayCard
+                key={day.date}
+                label={day.label}
+                slots={day.slots}
+                estimatedTotals={day.estimatedTotals}
+                targetCalories={plan.targetCalories}
+                targets={targets}>
+                {day.slots.map((slot) => (
+                  <MealSlotCard
+                    key={slot.id}
+                    slot={slot}
+                    dietaryWarning={plan.compatibility?.items.find((item) => item.itemId === slot.id)?.reasonLabels.join('; ')}
+                    disabled={busy}
+                    onSwap={(item) => void swapSlot(item)}
+                    onPick={setPickSlot}
+                    onShopping={setShoppingSlot}
+                  />
+                ))}
+              </PlanDayCard>
             ))}
-          </PlanDayCard>
-        ))}
+          </>
+        ) : (
+          <View className="gap-4">
+            {plan.userSummary ? <PlanSummary summary={plan.userSummary} /> : null}
+            <PlanNutritionTargets targets={targets} />
+            <PlanWarningsBanner warnings={plan.warnings} />
+            <MealAnalysisPanel planId={plan.id} planVersion={plan.lockVersion} />
+          </View>
+        )}
 
         {shoppingSlot ? <SlotShoppingSheet slot={shoppingSlot} onClose={() => setShoppingSlot(null)} /> : null}
       </>
