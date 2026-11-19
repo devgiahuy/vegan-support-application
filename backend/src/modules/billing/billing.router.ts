@@ -22,6 +22,7 @@ import {
   type AdminBillingCreate,
   type AdminBillingUpdate,
   type AdminBillingAvailability,
+  type CreateBillingOrder,
 } from './billing.schemas.js';
 
 export function createBillingRouter(
@@ -112,11 +113,7 @@ export function createBillingRouter(
     authentication.authenticate,
     validateBody(createBillingOrderSchema),
     async (req, res) => {
-      const input = getValidatedBody<{
-        productId: string;
-        idempotencyKey: string;
-        expectedProductVersion?: number;
-      }>(req);
+      const input = getValidatedBody<CreateBillingOrder>(req);
       res
         .status(201)
         .json({ success: true, data: await service.create(req.auth!.userId, input, req.ip ?? '') });

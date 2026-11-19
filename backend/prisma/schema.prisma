@@ -75,6 +75,7 @@ model PaymentOrder {
   pantrySlots         Int                @map("pantry_slots")
   durationMonths      Int?               @map("duration_months")
   provider            String
+  checkoutClient      BillingCheckoutClient? @map("checkout_client")
   providerOrderCode   String?            @unique @map("provider_order_code")
   providerLinkId      String?            @unique @map("provider_link_id")
   providerCheckoutUrl String?            @map("provider_checkout_url")
@@ -94,6 +95,11 @@ model PaymentOrder {
   @@index([status, paidAt])
   @@index([createdAt])
   @@map("payment_orders")
+}
+
+enum BillingCheckoutClient {
+  web
+  mobile
 }
 
 model PaymentEvent {

@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Quay lại đúng đơn sau thanh toán payOS — Updated 2026-11-19
+
+Đơn mới trên web quay về trang gói tiện ích với mã đơn. Bản app cài đặt iOS/Android mở lại màn hình để xem đơn từ cùng địa chỉ HTTPS và có nút xem trên web. Trình duyệt local, backend với payOS giả lập, bản dựng web và bundle mobile đã qua kiểm tra. Chưa phát hành thay đổi hoặc kiểm tra mở app trên thiết bị.
+
 ## Đã triển khai bốn tùy chọn và xử lý thực đơn — Updated 2026-11-19
 
 Backend, web và mobile đã bỏ kiểu ăn/truyền thống/setup lịch; dùng bốn toggle độc lập trứng/sữa/mật ong/ngũ vị tân áp mỗi ngày. Đổi profile có impact preview, hai lựa chọn thay hoặc giữ với cảnh báo bền vững, replacement preview/apply theo từng plan và linked DRAFT cho chương trình confirmed. Admin catalog dùng reviewed food groups có provenance; allergy/exclusion luôn ưu tiên. Hơn 20 plan chia nhóm rõ ràng ở cả clients.

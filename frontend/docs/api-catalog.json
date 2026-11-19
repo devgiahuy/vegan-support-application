@@ -1,7 +1,7 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "..\\backend\\openapi.json",
-  "generatedAt": "2026-11-19T05:52:03.158Z",
+  "source": "../backend/openapi.json",
+  "generatedAt": "2026-11-19T10:51:32.093Z",
   "stats": {
     "operations": 198,
     "groups": 43,
@@ -3692,7 +3692,7 @@
       "method": "POST",
       "path": "/api/v1/billing/orders",
       "group": "Billing",
-      "summary": "Create idempotent package order; confirm displayed product version for new orders",
+      "summary": "Create idempotent package order with web or mobile payOS return",
       "operationId": "",
       "params": [],
       "request": {
@@ -3711,6 +3711,13 @@
             },
             "expectedProductVersion": {
               "type": "integer"
+            },
+            "checkoutClient": {
+              "type": "string",
+              "enum": [
+                "web",
+                "mobile"
+              ]
             }
           },
           "additionalProperties": false

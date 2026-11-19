@@ -1,5 +1,5 @@
 import { PayOS, type PaymentLink, type WebhookData } from '@payos/node';
-import type { PaymentOrder } from '@prisma/client';
+import type { BillingCheckoutClient, PaymentOrder } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
 import type { AppConfig } from '../../config/env.js';
 import { payosWebhookSchema } from './billing.schemas.js';
@@ -15,9 +15,15 @@ export function paymentError(code: string, message: string, statusCode = 400): A
   return new AppError({ code, message, statusCode });
 }
 
-export function billingReturnUrl(config: AppConfig, orderId: string): string {
+export function billingReturnUrl(
+  config: AppConfig,
+  orderId: string,
+  checkoutClient?: BillingCheckoutClient | null,
+): string {
   const url = new URL(config.billing.returnUrl);
   url.searchParams.set('orderId', orderId);
+  url.searchParams.delete('returnTo');
+  if (checkoutClient === 'mobile') url.searchParams.set('returnTo', 'app');
   return url.toString();
 }
 
@@ -47,7 +53,7 @@ export class BillingProviders {
   async checkout(order: PaymentOrder): Promise<{ linkId: string; url: string }> {
     const client = this.ensurePayos();
     const orderCode = this.orderCode(order);
-    const returnUrl = billingReturnUrl(this.config, order.id);
+    const returnUrl = billingReturnUrl(this.config, order.id, order.checkoutClient);
     let result;
     try {
       result = await client.paymentRequests.create({

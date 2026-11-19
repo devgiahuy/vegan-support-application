@@ -1,8 +1,8 @@
 # Software Requirements Specification — Vegan Support Application
 
-**Version:** 1.10
+**Version:** 1.11
 
-**Updated:** 2026-11-18
+**Updated:** 2026-11-19
 
 **Status:** Approved product baseline
 
@@ -215,6 +215,7 @@ User-approved 2026-11-16 recipe detail warning: show an allergy warning only for
 - Each scan job is bounded by configured image limits. Full/partial successful analysis consumes one job credit once; total failure releases it. A previously charged job can retry without another debit, subject to configured attempt limits.
 - All undeleted Pantry records count toward capacity, including zero-quantity records. Manual creation and both confirmation flows enforce the same transactional cap. Over-limit existing data remains readable, editable and deletable; no automatic deletion occurs.
 - Only verified server-side settlement grants snapshotted benefits, once. Browser return URLs cannot grant allowances. Purchases never modify roles or bypass dietary rules, consent, provider controls or confirmation.
+- New payOS checkouts return to the same order in the web or installed app that created the checkout. The native return offers a link to the same order on the web if the browser cannot open the app.
 - User-authorized provider conversion (2026-10-14) uses payOS exclusively for new purchases. payOS has no independent sandbox and checkout transfers real money; the development application must disclose this. Missing merchant credentials disable checkout without a simulation fallback. Application production rollout, recurring subscriptions, automatic refunds and mobile-store distribution remain deferred.
 - Historical VNPAY/local simulation orders and existing balances remain readable with original provider identity. Their old settlement/checkout routes are removed. Partial payments remain pending; only a verified fully paid provider order grants the fixed package once. Extra transferred money does not add package benefits or trigger automatic refunds.
 - Admin catalog management (requested 2026-11-10, implementation in progress): an administrator can create, view, edit, withdraw and reactivate packages offered to members, including price and supported allowance options. Changes apply to future orders; existing orders and subscriptions retain their purchased snapshots. New orders require confirmation of the displayed product version; existing idempotent order retries remain recoverable.

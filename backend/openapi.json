@@ -53433,7 +53433,8 @@
         }
       },
       "post": {
-        "summary": "Create idempotent package order; confirm displayed product version for new orders",
+        "summary": "Create idempotent package order with web or mobile payOS return",
+        "description": "Confirm the displayed product version for new orders. checkoutClient defaults to web; mobile adds returnTo=app to the configured billing URL. An idempotent retry retains the original return destination.",
         "tags": [
           "Billing"
         ],
@@ -53461,6 +53462,13 @@
                   "expectedProductVersion": {
                     "type": "integer",
                     "exclusiveMinimum": 0
+                  },
+                  "checkoutClient": {
+                    "type": "string",
+                    "enum": [
+                      "web",
+                      "mobile"
+                    ]
                   }
                 },
                 "required": [
@@ -53703,6 +53711,7 @@
     "/api/v1/billing/orders/{id}/reconcile": {
       "post": {
         "summary": "Recover same payOS checkout if needed, verify query and settle once; 30-second throttle",
+        "description": "Checkout recovery uses the original order’s return destination.",
         "tags": [
           "Billing"
         ],

@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.25
+**Version:** 4.26
 
-**Updated:** 2026-11-18
+**Updated:** 2026-11-19
 
 **Status:** Approved implementation baseline
 
@@ -422,6 +422,7 @@ Maintenance clarification 2026-10-26: titles and bodies need not be unique. Auto
 - Billing is opt-in and app rollout remains development/test. The provider is now payOS, whose transfers are real even from a development app. Missing Client ID/API key/checksum disables purchases, without mock fallback. Historical balances/orders retain original identity. Application production rollout remains deferred.
 - Signed payOS webhooks trigger an authoritative signed payment-request query. PAID with sufficient received money grants once; UNDERPAID/PROCESSING map to PENDING. Expected order amount/link/reference must match. Extra payment does not change package benefits and requires manual merchant handling. Late fully verified payment may supersede an unfulfilled terminal order; PAID never downgrades.
 - New payOS order code/link/checkout URL are persisted, distinct from application UUID. Ambiguous creates retry/recover the same code. Reconciliation uses an owner-scoped 30-second cooldown. Signed unknown webhook confirmation samples ACK without grants. Browser return/cancel claims are ignored for settlement.
+- The initiating client is snapshotted when checkout is created. Web returns to the configured HTTPS billing page with `orderId`. Installed mobile returns through that same HTTPS page with `returnTo=app`, which opens the app's billing screen for the order and provides a web fallback. Expo Go and mobile web use web checkout. Idempotent retries and provider checkout recovery reuse the original destination. Apply additive Mongo provisioning; no backfill or reseed is required.
 - Sell one-time cumulative packages for chat credits, fridge jobs, receipt jobs and additional Pantry slots. Demo benefits do not expire or grant roles/media storage. Prices and benefits are snapshotted on each order.
 - Only a verified provider IPN/query result (or guarded local simulation) may grant benefits. Browser return never grants. Duplicate payment events and concurrent callbacks grant once; a verified late success may upgrade an unpaid terminal order, while PAID never downgrades.
 - Chat consumes daily free quota first, then purchased credits. Reserve before provider work; complete atomically with the successful answer. Failures/fallbacks release; replay and stale workers cannot charge again or overwrite a newer attempt.
