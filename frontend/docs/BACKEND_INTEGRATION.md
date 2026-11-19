@@ -1,12 +1,22 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.83
+**Version:** 4.84
 
 **Cập nhật:** 19/11/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
 **Contract target:** `/api/v1`
+
+## Admin audit timeline — 2026-11-19 (4.84)
+
+| Method | Path | Status | FE integrated | Consumer action |
+| --- | --- | --- | --- | --- |
+| GET | `/admin/logs` | READY | Yes, web 2026-11-19 | ADMIN only. Read `data.items` and pass `data.nextCursor` to load older entries. |
+
+Audit records include existing moderation decisions, automated moderation flags, restaurant reviews and edits, AI capability toggles, billing catalog changes, and storage adjustments. Only source, action, target, actor ID/display name and occurrence time are returned. Stored reasons, emails, prompts, and before/after snapshots are excluded. Sort is time descending with stable source and ID tie-breakers. `limit` defaults to 25 and is limited to 50. Invalid input returns `VALIDATION_ERROR` (400). Authentication is required (401) and non-admin users receive `FORBIDDEN` (403). Apply `npm run prisma:push` for six additive indexes. Existing records and seeds require no data migration.
+
+Changelog 2026-11-19 (4.84): Dashboard audit tab reads the real API with loading, pagination, empty and retry states. Backend lint/typecheck/build/OpenAPI, isolated Mongo provisioning and role/pagination smoke, Swagger sync, web typecheck/tests/build, and authenticated Chromium verification passed locally.
 
 ## Native mobile street map — 2026-11-19 (4.83, consumer-only)
 

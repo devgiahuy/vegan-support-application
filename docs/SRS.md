@@ -1,6 +1,6 @@
 # Software Requirements Specification — Vegan Support Application
 
-**Version:** 1.11
+**Version:** 1.12
 
 **Updated:** 2026-11-19
 
@@ -110,6 +110,7 @@ User-approved 2026-11-16 recipe detail warning: show an allergy warning only for
 - Recipe, handbook, and video content follows draft → submitted → approved/rejected publication review.
 - AI moderation and user reports create review signals, never automatic hard deletion.
 - Administrators record decisions and reasons in an audit trail.
+- Administrators can view a paginated system audit timeline of recorded administrative actions and automated moderation flags. The timeline shows event metadata without exposing free-text reasons, private source content, or snapshots.
 - Removed or rejected content can be handled through the documented state machine without destroying required evidence.
 
 ### FR-05 Food and nutrient knowledge base

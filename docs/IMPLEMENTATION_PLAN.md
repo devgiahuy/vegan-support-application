@@ -1,6 +1,6 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.26
+**Version:** 4.27
 
 **Updated:** 2026-11-19
 
@@ -403,6 +403,8 @@ Maintenance clarification 2026-10-26: titles and bodies need not be unique. Auto
 - Email/push/realtime delivery is post-MVP unless separately approved.
 
 ### BL-18 — AI governance
+
+- The read-only admin audit timeline combines existing moderation decisions and automated flags with restaurant approvals/rejections/edits, AI capability changes, billing catalog changes, and storage adjustments. Only ADMIN may read it. Return event metadata and the actor's display name, resolve ties by source and event ID for cursor pagination, and omit stored free-text reasons, contact details, provider data, and snapshots. Provision additive timeline indexes without backfilling or reseeding.
 
 - Log capability, provider/model, prompt/template version, latency, status, token/cost metadata when available, safety result, and correlation ID.
 - Minimize/redact sensitive content and restrict log access.
