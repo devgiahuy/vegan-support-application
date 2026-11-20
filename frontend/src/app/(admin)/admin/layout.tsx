@@ -19,6 +19,7 @@ import {
   Wallet,
   Package,
   Activity,
+  UserCheck,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
@@ -33,6 +34,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 const NAV_MAIN = [
   { label: 'Tổng quan', href: '/admin/dashboard', icon: LayoutDashboard },
   { label: 'Duyệt bài', href: '/admin/dashboard?tab=queue', icon: ClipboardCheck, badge: '12' },
+  { label: 'Đơn cộng tác', href: '/admin/dashboard?tab=contrib-apps', icon: UserCheck },
   { label: 'Nội dung', href: '/admin/dashboard?tab=content', icon: Newspaper },
   { label: 'Người dùng', href: '/admin/dashboard?tab=users', icon: Users },
   { label: 'Chuyên mục', href: '/admin/dashboard?tab=categories', icon: FolderTree },
@@ -87,6 +89,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         return 'Quản lý nội dung';
       case 'queue':
         return 'Kiểm duyệt bài viết';
+      case 'contrib-apps':
+        return 'Duyệt đơn cộng tác';
       case 'users':
         return 'Quản lý người dùng';
       case 'categories':

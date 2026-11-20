@@ -27,8 +27,16 @@ export type AddressGeocodeFormValues = z.infer<typeof addressGeocodeSchema>;
 export const submitRestaurantSchema = z.object({
   name: z.string().trim().min(2, 'Vui lòng nhập tên quán (tối thiểu 2 ký tự).').max(180),
   address: z.string().trim().min(5, 'Vui lòng nhập địa chỉ đầy đủ (tối thiểu 5 ký tự).').max(500),
-  latitude: z.number('Vui lòng chọn vị trí trên bản đồ.').min(-90).max(90),
-  longitude: z.number('Vui lòng chọn vị trí trên bản đồ.').min(-180).max(180),
+  latitude: z
+    .number({ message: 'Vui lòng nhập vĩ độ của quán.' })
+    .min(-90, 'Vĩ độ phải từ -90 đến 90.')
+    .max(90, 'Vĩ độ phải từ -90 đến 90.')
+    .refine((v) => v !== 0, 'Vui lòng nhập vĩ độ khác 0.'),
+  longitude: z
+    .number({ message: 'Vui lòng nhập kinh độ của quán.' })
+    .min(-180, 'Kinh độ phải từ -180 đến 180.')
+    .max(180, 'Kinh độ phải từ -180 đến 180.')
+    .refine((v) => v !== 0, 'Vui lòng nhập kinh độ khác 0.'),
   categories: z.array(z.string().trim().min(1).max(100)).max(30).optional(),
   dietTags: z.array(z.enum(['VEGAN', 'LACTO_OVO', 'BUDDHIST', 'CHRISTIAN'])).optional(),
   allergenFreeCodes: z.array(z.string().trim().min(1).max(100)).max(30).optional(),

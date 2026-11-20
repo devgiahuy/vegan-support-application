@@ -22,18 +22,22 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Activity, AlertTriangle, History, RotateCw, Sparkles, Info } from 'lucide-react';
+import { Activity, AlertTriangle, History, RotateCw, Info } from 'lucide-react';
 
 export interface RecipeNutritionCardProps {
   postId: string;
   isAuthorOrAdmin?: boolean;
   className?: string;
+  showNutrientTable?: boolean;
+  showDisclaimer?: boolean;
 }
 
 export function RecipeNutritionCard({
   postId,
   isAuthorOrAdmin = false,
   className,
+  showNutrientTable = false,
+  showDisclaimer = false,
 }: RecipeNutritionCardProps) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [recalculateModalOpen, setRecalculateModalOpen] = useState(false);
@@ -44,11 +48,9 @@ export function RecipeNutritionCard({
     data: nutrition,
     isLoading: isNutritionLoading,
     isError: isNutritionError,
-    error: nutritionError,
-    refetch: refetchNutrition,
   } = useRecipeNutritionQuery(postId);
 
-  const { data: statusData, isLoading: isStatusLoading } = useRecipeNutritionStatusQuery(postId, {
+  const { data: statusData } = useRecipeNutritionStatusQuery(postId, {
     enabled: isAuthorOrAdmin,
   });
 
@@ -86,7 +88,7 @@ export function RecipeNutritionCard({
           <Skeleton className="w-24 h-4" />
         </div>
         <Skeleton className="h-28 w-full rounded-xl" />
-        <Skeleton className="h-44 w-full rounded-xl" />
+        {showNutrientTable && <Skeleton className="h-44 w-full rounded-xl" />}
       </div>
     );
   }
@@ -269,14 +271,16 @@ export function RecipeNutritionCard({
         />
       )}
 
-      {/* Bảng chi tiết vi chất */}
-      <NutrientListTable nutrients={nutrition.perServingNutrients} />
+      {/* Bảng chi tiết vi chất (mặc định ẩn) */}
+      {showNutrientTable && <NutrientListTable nutrients={nutrition.perServingNutrients} />}
 
-      {/* Footer Disclaimer & Ghi chú */}
-      <div className="pt-3 border-t border-border/50 flex items-start gap-2 text-[11px] text-muted-foreground leading-relaxed">
-        <Info className="w-3.5 h-3.5 shrink-0 text-muted-foreground/80 mt-0.5" />
-        <p>{nutrition.disclaimerText}</p>
-      </div>
+      {/* Footer Disclaimer & Ghi chú (mặc định ẩn) */}
+      {showDisclaimer && nutrition.disclaimerText && (
+        <div className="pt-3 border-t border-border/50 flex items-start gap-2 text-[11px] text-muted-foreground leading-relaxed">
+          <Info className="w-3.5 h-3.5 shrink-0 text-muted-foreground/80 mt-0.5" />
+          <p>{nutrition.disclaimerText}</p>
+        </div>
+      )}
 
       {/* Modal Lịch sử tính toán */}
       <RecipeNutritionHistoryDialog
