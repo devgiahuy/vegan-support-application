@@ -1,5 +1,11 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Bổ sung spinner loading ở trang /login khi click đăng nhập — Updated 2026-11-20
+
+- **Thêm loading spinner vào nút Đăng nhập:** Cập nhật `LoginForm` (`src/features/auth/components/login-form.tsx`) để khi `isLoading` (`loginMutation.isPending || isRedirecting`), nút "Đăng nhập" hiển thị biểu tượng xoay `<Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />` cùng nhãn "Đang xác thực..." (hoặc "Đang chuyển hướng..." khi đăng nhập thành công và chờ router chuyển trang) và thuộc tính `aria-busy="true"`.
+- **Chặn double-submit:** Vô hiệu hóa nút bấm và các ô nhập liệu (`email`, `password`) trong suốt quá trình xác thực và điều hướng.
+- **Kiểm chứng:** `npx tsc --noEmit` đạt 0 lỗi type; 122 test files / 938 tests pass (thêm 3 unit tests cho `login-form.test.ts`); Next.js production build đạt.
+
 ## Kết nối tab Nhật ký hệ thống — Updated 2026-11-19
 
 Tab quản trị đọc sáu nguồn nhật ký đã lưu qua API có phân trang. Kiểm tra qua trình duyệt với tài khoản Admin đã xác nhận bảng, nút xem nhật ký cũ hơn, trạng thái trống và thử lại khi lỗi.

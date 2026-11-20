@@ -15,6 +15,7 @@ import {
   Flag,
   UserCog,
   MessagesSquare,
+  UserCheck,
   Store,
   Bot,
   Database,
@@ -261,9 +262,9 @@ function AdminDashboardContent() {
     { id: 'content', label: 'Quản lý nội dung', icon: Newspaper },
     { id: 'reports', label: 'Báo cáo', icon: Flag },
     { id: 'users', label: 'Người dùng & Roles', icon: Users },
-    { id: 'mod-users', label: 'Kiểm soát TK', icon: UserCog },
+    // { id: 'mod-users', label: 'Kiểm soát TK', icon: UserCog },
     { id: 'mod-comments', label: 'Kiểm duyệt BL', icon: MessagesSquare },
-    // { id: 'contrib-apps', label: 'Đơn cộng tác', icon: UserCheck },
+    { id: 'contrib-apps', label: 'Đơn cộng tác', icon: UserCheck },
     { id: 'ai-governance', label: 'Giám sát AI', icon: Bot },
     { id: 'ai-revenue', label: 'Doanh thu AI', icon: Wallet },
     { id: 'billing-catalog', label: 'Gói tiện ích', icon: Package },
@@ -301,11 +302,11 @@ function AdminDashboardContent() {
             aria-label="Làm mới dữ liệu"
             onClick={() => void handleRefresh()}
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 mt-4 sm:grid-cols-2 lg:grid-cols-4">
           {kpis.map((k) => {
             const Icon = k.icon;
             return (
@@ -365,7 +366,7 @@ function AdminDashboardContent() {
                   {isActive && (
                     <motion.div
                       layoutId="active-admin-tab"
-                      className="absolute inset-0 -z-10 rounded-full bg-background shadow-sm border border-border/40"
+                      className="absolute inset-0 border rounded-full shadow-sm -z-10 bg-background border-border/40"
                       transition={{ type: 'spring', stiffness: 420, damping: 32 }}
                     />
                   )}
@@ -430,7 +431,7 @@ function AdminDashboardContent() {
             {/* TAB: MOD-COMMENTS — kiểm duyệt bình luận (features/moderation) */}
             {tab === 'mod-comments' && <ModCommentsTable />}
 
-            {/* TAB: CONTRIB-APPS — duyệt đơn cộng tác (features/contributor, fixture) */}
+            {/* TAB: CONTRIB-APPS — duyệt đơn cộng tác (features/contributor) */}
             {tab === 'contrib-apps' && <ContribQueueTable />}
 
             {/* TAB: RESTAURANTS — duyệt quán mới (features/restaurant, fixture) */}
@@ -463,7 +464,7 @@ function AdminDashboardContent() {
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h2 className="font-semibold text-lg">Quản trị Kiểm chứng Tri thức AI</h2>
+                    <h2 className="text-lg font-semibold">Quản trị Kiểm chứng Tri thức AI</h2>
                     <p className="text-xs text-muted-foreground">
                       Theo dõi các bản kiểm chứng của Người đóng góp và thực hiện can thiệp kiểm
                       toán (Ghi đè / Thu hồi).
@@ -504,5 +505,5 @@ function AdminDashboardContent() {
 }
 
 function BadgeCheckIcon() {
-  return <ClipboardCheck className="inline h-6 w-6 text-primary" />;
+  return <ClipboardCheck className="inline w-6 h-6 text-primary" />;
 }

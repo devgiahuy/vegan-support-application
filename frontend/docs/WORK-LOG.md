@@ -1,5 +1,21 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-20] — Thêm spinner loading ở trang /login khi click đăng nhập
+
+- **Yêu cầu:** Thêm spinner loading ở trang `/login` khi người dùng nhấn nút đăng nhập.
+- **Nguyên nhân:** Trước đây nút Đăng nhập trong `LoginForm` chỉ đổi nhãn text thành `"Đang xác thực..."` và giữ nguyên icon `<LogIn />` tĩnh mà không có biểu tượng spinner loading. Sau khi mutation thành công và router chuyển trang, trạng thái pending mất đi có thể khiến nút nhấp nháy trở lại trạng thái ban đầu trước khi trang đích được tải.
+- **Đã làm:**
+  - Cập nhật `LoginForm` (`src/features/auth/components/login-form.tsx`):
+    - Nhúng icon `<Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />` khi đang trong trạng thái tải.
+    - Quản lý trạng thái `isLoading` kết hợp giữa `loginMutation.isPending` và `isRedirecting` (giữ spinner hiển thị `"Đang chuyển hướng..."` cho đến khi trang hoàn tất điều hướng, chống double-submit / giật lag).
+    - Thêm `aria-busy={isLoading}` và vô hiệu hóa các ô nhập liệu (`email`, `password`) cũng như nút submit khi đang tải.
+  - Viết unit tests kiểm thử hành vi trong `src/features/auth/components/login-form.test.ts` (3/3 tests pass).
+- **Kiểm chứng:**
+  - `npx tsc --noEmit` đạt 0 lỗi type.
+  - Vitest: toàn bộ test suite frontend (122 test files, 938 tests) pass 100%.
+  - Next.js production build (`npx next build --webpack`) biên dịch thành công 47 routes tĩnh và động (`○ /login`).
+  - `git diff --check` sạch sẽ.
+
 ## [2026-11-19] — Kết nối nhật ký thao tác hệ thống
 
 - Thay thông báo giữ chỗ bằng bảng phân trang, hiển thị thời gian, người thực hiện, thao tác và đối tượng. Nguồn dữ liệu là sáu loại sự kiện đã lưu. API chỉ cho Admin đọc và lọc trường nhạy cảm.

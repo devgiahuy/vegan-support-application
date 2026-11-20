@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Lock, LogIn, Mail } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Lock, LogIn, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,7 @@ export function LoginForm({
 }) {
   const loginMutation = useLoginMutation();
   const [showPassword, setShowPassword] = React.useState(false);
+  const [isRedirecting, setIsRedirecting] = React.useState(false);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -36,8 +37,10 @@ export function LoginForm({
   const onSubmit = async (values: LoginFormValues) => {
     try {
       await loginMutation.mutateAsync(values);
+      setIsRedirecting(true);
       onSuccess?.();
     } catch (error) {
+      setIsRedirecting(false);
       const code = getApiErrorCode(error);
       if (code === 'INVALID_CREDENTIALS') {
         toast.error('Email hoặc mật khẩu không đúng. Vui lòng thử lại.');
@@ -68,6 +71,8 @@ export function LoginForm({
     }
   };
 
+  const isLoading = loginMutation.isPending || isRedirecting;
+
   return (
     <form onSubmit={(e) => void form.handleSubmit(onSubmit)(e)} className="space-y-4" noValidate>
       <div className="space-y-1.5">
@@ -84,7 +89,8 @@ export function LoginForm({
             type="email"
             autoComplete="email"
             placeholder="user@veggieconnect.vn"
-            className="h-12 rounded-xl pl-10 text-sm border-border/80 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
+            className="h-12 rounded-xl pl-10 text-sm border-border/80 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary transition-all disabled:opacity-60"
+            disabled={isLoading}
             {...form.register('email')}
           />
         </div>
@@ -101,13 +107,16 @@ export function LoginForm({
           >
             Mật khẩu
           </Label>
-          <button
-            type="button"
-            onClick={() => onForgotPassword?.()}
-            className="text-xs font-medium text-primary hover:underline"
-          >
-            Quên mật khẩu?
-          </button>
+          {onForgotPassword && (
+            <button
+              type="button"
+              disabled={isLoading}
+              onClick={() => onForgotPassword()}
+              className="text-xs font-medium text-primary hover:underline disabled:opacity-50 disabled:pointer-events-none"
+            >
+              Quên mật khẩu?
+            </button>
+          )}
         </div>
         <div className="relative">
           <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -116,14 +125,16 @@ export function LoginForm({
             type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
             placeholder="••••••••"
-            className="h-12 rounded-xl px-10 text-sm border-border/80 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
+            className="h-12 rounded-xl px-10 text-sm border-border/80 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary transition-all disabled:opacity-60"
+            disabled={isLoading}
             {...form.register('password')}
           />
           <button
             type="button"
             aria-label="Hiện/ẩn mật khẩu"
+            disabled={isLoading}
             onClick={() => setShowPassword((v) => !v)}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none"
           >
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
@@ -135,11 +146,24 @@ export function LoginForm({
 
       <Button
         type="submit"
-        className="h-12 w-full gap-2 rounded-xl font-semibold bg-primary hover:bg-primary/95 active:scale-[0.99] transition-all shadow-xs"
-        disabled={loginMutation.isPending}
+        className="h-12 w-full gap-2 rounded-xl font-semibold bg-primary hover:bg-primary/95 active:scale-[0.99] transition-all shadow-xs cursor-pointer disabled:cursor-not-allowed"
+        disabled={isLoading}
+        aria-busy={isLoading}
       >
-        {loginMutation.isPending ? 'Đang xác thực...' : 'Đăng nhập'}
-        <LogIn className="h-4 w-4" />
+        {isLoading ? (
+          <>
+            <Loader2
+              className="h-4 w-4 animate-spin motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+            <span>{isRedirecting ? 'Đang chuyển hướng...' : 'Đang xác thực...'}</span>
+          </>
+        ) : (
+          <>
+            <span>Đăng nhập</span>
+            <LogIn className="h-4 w-4" aria-hidden="true" />
+          </>
+        )}
       </Button>
     </form>
   );

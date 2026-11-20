@@ -1,22 +1,16 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { ArrowLeft, Mail, Send, ShieldCheck, Leaf, CheckCircle2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { ShieldCheck, Leaf } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { LoginForm } from '@/features/auth/components/login-form';
 import { RegisterForm } from '@/features/auth/components/register-form';
 import { useAuthStore } from '@/store/useAuthStore';
 import { UserRole } from '@/common/enums';
 
-type Tab = 'login' | 'register' | 'forgot';
+type Tab = 'login' | 'register';
 
 /**
  * Chặn open redirect: chỉ chấp nhận path nội bộ bắt đầu bằng `/` (không `//`, không scheme).
@@ -33,7 +27,6 @@ export default function LoginPage() {
   const redirectTarget = getSafeRedirectTarget(rawFrom);
 
   const [tab, setTab] = React.useState<Tab>('login');
-  const [forgotSent, setForgotSent] = React.useState(false);
   const shouldReduceMotion = useReducedMotion();
 
   const handleLoginSuccess = React.useCallback(() => {
@@ -51,7 +44,6 @@ export default function LoginPage() {
   const tabs: { id: Tab; label: string }[] = [
     { id: 'login', label: 'Đăng nhập' },
     { id: 'register', label: 'Tạo tài khoản' },
-    { id: 'forgot', label: 'Khôi phục' },
   ];
 
   return (
@@ -63,7 +55,7 @@ export default function LoginPage() {
         className="rounded-[28px] border border-border/70 bg-white/95 p-6 shadow-[0_20px_50px_rgba(29,43,34,0.06)] backdrop-blur-md sm:p-9 dark:border-border/40 dark:bg-[#12211A]/95 dark:shadow-[0_20px_50px_rgba(0,0,0,0.35)]"
       >
         {/* Modern Segmented Control Tabs */}
-        <div className="relative grid grid-cols-3 gap-1 rounded-full bg-[#F3F2EC] p-1 dark:bg-muted/50">
+        <div className="relative grid grid-cols-2 gap-1 rounded-full bg-[#F3F2EC] p-1 dark:bg-muted/50">
           {tabs.map((t) => {
             const isActive = tab === t.id;
             return (
@@ -109,26 +101,8 @@ export default function LoginPage() {
               </p>
 
               <div className="mt-6">
-                <LoginForm
-                  onSuccess={handleLoginSuccess}
-                  onForgotPassword={() => setTab('forgot')}
-                />
+                <LoginForm onSuccess={handleLoginSuccess} />
               </div>
-
-              {/* <div className="flex justify-center">
-                <motion.div
-                  className="w-full"
-                  whileTap={shouldReduceMotion ? undefined : { scale: 0.99 }}
-                >
-                  <Button
-                    variant="outline"
-                    className="w-full h-12 text-sm font-medium transition-colors rounded-xl border-border/80 hover:border-primary/40 hover:bg-primary/5"
-                    onClick={() => toast.info('Đăng nhập Google sẽ sớm khả dụng')}
-                  >
-                    Google ID
-                  </Button>
-                </motion.div>
-              </div> */}
 
               <p className="mt-6 text-center text-xs text-[#718078] dark:text-neutral-400">
                 Bạn mới biết đến VeggieConnect?{' '}
@@ -173,85 +147,6 @@ export default function LoginPage() {
                   Đăng nhập ngay
                 </button>
               </p>
-            </motion.div>
-          )}
-
-          {tab === 'forgot' && (
-            <motion.div
-              key="forgot"
-              initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-7"
-            >
-              <h1 className="text-2xl font-bold tracking-tight text-[#1D2B22] sm:text-[28px] dark:text-[#E8F1E8]">
-                Khôi phục mật khẩu
-              </h1>
-              <p className="mt-1.5 text-sm leading-relaxed text-[#718078] dark:text-neutral-400">
-                Nhập email liên kết với tài khoản VeggieConnect. Chúng tôi sẽ gửi hướng dẫn khôi
-                phục bảo mật trong tích tắc.
-              </p>
-
-              {forgotSent && (
-                <motion.div
-                  initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="p-3 mt-4 text-sm border rounded-xl border-primary/30 bg-primary/5"
-                >
-                  <p className="flex items-center gap-1.5 font-semibold text-primary">
-                    <CheckCircle2 className="w-4 h-4" /> Email đã được gửi!
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Vui lòng kiểm tra hộp thư đến (và thư mục Spam). Liên kết có hiệu lực trong 15
-                    phút.
-                  </p>
-                </motion.div>
-              )}
-
-              <form
-                className="mt-6 space-y-4"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setForgotSent(true);
-                  toast.success('Đã gửi liên kết khôi phục');
-                }}
-              >
-                <div className="space-y-1.5">
-                  <Label
-                    htmlFor="forgot-email"
-                    className="text-xs font-semibold uppercase tracking-wider text-[#718078] dark:text-neutral-300"
-                  >
-                    Email đã đăng ký tài khoản
-                  </Label>
-                  <div className="relative">
-                    <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      id="forgot-email"
-                      type="email"
-                      placeholder="vidu@veggieconnect.vn"
-                      className="h-12 pl-10 text-sm rounded-xl border-border/80 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary"
-                      required
-                    />
-                  </div>
-                </div>
-                <motion.div whileTap={shouldReduceMotion ? undefined : { scale: 0.99 }}>
-                  <Button
-                    type="submit"
-                    className="w-full h-12 gap-2 font-semibold rounded-xl bg-primary hover:bg-primary/95"
-                  >
-                    <Send className="w-4 h-4" /> Gửi liên kết khôi phục
-                  </Button>
-                </motion.div>
-              </form>
-
-              <button
-                type="button"
-                onClick={() => setTab('login')}
-                className="mt-6 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" /> Quay lại trang Đăng nhập
-              </button>
             </motion.div>
           )}
         </AnimatePresence>
