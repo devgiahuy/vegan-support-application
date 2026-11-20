@@ -171,10 +171,11 @@ export function PantryAdjustmentSheet({
           </Text>
         ) : null}
 
-        <View className="flex-row justify-end gap-2 pt-1">
-          <PrimaryButton label="Hủy" variant="outline" disabled={adjust.isPending} onPress={onClose} />
+        <View className="flex-row gap-2 pt-1">
+          <PrimaryButton label="Hủy" variant="outline" className="flex-1" disabled={adjust.isPending} onPress={onClose} />
           <PrimaryButton
             label={adjust.isPending ? 'Đang ghi nhận...' : 'Xác nhận điều chỉnh'}
+            className="flex-[1.6]"
             loading={adjust.isPending}
             disabled={adjust.isPending}
             onPress={submit}

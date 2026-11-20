@@ -1,6 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
-import { ArrowRight, Bookmark, Compass, Lock, MessageSquare, Search, ShieldCheck, Sparkles } from 'lucide-react-native';
+import { ArrowRight, Bookmark, Compass, Lock, MessageSquare, Search, Sparkles } from 'lucide-react-native';
 
 import { FormSheet } from '@/components/shared/form-sheet';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -79,12 +79,6 @@ export function WhyRecommendedSheet({ meta, onClose }: WhyRecommendedSheetProps)
             Dữ liệu hành vi chỉ dùng để tối ưu gợi ý trong ứng dụng. Bạn có thể tắt cá nhân hóa hoặc xóa lịch sử hành vi bất cứ lúc nào ở Hồ sơ.
           </Text>
         </View>
-        {meta?.scoringVersion ? (
-          <View className="flex-row items-center gap-1.5">
-            <ShieldCheck size={12} color={colors.mutedForeground} />
-            <Text className="text-[11px] text-muted-foreground">Phiên bản chấm điểm: {meta.scoringVersion}</Text>
-          </View>
-        ) : null}
 
         <Link href={'/profile' as Href} asChild>
           <Pressable

@@ -48,6 +48,13 @@ function buildMonthCells(year: number, month: number): (number | null)[] {
   return cells;
 }
 
+/** Chia các ô của tháng thành từng tuần (mỗi tuần đúng 7 ô, bắt đầu từ Thứ hai). */
+function chunkWeeks(cells: (number | null)[]): (number | null)[][] {
+  const weeks: (number | null)[][] = [];
+  for (let index = 0; index < cells.length; index += 7) weeks.push(cells.slice(index, index + 7));
+  return weeks;
+}
+
 interface CalendarCardProps {
   value?: string;
   title: string;
@@ -64,7 +71,7 @@ function CalendarCard({ value, title, minDate, maxDate, onSelect, onClear, onClo
   const initial = parseDate(value ?? '') ?? parseDate(todayString());
   const [view, setView] = React.useState({ year: initial?.year ?? 2026, month: initial?.month ?? 1 });
 
-  const cells = React.useMemo(() => buildMonthCells(view.year, view.month), [view.year, view.month]);
+  const weeks = React.useMemo(() => chunkWeeks(buildMonthCells(view.year, view.month)), [view.year, view.month]);
   const today = todayString();
 
   const shiftMonth = (delta: number) => {
@@ -111,35 +118,40 @@ function CalendarCard({ value, title, minDate, maxDate, onSelect, onClear, onClo
           ))}
         </View>
 
-        <View className="flex-row flex-wrap">
-          {cells.map((day, index) => {
-            if (day === null) return <View key={`blank-${index}`} className="h-11 w-[14.2857%]" />;
-            const date = toDateString(view.year, view.month, day);
-            const selected = date === value;
-            const disabled = isDisabled(date);
-            return (
-              <View key={date} className="h-11 w-[14.2857%] items-center justify-center">
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={formatDisplay(date)}
-                  accessibilityState={{ selected, disabled }}
-                  disabled={disabled}
-                  onPress={() => {
-                    onSelect(date);
-                    onClose();
-                  }}
-                  className={cn(
-                    'h-10 w-10 items-center justify-center rounded-full',
-                    selected ? 'bg-primary' : date === today ? 'border border-primary' : '',
-                    disabled ? 'opacity-30' : ''
-                  )}>
-                  <Text className={cn('text-sm', selected ? 'font-bold text-primary-foreground' : 'text-foreground')}>
-                    {day}
-                  </Text>
-                </Pressable>
-              </View>
-            );
-          })}
+        {/* Mỗi tuần là một hàng riêng với 7 ô flex-1 để các ngày luôn thẳng hàng với tiêu đề T2…CN. */}
+        <View>
+          {weeks.map((week, weekIndex) => (
+            <View key={`week-${weekIndex}`} className="flex-row">
+              {week.map((day, dayIndex) => {
+                if (day === null) return <View key={`blank-${weekIndex}-${dayIndex}`} className="h-11 flex-1" />;
+                const date = toDateString(view.year, view.month, day);
+                const selected = date === value;
+                const disabled = isDisabled(date);
+                return (
+                  <View key={date} className="h-11 flex-1 items-center justify-center">
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={formatDisplay(date)}
+                      accessibilityState={{ selected, disabled }}
+                      disabled={disabled}
+                      onPress={() => {
+                        onSelect(date);
+                        onClose();
+                      }}
+                      className={cn(
+                        'h-10 w-10 items-center justify-center rounded-full',
+                        selected ? 'bg-primary' : date === today ? 'border border-primary' : '',
+                        disabled ? 'opacity-30' : ''
+                      )}>
+                      <Text className={cn('text-sm', selected ? 'font-bold text-primary-foreground' : 'text-foreground')}>
+                        {day}
+                      </Text>
+                    </Pressable>
+                  </View>
+                );
+              })}
+            </View>
+          ))}
         </View>
 
         <View className="flex-row gap-2">

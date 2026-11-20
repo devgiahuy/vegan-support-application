@@ -63,7 +63,7 @@ export function ExclusionEditor({
             setError(null);
             onSearchChange(next);
           }}
-          placeholder="Tìm nguyên liệu, vd: dứa, sầu riêng, mắm tôm…"
+          placeholder="Tìm nguyên liệu"
           clearLabel="Xóa nội dung tìm kiếm nguyên liệu kiêng"
         />
         {error ? <Text accessibilityRole="alert" className="text-xs text-destructive">{error}</Text> : null}

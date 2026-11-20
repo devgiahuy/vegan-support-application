@@ -5,91 +5,133 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  Flame,
   History,
   Info,
   RotateCw,
-  Scale,
-  Sparkles,
   X,
 } from 'lucide-react-native';
 
-import { ShowMoreButton, useShowMore } from '@/components/shared/show-more';
 import { ErrorState, LoadingState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
-import { cn } from '@/lib/utils';
 import {
   useRecalculateNutritionMutation,
   useRecipeNutritionHistoryQuery,
   useRecipeNutritionQuery,
   useRecipeNutritionStatusQuery,
 } from '../queries/recipe-nutrition.queries';
-import type { NutrientLine, RecipeNutritionEstimate } from '../types/recipe-nutrition.model';
+import type { NutrientLine, RecipeNutritionEstimate, UncoveredIngredient } from '../types/recipe-nutrition.model';
 
-function OriginBadge({ line }: { line: NutrientLine }) {
-  const colors = useIconColors();
-  if (line.isAiEstimated) {
-    return (
-      <View className="flex-row items-center gap-1 rounded-full bg-purple-500/10 px-1.5 py-0.5">
-        <Sparkles size={10} color="#7e22ce" />
-        <Text className="text-[10px] font-medium text-purple-700">AI ước lượng</Text>
-      </View>
-    );
-  }
-  if (line.origin === 'USER_PROVIDED') {
-    return (
-      <View className="rounded-full bg-amber-500/10 px-1.5 py-0.5">
-        <Text className="text-[10px] font-medium text-amber-700">Người dùng nhập</Text>
-      </View>
-    );
-  }
-  if (line.origin === 'VERIFIED_OVERRIDE') {
-    return (
-      <View className="rounded-full bg-blue-500/10 px-1.5 py-0.5">
-        <Text className="text-[10px] font-medium text-blue-700">Đã xác minh</Text>
-      </View>
-    );
-  }
-  return (
-    <View className="flex-row items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5">
-      <Scale size={10} color={colors.primary} />
-      <Text className="text-[10px] font-medium text-primary">Từ dữ liệu chuẩn</Text>
-    </View>
-  );
+interface MacroTile {
+  key: string;
+  label: string;
+  line: NutrientLine | undefined;
+  percent: number | undefined;
+  dotClass: string;
+  barClass: string;
+  tileClass: string;
+  labelClass: string;
 }
 
-export function KeyMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <View className="min-w-[30%] flex-1 items-center rounded-xl border border-border bg-muted/30 p-2.5">
-      <Text className="text-[11px] text-muted-foreground">{label}</Text>
-      <Text className="mt-0.5 text-base font-bold text-foreground">{value}</Text>
-    </View>
-  );
-}
-
-export function MacroBar({ estimate }: { estimate: RecipeNutritionEstimate }) {
+/** Khối năng lượng + phân bổ macro — bố cục đồng bộ `MacroDistributionBar` của web (kcal, thanh macro, 3 ô Đạm/Tinh bột/Béo). */
+export function MacroSummary({ estimate }: { estimate: RecipeNutritionEstimate }) {
+  const byCode = (code: string) => estimate.nutrients.find((line) => line.code === code);
+  const energy = byCode('ENERGY_KCAL');
   const split = estimate.macroSplit;
-  if (!split) return null;
-  const segments = [
-    { label: 'Đạm', percent: split.proteinPercent, color: 'bg-primary' },
-    { label: 'Tinh bột', percent: split.carbsPercent, color: 'bg-cta' },
-    { label: 'Béo', percent: split.fatPercent, color: 'bg-sky-500' },
+  const tiles: MacroTile[] = [
+    {
+      key: 'PROTEIN',
+      label: 'Đạm',
+      line: byCode('PROTEIN'),
+      percent: split?.proteinPercent,
+      dotClass: 'bg-emerald-500',
+      barClass: 'bg-emerald-500',
+      tileClass: 'border-emerald-200/60 bg-emerald-50/60 dark:border-emerald-800/40 dark:bg-emerald-950/30',
+      labelClass: 'text-emerald-800 dark:text-emerald-300',
+    },
+    {
+      key: 'CARBS',
+      label: 'Tinh bột',
+      line: byCode('CARBS'),
+      percent: split?.carbsPercent,
+      dotClass: 'bg-amber-500',
+      barClass: 'bg-amber-500',
+      tileClass: 'border-amber-200/60 bg-amber-50/60 dark:border-amber-800/40 dark:bg-amber-950/30',
+      labelClass: 'text-amber-800 dark:text-amber-300',
+    },
+    {
+      key: 'FAT',
+      label: 'Béo',
+      line: byCode('FAT'),
+      percent: split?.fatPercent,
+      dotClass: 'bg-sky-500',
+      barClass: 'bg-sky-500',
+      tileClass: 'border-sky-200/60 bg-sky-50/60 dark:border-sky-800/40 dark:bg-sky-950/30',
+      labelClass: 'text-sky-800 dark:text-sky-300',
+    },
   ];
+  const totalGrams = tiles.reduce((sum, tile) => sum + (tile.line?.amount ?? 0), 0);
+
   return (
-    <View className="gap-2">
-      <Text className="text-xs font-semibold text-foreground">Phân bổ năng lượng (ước tính)</Text>
-      <View className="h-2.5 flex-row overflow-hidden rounded-full bg-muted">
-        {segments.map((segment) => (
-          <View key={segment.label} className={segment.color} style={{ width: `${segment.percent}%` }} />
-        ))}
+    <View className="gap-4 rounded-2xl border border-border bg-card p-4">
+      <View className="flex-row flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
+        <View className="flex-row items-center gap-2.5">
+          <View className="rounded-xl bg-orange-100 p-2 dark:bg-orange-950/50">
+            <Flame size={20} color="#ea580c" />
+          </View>
+          <View>
+            <View className="flex-row items-baseline gap-1.5">
+              <Text className="text-2xl font-bold text-foreground">
+                {energy ? `~${energy.formattedAmount}` : '—'}
+              </Text>
+              <Text className="text-sm font-semibold uppercase text-muted-foreground">kcal</Text>
+            </View>
+            <Text className="text-xs text-muted-foreground">năng lượng mỗi khẩu phần</Text>
+          </View>
+        </View>
+        <View className="rounded-md bg-muted px-2.5 py-1">
+          <Text className="text-xs font-medium text-muted-foreground">Khẩu phần: {estimate.servings} người ăn</Text>
+        </View>
       </View>
-      <View className="flex-row flex-wrap gap-x-4 gap-y-1">
-        {segments.map((segment) => (
-          <View key={segment.label} className="flex-row items-center gap-1.5">
-            <View className={cn('h-2 w-2 rounded-full', segment.color)} />
-            <Text className="text-[11px] text-muted-foreground">
-              {segment.label} {segment.percent}%
+
+      <View className="gap-1.5">
+        <View className="flex-row items-center justify-between gap-2">
+          <Text className="flex-1 text-xs font-medium text-muted-foreground">Tỷ lệ phân bổ đa lượng chất (Macro)</Text>
+          <Text className="text-xs font-medium text-muted-foreground">
+            {totalGrams > 0 ? `${totalGrams.toFixed(1).replace('.', ',')}g tổng` : 'Chưa có'}
+          </Text>
+        </View>
+        <View
+          accessibilityRole="progressbar"
+          accessibilityLabel="Phân bổ năng lượng đạm, tinh bột, béo"
+          className="h-3 w-full flex-row overflow-hidden rounded-full bg-muted/60">
+          {totalGrams > 0
+            ? tiles.map((tile) => {
+                const width = ((tile.line?.amount ?? 0) / totalGrams) * 100;
+                return width > 0 ? (
+                  <View key={tile.key} className={tile.barClass} style={{ width: `${width}%` }} />
+                ) : null;
+              })
+            : null}
+        </View>
+      </View>
+
+      <View className="flex-row gap-2">
+        {tiles.map((tile) => (
+          <View key={tile.key} className={`flex-1 items-center rounded-lg border px-2 py-3 ${tile.tileClass}`}>
+            <View className="mb-1 flex-row items-center justify-center gap-1.5">
+              <View className={`h-2 w-2 rounded-full ${tile.dotClass}`} />
+              <Text numberOfLines={1} className={`text-xs font-semibold ${tile.labelClass}`}>
+                {tile.label}
+              </Text>
+            </View>
+            <Text className="text-base font-bold text-foreground">
+              {tile.line ? `~${tile.line.formattedAmount}${tile.line.unit}` : '—'}
+            </Text>
+            <Text className="mt-0.5 text-[11px] text-muted-foreground">
+              {tile.percent !== undefined ? `${tile.percent}% calo` : 'Chưa có'}
             </Text>
           </View>
         ))}
@@ -98,16 +140,57 @@ export function MacroBar({ estimate }: { estimate: RecipeNutritionEstimate }) {
   );
 }
 
-export function Collapsible({ title, children }: { title: string; children: React.ReactNode }) {
-  const colors = useIconColors();
+/** Cảnh báo nguyên liệu chưa có dữ liệu thành phần chuẩn — đồng bộ `UncoveredIngredientsAlert` của web. */
+export function UncoveredIngredientsAlert({
+  ingredients,
+  confidencePercent,
+}: {
+  ingredients: UncoveredIngredient[];
+  confidencePercent: number;
+}) {
   const [open, setOpen] = React.useState(false);
+  if (ingredients.length === 0) return null;
   return (
-    <View>
-      <Pressable onPress={() => setOpen((value) => !value)} className="flex-row items-center gap-1">
-        <Text className="text-xs font-semibold text-foreground">{title}</Text>
-        {open ? <ChevronUp size={14} color={colors.foreground} /> : <ChevronDown size={14} color={colors.foreground} />}
-      </Pressable>
-      {open ? <View className="mt-2 gap-1.5">{children}</View> : null}
+    <View className="rounded-xl border border-amber-300/80 bg-amber-50/80 p-4 dark:border-amber-900/60 dark:bg-amber-950/30">
+      <View className="flex-row items-start gap-3">
+        <View className="mt-0.5 rounded-md bg-amber-200/80 p-1 dark:bg-amber-900/60">
+          <AlertTriangle size={16} color="#92400e" />
+        </View>
+        <View className="min-w-0 flex-1">
+          <View className="flex-row flex-wrap items-center justify-between gap-2">
+            <Text className="flex-shrink text-sm font-semibold text-amber-900 dark:text-amber-200">
+              Có {ingredients.length} nguyên liệu chưa có dữ liệu thành phần chuẩn
+            </Text>
+            <View className="rounded-full bg-amber-200/60 px-2 py-0.5 dark:bg-amber-900/50">
+              <Text className="text-xs font-medium text-amber-800 dark:text-amber-300">Độ bao phủ: {confidencePercent}%</Text>
+            </View>
+          </View>
+          <Text className="mt-1 text-xs leading-relaxed text-amber-800/90 dark:text-amber-300/90">
+            Số liệu dinh dưỡng hiển thị là mức tối thiểu đã xác định từ các nguyên liệu đã biết. Các nguyên liệu thiếu chưa
+            được tính vào tổng năng lượng.
+          </Text>
+          <Pressable onPress={() => setOpen((value) => !value)} className="mt-2.5 flex-row items-center gap-1 self-start">
+            <Text className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+              {open ? 'Thu gọn danh sách nguyên liệu' : 'Xem chi tiết các nguyên liệu thiếu'}
+            </Text>
+            {open ? <ChevronUp size={14} color="#78350f" /> : <ChevronDown size={14} color="#78350f" />}
+          </Pressable>
+          {open ? (
+            <View className="mt-3 gap-2 border-t border-amber-200/60 pt-2.5 dark:border-amber-800/40">
+              {ingredients.map((item, index) => (
+                <View
+                  key={`${item.displayName}-${index}`}
+                  className="flex-row items-start gap-2 rounded-md bg-amber-100/50 p-2 dark:bg-amber-900/20">
+                  <Info size={14} color="#b45309" />
+                  <Text className="flex-1 text-xs text-amber-800/80 dark:text-amber-300/80">
+                    <Text className="font-semibold text-amber-950 dark:text-amber-100">{item.displayName}</Text> ({item.reason})
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      </View>
     </View>
   );
 }
@@ -175,15 +258,15 @@ function RecalculateModal({
     <Modal visible animationType="fade" transparent onRequestClose={onClose}>
       <View className="flex-1 items-center justify-center bg-black/50 px-6">
         <View className="w-full max-w-sm rounded-2xl bg-card p-5">
-          <Text className="text-base font-bold text-foreground">Tính lại dinh dưỡng</Text>
+          <Text className="text-base font-bold text-foreground">Tính toán lại dinh dưỡng</Text>
           <Text className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Hệ thống đối soát nguyên liệu sau sơ chế và áp dụng hệ số giữ lại dinh dưỡng của cách nấu cho phiên bản hiện tại.
+            Hệ thống sẽ phân tích lại toàn bộ nguyên liệu sạch và các bước nấu của phiên bản hiện tại.
           </Text>
           <View className="mt-3 flex-row items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 p-3">
             <View className="flex-1">
-              <Text className="text-xs font-semibold text-foreground">Cho phép AI ước lượng chỉ số còn thiếu</Text>
+              <Text className="text-xs font-semibold text-foreground">Cho phép AI ước lượng vi chất còn thiếu</Text>
               <Text className="mt-0.5 text-[11px] text-muted-foreground">
-                Giá trị do AI bổ sung luôn được gắn nhãn &quot;AI ước lượng&quot;.
+                Gắn nhãn &quot;AI ước lượng&quot; rõ ràng cho các giá trị bổ trợ.
               </Text>
             </View>
             <Switch value={useAiFallback} onValueChange={setUseAiFallback} />
@@ -191,7 +274,7 @@ function RecalculateModal({
           <View className="mt-4 flex-row gap-2">
             <PrimaryButton label="Hủy" variant="outline" className="flex-1" onPress={onClose} />
             <PrimaryButton
-              label={isPending ? 'Đang tính...' : 'Tính lại'}
+              label={isPending ? 'Đang tính...' : 'Bắt đầu tính lại'}
               className="flex-1"
               loading={isPending}
               onPress={() => onConfirm(useAiFallback)}
@@ -203,46 +286,11 @@ function RecalculateModal({
   );
 }
 
-const VISIBLE_OTHER_NUTRIENTS = 2;
-
-/** Vi chất và dưỡng chất khác: danh sách rất dài nên chỉ hiện vài dòng đầu, phần còn lại mở bằng "Xem thêm". */
-function OtherNutrients({ lines }: { lines: NutrientLine[] }) {
-  const list = useShowMore(lines, VISIBLE_OTHER_NUTRIENTS);
-  if (lines.length === 0) return null;
-  return (
-    <View className="gap-1">
-      <Text className="text-xs font-semibold text-foreground">Vi chất và dưỡng chất khác ({lines.length})</Text>
-      {list.visible.map((line) => (
-        <View key={line.code} className="gap-1 border-b border-border/60 py-2">
-          <View className="flex-row items-center justify-between gap-2">
-            <Text className="flex-1 text-sm text-foreground">{line.name}</Text>
-            <Text className="text-sm font-semibold text-foreground">
-              {line.formattedAmount} {line.unit}
-            </Text>
-          </View>
-          <View className="flex-row flex-wrap items-center gap-2">
-            <OriginBadge line={line} />
-            {line.rangeLabel ? (
-              <Text className="text-[10px] text-muted-foreground">
-                Khoảng {line.rangeLabel} {line.unit}
-              </Text>
-            ) : null}
-            {line.confidencePercent > 0 && line.confidencePercent < 100 ? (
-              <Text className="text-[10px] text-muted-foreground">tin cậy {line.confidencePercent}%</Text>
-            ) : null}
-          </View>
-        </View>
-      ))}
-      <ShowMoreButton collapsible={list.collapsible} expanded={list.expanded} hiddenCount={list.hiddenCount} onPress={list.toggle} />
-    </View>
-  );
-}
-
 /**
- * Thẻ "Phân tích dinh dưỡng theo cách nấu" — đồng bộ `RecipeNutritionCard` của web, hiển thị theo mỗi khẩu phần:
- * chỉ số chính, phân bổ năng lượng, nguyên liệu thiếu dữ liệu, bảng dưỡng chất kèm nguồn gốc số liệu
- * (từ dữ liệu chuẩn / AI ước lượng), giả định, độ tin cậy và lịch sử. Số liệu luôn là ước tính tham khảo;
- * chỉ số không có dữ liệu thì không hiển thị (không coi là 0).
+ * Thẻ "Phân tích Dinh dưỡng Nấu nướng" — đồng bộ `RecipeNutritionCard` của web, hiển thị theo mỗi khẩu phần:
+ * năng lượng, phân bổ macro (đạm/tinh bột/béo), nguyên liệu thiếu dữ liệu, giả định, độ tin cậy và lịch sử.
+ * Không hiển thị bảng vi chất. Số liệu luôn là ước tính tham khảo; chỉ số không có dữ liệu thì không
+ * hiển thị là 0.
  */
 export function RecipeNutritionCard({ postId, canManage }: { postId: string; canManage: boolean }) {
   const colors = useIconColors();
@@ -269,17 +317,17 @@ export function RecipeNutritionCard({ postId, canManage }: { postId: string; can
     return (
       <View className="items-center gap-2 rounded-2xl border border-dashed border-border bg-card/50 p-5">
         <Activity size={22} color={colors.primary} />
-        <Text className="text-center text-sm font-semibold text-foreground">Chưa có thông tin dinh dưỡng chi tiết</Text>
+        <Text className="text-center text-sm font-semibold text-foreground">Chưa có thông tin dinh dưỡng chính thức</Text>
         <Text className="text-center text-xs leading-relaxed text-muted-foreground">
           {canManage
-            ? 'Bạn là tác giả. Hãy tính dinh dưỡng tự động dựa trên nguyên liệu và các bước nấu.'
-            : 'Công thức này chưa được phân tích dinh dưỡng theo phương pháp chế biến.'}
+            ? 'Bạn là tác giả của công thức này. Hãy kích hoạt tính toán dinh dưỡng tự động dựa trên nguyên liệu và các bước nấu.'
+            : 'Công thức này chưa được phân tích dinh dưỡng chi tiết theo phương pháp chế biến.'}
         </Text>
         <View className="mt-1 w-full flex-row gap-2">
           <PrimaryButton label="Thử lại" variant="outline" className="flex-1" onPress={() => void refetch()} />
           {canManage ? (
             <PrimaryButton
-              label="Tính ngay"
+              label="Tính toán dinh dưỡng ngay"
               className="flex-1"
               icon={<RotateCw size={15} color={colors.primaryForeground} />}
               onPress={() => setRecalcOpen(true)}
@@ -297,36 +345,19 @@ export function RecipeNutritionCard({ postId, canManage }: { postId: string; can
     );
   }
 
-  const byCode = (code: string) => nutrition.nutrients.find((line) => line.code === code);
-  const metric = (code: string, label: string) => {
-    const line = byCode(code);
-    return <KeyMetric key={code} label={label} value={line ? `${line.formattedAmount} ${line.unit}` : 'Chưa có'} />;
-  };
-  const primaryCodes = ['ENERGY_KCAL', 'PROTEIN', 'CARBS', 'FAT', 'FIBER'];
-  const otherNutrients = nutrition.nutrients.filter((line) => !primaryCodes.includes(line.code));
-
   return (
     <View className="gap-4 rounded-2xl border border-border bg-card p-4">
-      <View className="flex-row items-start gap-2.5">
-        <View className="rounded-xl bg-primary/10 p-2">
+      <View className="flex-row items-start gap-2.5 border-b border-border/60 pb-3">
+        <View className="rounded-xl bg-emerald-50 p-2 dark:bg-emerald-950/60">
           <Activity size={18} color={colors.primary} />
         </View>
         <View className="flex-1">
-          <Text className="text-base font-bold text-foreground">Dinh dưỡng theo cách nấu</Text>
+          <Text className="text-base font-bold text-foreground">Phân tích Dinh dưỡng Nấu nướng</Text>
           <Text className="text-xs text-muted-foreground">
-            Mỗi khẩu phần ({nutrition.servings} khẩu phần), có tính hao hụt khi chế biến
+            Có tính đến hao hụt nhiệt độ và phương pháp chế biến (Cooking-aware)
           </Text>
         </View>
       </View>
-
-      {nutrition.isPreview ? (
-        <View className="flex-row items-start gap-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
-          <Info size={15} color={colors.primary} />
-          <Text className="flex-1 text-xs leading-relaxed text-muted-foreground">
-            Đây là ước tính tính tại chỗ từ nguyên liệu hiện có, chưa phải bản chính thức do tác giả lưu.
-          </Text>
-        </View>
-      ) : null}
 
       <View className="flex-row flex-wrap gap-2">
         {nutrition.isPreview ? null : (
@@ -340,87 +371,42 @@ export function RecipeNutritionCard({ postId, canManage }: { postId: string; can
         {canManage ? (
           <Pressable
             onPress={() => setRecalcOpen(true)}
-            className="flex-row items-center gap-1 rounded-full border border-primary/40 px-3 py-1.5">
+            className="flex-row items-center gap-1 rounded-full border border-emerald-300 px-3 py-1.5 dark:border-emerald-800">
             <RotateCw size={13} color={colors.primary} />
-            <Text className="text-xs font-semibold text-primary">Tính lại</Text>
+            <Text className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">Tính lại</Text>
           </Pressable>
         ) : null}
       </View>
 
       {isStale ? (
-        <View className="flex-row items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3">
-          <AlertTriangle size={15} color="#b45309" />
-          <View className="flex-1">
-            <Text className="text-xs font-bold text-amber-900">Dữ liệu dinh dưỡng có thể đã cũ</Text>
-            <Text className="mt-0.5 text-xs text-amber-800">
-              Công thức hoặc nguyên liệu đã thay đổi sau lần tính trước.
-              {canManage ? ' Hãy bấm "Tính lại" để làm mới.' : ''}
-            </Text>
-          </View>
-        </View>
-      ) : null}
-
-      {status?.aiJobStatusLabel ? (
-        <Text className="text-[11px] text-muted-foreground">Trạng thái AI: {status.aiJobStatusLabel}</Text>
-      ) : null}
-      {nutrition.aiProviderDown ? (
-        <Text className="text-[11px] text-amber-700">
-          Dịch vụ AI tạm thời không khả dụng; chỉ hiển thị số liệu tính từ dữ liệu chuẩn.
-        </Text>
-      ) : null}
-
-      <View className="flex-row flex-wrap gap-2">
-        {metric('ENERGY_KCAL', 'Năng lượng')}
-        {metric('PROTEIN', 'Đạm')}
-        {metric('CARBS', 'Tinh bột')}
-        {metric('FAT', 'Béo')}
-        {metric('FIBER', 'Chất xơ')}
-      </View>
-
-      <MacroBar estimate={nutrition} />
-
-      {nutrition.uncoveredIngredients.length > 0 ? (
-        <View className="gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3">
-          <View className="flex-row items-start gap-2">
-            <AlertTriangle size={15} color="#b45309" />
-            <View className="flex-1">
-              <Text className="text-sm font-semibold text-amber-900">
-                {nutrition.uncoveredIngredients.length} nguyên liệu chưa có dữ liệu thành phần chuẩn
-              </Text>
-              <Text className="mt-0.5 text-xs leading-relaxed text-amber-800">
-                Số liệu chỉ phản ánh phần nguyên liệu đã biết, nên có thể thấp hơn thực tế. Độ tin cậy: {nutrition.confidencePercent}%.
+        <View className="flex-row items-start gap-2.5 rounded-xl border border-amber-300/80 bg-amber-50/90 p-3.5 dark:border-amber-900/60 dark:bg-amber-950/40">
+          <AlertTriangle size={16} color="#b45309" />
+          <View className="flex-1 gap-2">
+            <View>
+              <Text className="text-xs font-bold text-amber-950 dark:text-amber-200">Dữ liệu dinh dưỡng có thể đã cũ</Text>
+              <Text className="mt-0.5 text-xs text-amber-800/90 dark:text-amber-300/90">
+                Công thức hoặc nguyên liệu đã có sự thay đổi sau lần tính trước.
               </Text>
             </View>
+            {canManage ? (
+              <Pressable
+                onPress={() => setRecalcOpen(true)}
+                className="self-start rounded-md bg-amber-600 px-3 py-1.5 active:bg-amber-700">
+                <Text className="text-xs font-semibold text-white">Làm mới ngay</Text>
+              </Pressable>
+            ) : null}
           </View>
-          <Collapsible title="Xem nguyên liệu thiếu dữ liệu">
-            {nutrition.uncoveredIngredients.map((item, index) => (
-              <View key={`${item.displayName}-${index}`} className="rounded-lg bg-amber-100/60 px-2.5 py-1.5">
-                <Text className="text-xs font-semibold text-amber-950">{item.displayName}</Text>
-                <Text className="text-[11px] text-amber-800">{item.reason}</Text>
-              </View>
-            ))}
-          </Collapsible>
         </View>
       ) : null}
 
-      <OtherNutrients lines={otherNutrients} />
+      <MacroSummary estimate={nutrition} />
 
-      {nutrition.assumptions.length > 0 ? (
-        <Collapsible title={`Giả định khi tính (${nutrition.assumptions.length})`}>
-          {nutrition.assumptions.map((assumption, index) => (
-            <Text key={`${assumption.code}-${index}`} className="text-[11px] leading-relaxed text-muted-foreground">
-              • {assumption.message}
-              {assumption.isAiEstimated ? ' (AI ước lượng)' : ''}
-            </Text>
-          ))}
-        </Collapsible>
-      ) : null}
+      <UncoveredIngredientsAlert
+        ingredients={nutrition.uncoveredIngredients}
+        confidencePercent={nutrition.confidencePercent}
+      />
 
-      {nutrition.sourceLabels.length > 0 ? (
-        <Text className="text-[11px] text-muted-foreground">Nguồn dữ liệu: {nutrition.sourceLabels.join(', ')}</Text>
-      ) : null}
-
-      <View className="flex-row items-start gap-2 border-t border-border pt-3">
+      <View className="flex-row items-start gap-2 border-t border-border/50 pt-3">
         <Info size={14} color={colors.mutedForeground} />
         <Text className="flex-1 text-[11px] leading-relaxed text-muted-foreground">{nutrition.disclaimer}</Text>
       </View>

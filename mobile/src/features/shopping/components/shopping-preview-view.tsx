@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { CircleCheck, Info, RefreshCw, ShoppingCart, TriangleAlert } from 'lucide-react-native';
+import { CircleCheck, RefreshCw, ShoppingCart, TriangleAlert } from 'lucide-react-native';
 
 import { ShowMoreButton, useShowMore } from '@/components/shared/show-more';
 import { ErrorState, LoadingState } from '@/components/shared/state-views';
@@ -139,15 +139,6 @@ function ItemRow({ item }: { item: ShoppingItem }) {
           <Text className="font-medium">Món dùng: </Text>
           {item.mealNames.join(' • ')}
         </Text>
-      ) : null}
-
-      {item.assumptions.length > 0 ? (
-        <View className="flex-row items-start gap-1.5">
-          <Info size={13} color={colors.info} />
-          <Text className="flex-1 text-xs leading-4 text-blue-600 dark:text-blue-400">
-            Quy đổi: {item.assumptions.join('; ')}
-          </Text>
-        </View>
       ) : null}
 
       <View className="flex-row rounded-xl border border-border bg-card p-2.5">

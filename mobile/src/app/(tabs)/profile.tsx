@@ -802,7 +802,6 @@ function PrivacySection() {
             <Text className="text-sm font-semibold text-foreground">Gợi ý món theo hành vi</Text>
             <Text className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
               Cho phép dùng món bạn xem, lưu, đánh giá để tinh chỉnh gợi ý. Khi tắt, bạn vẫn thấy gợi ý phổ biến.
-              {consent?.consentVersion ? ` Phiên bản điều khoản: ${consent.consentVersion}.` : ''}
             </Text>
             {consentQuery.isError ? (
               <Text className="mt-1 text-xs text-destructive">Không tải được cài đặt gợi ý.</Text>

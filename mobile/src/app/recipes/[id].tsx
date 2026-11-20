@@ -4,18 +4,18 @@ import { Image } from 'expo-image';
 import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   AlertTriangle,
+  BadgeCheck,
   CalendarPlus,
   Clock,
-  Dumbbell,
-  Flame,
   Hourglass,
   History,
+  Info,
   Leaf,
   Minus,
   Pencil,
   Plus,
   Share2,
-  ShieldCheck,
+  Star,
   Trash2,
   Users,
   Utensils,
@@ -29,9 +29,11 @@ import { RecipeAllergenHighlight } from '@/features/recipe/components/recipe-all
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
 import { useRecipeDetailQuery, useRelatedRecipesQuery } from '@/features/recipe/queries/recipe.queries';
 import { RecipeNutritionCard } from '@/features/recipe-nutrition/components/recipe-nutrition-card';
+import { IngredientNutritionModal } from '@/features/food-data/components/nutrition-facts-panel';
 import { ReviewHistorySheet } from '@/features/review/components/review-history-sheet';
 import { useDeletePostMutation } from '@/features/post/queries/post.queries';
 import { CommunityPanel } from '@/features/community/components/community-panel';
+import { useCommunitySummaryQuery } from '@/features/community/queries/community.queries';
 import { AddToMealPlanSheet } from '@/features/meal-plan/components/add-to-meal-plan-sheet';
 import { ReportButton } from '@/features/safety/components/report-button';
 import { PostStatus, UserRole } from '@/common/enums';
@@ -45,11 +47,6 @@ import { useAuthStore } from '@/store/useAuthStore';
 function formatScaledAmount(amount: number, ratio: number): string {
   const scaled = Math.round(amount * ratio * 100) / 100;
   return String(scaled);
-}
-
-/** Chỉ số thiếu dữ liệu hiển thị "Chưa có", không bịa số hay đổi thành 0. */
-function formatNutrient(value: number | null, unit: string): string {
-  return value === null ? 'Chưa có' : `${value}${unit}`;
 }
 
 /**
@@ -66,6 +63,7 @@ export default function RecipeDetailScreen() {
   const currentRole = useAuthStore((state) => state.user?.role);
   const { data: recipe, isLoading, isError, refetch } = useRecipeDetailQuery(id ?? '');
   const { data: relatedData } = useRelatedRecipesQuery(id ?? '');
+  const { data: communitySummary } = useCommunitySummaryQuery(id ?? '');
   const relatedRecipes = (relatedData ?? []).filter((r) => r.id !== id).slice(0, 4);
   const deleteMutation = useDeletePostMutation();
   const trackEvent = useTrackBehaviorEvent();
@@ -82,6 +80,7 @@ export default function RecipeDetailScreen() {
   const [addToPlanOpen, setAddToPlanOpen] = React.useState(false);
   const [historyPostId, setHistoryPostId] = React.useState<string | null>(null);
   const [checked, setChecked] = React.useState<string[]>([]);
+  const [viewingIngredient, setViewingIngredient] = React.useState<{ id: string; name: string } | null>(null);
 
   const isOwner = !!currentUserId && recipe?.author.id === currentUserId;
   const canManageNutrition = isOwner || currentRole === UserRole.ADMIN;
@@ -151,11 +150,12 @@ export default function RecipeDetailScreen() {
     );
   }
 
-  const incompatibilities = recipe.dietCompatibilities.filter((c) => !c.compatible);
   const baseServings = recipe.servings || 2;
   const servingCount = (servings ?? recipe.servings) || 2;
   const servingRatio = servingCount / baseServings;
-  const hasCompatibilityInfo = recipe.dietaryGroups.length > 0 || incompatibilities.length > 0;
+  const ratingCount = communitySummary?.rating?.count ?? 0;
+  const tasteAverage = communitySummary?.rating?.tasteAverage ?? null;
+  const hasRating = ratingCount > 0 && tasteAverage !== null;
 
   return (
     <SiteScreen title={recipe.title} onRefresh={() => refetch()}>
@@ -187,6 +187,22 @@ export default function RecipeDetailScreen() {
         {/* Ảnh bìa ưu tiên hiển thị ngay đầu trang để người dùng nhận diện món ăn */}
         <View className="aspect-video w-full overflow-hidden rounded-2xl border border-border bg-muted">
           <Image source={{ uri: recipe.coverImageUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+          <View pointerEvents="none" className="absolute bottom-3 left-3 right-3 flex-row items-center justify-between gap-2">
+            <View className="flex-shrink flex-row items-center gap-1.5 rounded-full bg-black/50 px-3 py-1.5">
+              <Clock size={14} color="#34d399" />
+              <Text numberOfLines={1} className="text-xs font-medium text-white">
+                {recipe.totalTimeMinutes} phút chuẩn bị & nấu
+              </Text>
+            </View>
+            {hasRating ? (
+              <View className="flex-row items-center gap-1 rounded-full bg-black/50 px-3 py-1.5">
+                <Star size={14} color="#fbbf24" fill="#fbbf24" />
+                <Text className="text-xs font-medium text-white">
+                  {tasteAverage?.toFixed(1)} ({ratingCount} đánh giá)
+                </Text>
+              </View>
+            ) : null}
+          </View>
         </View>
 
         {/* Nhãn phân loại & Tiêu đề */}
@@ -202,6 +218,14 @@ export default function RecipeDetailScreen() {
               <View className="flex-row items-center gap-1 rounded-full bg-primary/15 px-2.5 py-1">
                 <Leaf size={12} color={colors.primary} />
                 <Text className="text-xs font-medium text-primary">Đủ điều kiện thực đơn</Text>
+              </View>
+            ) : null}
+            {hasRating ? (
+              <View className="flex-row items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1">
+                <Star size={12} color="#fbbf24" fill="#fbbf24" />
+                <Text className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                  {tasteAverage?.toFixed(1)} ({ratingCount} đánh giá)
+                </Text>
               </View>
             ) : null}
           </View>
@@ -237,7 +261,13 @@ export default function RecipeDetailScreen() {
         <View className="flex-row items-center justify-between gap-3 border-y border-border py-3">
           <View className="min-w-0 flex-1 flex-row items-center gap-2.5">
             <UserAvatar name={recipe.author.name} uri={recipe.author.avatarUrl} size={42} className="border border-primary/20" />
-            <Text numberOfLines={1} className="flex-1 text-sm font-semibold text-foreground">{recipe.author.name}</Text>
+            <View className="min-w-0 flex-1">
+              <View className="flex-row items-center gap-1.5">
+                <Text numberOfLines={1} className="flex-shrink text-sm font-semibold text-foreground">{recipe.author.name}</Text>
+                {(recipe.author.verified ?? true) ? <BadgeCheck size={16} color={colors.primary} /> : null}
+              </View>
+              <Text className="text-xs text-muted-foreground">Tác giả công thức</Text>
+            </View>
           </View>
           {isOwner ? (
             <View className="flex-row gap-1.5">
@@ -268,36 +298,19 @@ export default function RecipeDetailScreen() {
           ) : null}
         </View>
 
-        {/* 4 chỉ số chính */}
-        <View className="flex-row flex-wrap justify-between gap-y-2.5">
-          <View className="w-[48.5%] items-center gap-1 rounded-2xl border border-border bg-card p-3">
-            <Flame size={16} color="#ea580c" />
-            <Text className="text-xs text-muted-foreground">Lượng Calo</Text>
-            <Text className="text-base font-bold text-foreground">{formatNutrient(recipe.nutrition.calories, ' kcal')}</Text>
-          </View>
-          <View className="w-[48.5%] items-center gap-1 rounded-2xl border border-border bg-card p-3">
-            <Dumbbell size={16} color={colors.primary} />
-            <Text className="text-xs text-muted-foreground">Chất đạm</Text>
-            <Text className="text-base font-bold text-foreground">{formatNutrient(recipe.nutrition.protein, 'g')}</Text>
-          </View>
-          <View className="w-[48.5%] items-center gap-1 rounded-2xl border border-border bg-card p-3">
-            <Utensils size={16} color={colors.cta} />
-            <Text className="text-xs text-muted-foreground">Tinh bột</Text>
-            <Text className="text-base font-bold text-foreground">{formatNutrient(recipe.nutrition.carbs, 'g')}</Text>
-          </View>
-          <View className="w-[48.5%] items-center gap-1 rounded-2xl border border-border bg-card p-3">
-            <Clock size={16} color={colors.mutedForeground} />
-            <Text className="text-xs text-muted-foreground">Thời gian</Text>
-            <Text className="text-base font-bold text-foreground">{recipe.totalTimeMinutes} phút</Text>
-          </View>
-        </View>
-
         {/* Nguyên liệu + bộ đếm khẩu phần dễ chạm */}
         <View className="overflow-hidden rounded-2xl border border-border">
           <View className="flex-row items-center justify-between gap-2 border-b border-border bg-muted/40 p-3.5">
             <View className="flex-1">
-              <Text className="text-base font-bold text-foreground">Nguyên liệu chuẩn bị</Text>
-              <Text className="mt-0.5 text-xs text-muted-foreground">Chạm từng dòng để đánh dấu đã có</Text>
+              <View className="flex-row items-center gap-2">
+                <Utensils size={18} color={colors.primary} />
+                <Text className="flex-shrink text-base font-bold text-foreground">Nguyên liệu cần chuẩn bị</Text>
+              </View>
+              <Text className="mt-0.5 text-xs text-muted-foreground">
+                {servingCount === baseServings
+                  ? `Định lượng chuẩn cho ${baseServings} khẩu phần`
+                  : `Đã quy đổi cho ${servingCount} khẩu phần (công thức gốc ${baseServings})`}
+              </Text>
             </View>
             <View className="flex-row items-center gap-1 rounded-xl border border-border bg-background p-1">
               <Pressable
@@ -344,10 +357,22 @@ export default function RecipeDetailScreen() {
                       )}>
                       {ing.name}
                     </Text>
-                    <View className="rounded-full bg-primary/10 px-2.5 py-1">
-                      <Text className="text-xs font-semibold text-primary">
-                        {formatScaledAmount(ing.amount, servingRatio)} {ing.unit}
-                      </Text>
+                    <View className="flex-row items-center gap-1">
+                      <View className="rounded-full bg-primary/10 px-2.5 py-1">
+                        <Text className="text-xs font-semibold text-primary">
+                          {formatScaledAmount(ing.amount, servingRatio)} {ing.unit}
+                        </Text>
+                      </View>
+                      {ing.ingredientId ? (
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Xem dinh dưỡng ${ing.name}`}
+                          hitSlop={6}
+                          onPress={() => setViewingIngredient({ id: ing.ingredientId as string, name: ing.name })}
+                          className="h-9 w-9 items-center justify-center rounded-full active:bg-muted">
+                          <Info size={16} color={colors.mutedForeground} />
+                        </Pressable>
+                      ) : null}
                     </View>
                   </Pressable>
                 );
@@ -360,39 +385,33 @@ export default function RecipeDetailScreen() {
           </View>
         </View>
 
+        <IngredientNutritionModal ingredient={viewingIngredient} onClose={() => setViewingIngredient(null)} />
+
+        {/* Dinh dưỡng theo cách nấu */}
+        <RecipeNutritionCard postId={recipe.id} canManage={canManageNutrition} />
+
         {/* Các bước thực hiện */}
         <View className="gap-3">
           <Text className="text-lg font-bold text-foreground">Các bước thực hiện</Text>
           {recipe.steps.length > 0 ? (
             <View className="gap-2.5">
               {recipe.steps.map((step, index) => (
-                <View key={`${step.position}-${index}`} className="flex-row gap-3 rounded-2xl border border-border bg-card p-3.5">
-                  <View className="h-7 w-7 items-center justify-center rounded-full bg-primary">
-                    <Text className="text-xs font-bold text-primary-foreground">{index + 1}</Text>
-                  </View>
-                  <View className="flex-1 gap-1.5">
-                    <Text className="text-sm leading-relaxed text-foreground">{step.instruction}</Text>
-                    {step.durationMinutes !== null || step.temperatureCelsius !== null || step.cookingMethodName ? (
-                      <View className="flex-row flex-wrap gap-1.5">
-                        {step.cookingMethodName ? (
-                          <View className="rounded-full bg-muted px-2.5 py-0.5">
-                            <Text className="text-[11px] text-muted-foreground">{step.cookingMethodName}</Text>
-                          </View>
-                        ) : null}
-                        {step.durationMinutes !== null ? (
-                          <View className="flex-row items-center gap-1 rounded-full bg-muted px-2.5 py-0.5">
-                            <Clock size={10} color={colors.mutedForeground} />
-                            <Text className="text-[11px] text-muted-foreground">{step.durationMinutes} phút</Text>
-                          </View>
-                        ) : null}
-                        {step.temperatureCelsius !== null ? (
-                          <View className="rounded-full bg-muted px-2.5 py-0.5">
-                            <Text className="text-[11px] text-muted-foreground">{step.temperatureCelsius}°C</Text>
-                          </View>
-                        ) : null}
+                <View key={`${step.position}-${index}`} className="gap-2 rounded-2xl border border-border bg-card p-3.5">
+                  <View className="flex-row items-center justify-between gap-2">
+                    <View className="flex-row items-center gap-2.5">
+                      <View className="h-7 w-7 items-center justify-center rounded-full bg-primary">
+                        <Text className="text-xs font-bold text-primary-foreground">{index + 1}</Text>
+                      </View>
+                      <Text className="text-base font-bold text-foreground">Bước {index + 1}</Text>
+                    </View>
+                    {step.durationMinutes ? (
+                      <View className="flex-row items-center gap-1">
+                        <Clock size={13} color={colors.mutedForeground} />
+                        <Text className="text-xs font-medium text-muted-foreground">~{step.durationMinutes} phút</Text>
                       </View>
                     ) : null}
                   </View>
+                  <Text className="text-sm leading-relaxed text-muted-foreground">{step.instruction}</Text>
                 </View>
               ))}
             </View>
@@ -405,27 +424,19 @@ export default function RecipeDetailScreen() {
           )}
         </View>
 
-        {/* Thông tin nhóm thực phẩm */}
-        {hasCompatibilityInfo ? (
-          <View className="gap-2.5 rounded-2xl border border-border bg-card p-4">
-            <View className="flex-row items-center gap-1.5">
-              <ShieldCheck size={15} color={colors.primary} />
-              <Text className="text-sm font-bold text-foreground">Thông tin nhóm thực phẩm</Text>
+        {/* Nhóm thực phẩm đã ghi nhận — chỉ hiện khi có dữ liệu thật */}
+        {recipe.dietaryGroupLabels.length > 0 ? (
+          <View className="gap-3">
+            <Text className="text-base font-semibold text-foreground">Nhóm thực phẩm đã ghi nhận</Text>
+            <View className="flex-row flex-wrap gap-2">
+              {recipe.dietaryGroupLabels.map((label) => (
+                <View key={label} className="rounded-full border border-border px-2.5 py-1">
+                  <Text className="text-xs text-foreground">{label}</Text>
+                </View>
+              ))}
             </View>
-            {recipe.dietaryGroupLabels.map((label) => (
-              <Text key={label} className="text-xs leading-relaxed text-muted-foreground">{label}</Text>
-            ))}
-            {incompatibilities.map((c) => (
-              <Text key={c.dietPattern} className="text-xs leading-relaxed text-muted-foreground">
-                <Text className="font-semibold text-foreground">{c.dietPattern}: </Text>
-                chưa tương thích ({c.reasonCodes.join(', ') || 'đang cập nhật nguyên nhân'}).
-              </Text>
-            ))}
           </View>
         ) : null}
-
-        {/* Dinh dưỡng theo cách nấu */}
-        <RecipeNutritionCard postId={recipe.id} canManage={canManageNutrition} />
 
         {!isOwner ? <ReportButton targetType="POST" targetId={recipe.id} /> : null}
 

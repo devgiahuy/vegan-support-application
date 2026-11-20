@@ -7,7 +7,6 @@ import { MealType } from '@/common/enums';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { ErrorState, LoadingState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { MealAnalysisPanel } from '@/features/meal-analysis/components/meal-analysis-panel';
 import { MealItemSelector, type SelectedMealItem } from '@/features/meal-plan/components/meal-item-selector';
 import { MealSlotCard } from '@/features/meal-plan/components/meal-slot-card';
 import { PlanDayCard } from '@/features/meal-plan/components/plan-day-card';
@@ -423,7 +422,6 @@ export default function MealPlanDetailScreen() {
             {plan.userSummary ? <PlanSummary summary={plan.userSummary} /> : null}
             <PlanNutritionTargets targets={targets} />
             <PlanWarningsBanner warnings={plan.warnings} />
-            <MealAnalysisPanel planId={plan.id} planVersion={plan.lockVersion} />
           </View>
         )}
 

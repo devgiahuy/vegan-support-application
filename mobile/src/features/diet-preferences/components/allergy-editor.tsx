@@ -164,7 +164,7 @@ export function AllergyEditor({
       <SearchBox
         value={search}
         onChange={onSearchChange}
-        placeholder="Tìm nhóm dị ứng hoặc nguyên liệu, vd: đậu phộng, nấm hương…"
+        placeholder="Tìm nhóm dị ứng hoặc nguyên liệu"
         clearLabel="Xóa nội dung tìm kiếm dị ứng"
       />
 

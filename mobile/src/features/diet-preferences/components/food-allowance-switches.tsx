@@ -1,4 +1,5 @@
 import { Switch, Text, View } from 'react-native';
+import { Egg, Flower2, Milk, Vegan, type LucideIcon } from 'lucide-react-native';
 
 import { useIconColors } from '@/lib/theme-colors';
 import type { FoodAllowanceSelection } from '@/features/diet-preferences/types/food-allowances.model';
@@ -7,14 +8,16 @@ export const FOOD_ALLOWANCE_OPTIONS: readonly {
   key: keyof FoodAllowanceSelection;
   label: string;
   description: string;
+  icon: LucideIcon;
 }[] = [
-  { key: 'allowEggs', label: 'Ăn trứng', description: 'Cho phép trứng và các món có thành phần từ trứng.' },
-  { key: 'allowDairy', label: 'Ăn sữa', description: 'Cho phép sữa động vật và các chế phẩm từ sữa.' },
-  { key: 'allowHoney', label: 'Ăn mật ong', description: 'Cho phép mật ong và các món có mật ong.' },
+  { key: 'allowEggs', label: 'Ăn trứng', description: 'Cho phép trứng và các món có thành phần từ trứng.', icon: Egg },
+  { key: 'allowDairy', label: 'Ăn sữa', description: 'Cho phép sữa động vật và các chế phẩm từ sữa.', icon: Milk },
+  { key: 'allowHoney', label: 'Ăn mật ong', description: 'Cho phép mật ong và các món có mật ong.', icon: Vegan },
   {
     key: 'allowFivePungent',
     label: 'Ăn ngũ vị tân',
     description: 'Cho phép hành, hẹ, tỏi, kiệu và hưng cừ.',
+    icon: Flower2,
   },
 ];
 
@@ -39,29 +42,33 @@ export function FoodAllowanceSwitches({
         </Text>
       </View>
       <View className="overflow-hidden rounded-xl border border-border bg-card">
-        {FOOD_ALLOWANCE_OPTIONS.map((option, index) => (
-          <View
-            key={option.key}
-            className={`flex-row items-center gap-4 p-4${index > 0 ? ' border-t border-border' : ''}`}
-          >
-            <View className="flex-1 gap-1">
-              <Text className="text-sm font-semibold text-foreground">{option.label}</Text>
-              <Text className="text-xs leading-5 text-muted-foreground">{option.description}</Text>
-              <Text className="text-xs font-medium text-primary">
-                {value[option.key] ? 'Được ăn' : 'Đang kiêng'}
-              </Text>
+        {FOOD_ALLOWANCE_OPTIONS.map((option, index) => {
+          const Icon = option.icon;
+          return (
+            <View
+              key={option.key}
+              className={`flex-row items-center gap-3 p-4${index > 0 ? ' border-t border-border' : ''}`}
+            >
+              <Icon size={20} color={colors.mutedForeground} />
+              <View className="flex-1 gap-1">
+                <Text className="text-sm font-semibold text-foreground">{option.label}</Text>
+                <Text className="text-xs leading-5 text-muted-foreground">{option.description}</Text>
+                <Text className="text-xs font-medium text-primary">
+                  {value[option.key] ? 'Được ăn' : 'Đang kiêng'}
+                </Text>
+              </View>
+              <Switch
+                accessibilityLabel={option.label}
+                accessibilityHint={`${option.description} Bật là được ăn, tắt là kiêng.`}
+                accessibilityState={{ checked: value[option.key], disabled }}
+                value={value[option.key]}
+                onValueChange={(allowed) => onChange({ ...value, [option.key]: allowed })}
+                disabled={disabled}
+                trackColor={{ false: colors.mutedForeground, true: colors.primary }}
+              />
             </View>
-            <Switch
-              accessibilityLabel={option.label}
-              accessibilityHint={`${option.description} Bật là được ăn, tắt là kiêng.`}
-              accessibilityState={{ checked: value[option.key], disabled }}
-              value={value[option.key]}
-              onValueChange={(allowed) => onChange({ ...value, [option.key]: allowed })}
-              disabled={disabled}
-              trackColor={{ false: colors.mutedForeground, true: colors.primary }}
-            />
-          </View>
-        ))}
+          );
+        })}
       </View>
       <Text className="text-xs leading-5 text-muted-foreground">
         Dị ứng và nguyên liệu bạn kiêng vẫn được ưu tiên, kể cả khi bật cho phép một nhóm thực phẩm.
